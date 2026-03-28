@@ -72,7 +72,7 @@ export function useNerveCenterData(projectPath: string | undefined): NerveCenter
       if (pathRef.current !== projectPath) return
 
       const branchStep = branchResult.steps[0]
-      if (!branchResult.success || !branchStep) {
+      if (!branchResult.success || !branchStep || !statusRaw.success) {
         setGit(null)
         setCommits([])
         setError('Not a git repository')
@@ -80,14 +80,14 @@ export function useNerveCenterData(projectPath: string | undefined): NerveCenter
         return
       }
 
-      const { dirty, staged } = parsePorcelainStatus(statusRaw)
+      const { dirty, staged } = parsePorcelainStatus(statusRaw.stdout)
       setGit({
         branch: branchStep.stdout.trim(),
         dirty,
         staged
       })
 
-      const logStep = logResult.steps[0]
+      const logStep = logResult.success ? logResult.steps[0] : undefined
       setCommits(logStep?.stdout ? parseCommits(logStep.stdout) : [])
     } catch {
       if (pathRef.current === projectPath) {

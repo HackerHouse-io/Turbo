@@ -92,6 +92,13 @@ export function CommandPalette() {
       setGitConfirm({ message: pending.message, diffStat: pending.diffStat, pushAfter: pending.pushAfter })
       useGitStore.getState().setPendingCommit(null)
     }
+
+    // Hydrate template fill from pending template (set by quick actions)
+    const pendingTemplate = useUIStore.getState().pendingTemplateFill
+    if (pendingTemplate) {
+      setFillTemplate(pendingTemplate)
+      useUIStore.setState({ pendingTemplateFill: null })
+    }
   }, [])
 
   // ─── Create session helper ─────────────────────────────────

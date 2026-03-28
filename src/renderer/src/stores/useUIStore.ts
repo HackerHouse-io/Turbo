@@ -1,9 +1,12 @@
 import { create } from 'zustand'
+import type { PromptTemplate } from '../../../shared/types'
 
 interface UIState {
   // Command palette
   commandPaletteOpen: boolean
+  pendingTemplateFill: PromptTemplate | null
   openCommandPalette: () => void
+  openCommandPaletteWithTemplate: (template: PromptTemplate) => void
   closeCommandPalette: () => void
   toggleCommandPalette: () => void
 
@@ -26,8 +29,10 @@ interface UIState {
 
 export const useUIStore = create<UIState>((set) => ({
   commandPaletteOpen: false,
+  pendingTemplateFill: null,
   openCommandPalette: () => set({ commandPaletteOpen: true }),
-  closeCommandPalette: () => set({ commandPaletteOpen: false }),
+  openCommandPaletteWithTemplate: (template) => set({ commandPaletteOpen: true, pendingTemplateFill: template }),
+  closeCommandPalette: () => set({ commandPaletteOpen: false, pendingTemplateFill: null }),
   toggleCommandPalette: () => set(s => ({ commandPaletteOpen: !s.commandPaletteOpen })),
 
   projectSelectorOpen: false,

@@ -13,6 +13,7 @@ interface QuickActionsCardProps {
 export function QuickActionsCard({ projectPath }: QuickActionsCardProps) {
   const { templates, gitPresets } = useCommandPaletteData()
   const openCommandPalette = useUIStore(s => s.openCommandPalette)
+  const openWithTemplate = useUIStore(s => s.openCommandPaletteWithTemplate)
   const gitLoading = useGitStore(s => s.gitLoading)
   const gitLoadingMessage = useGitStore(s => s.gitLoadingMessage)
   const gitSuccess = useGitStore(s => s.gitSuccess)
@@ -28,7 +29,7 @@ export function QuickActionsCard({ projectPath }: QuickActionsCardProps) {
 
   const handleTemplateClick = useCallback((t: PromptTemplate) => {
     if (t.variables.length > 0) {
-      openCommandPalette()
+      openWithTemplate(t)
       return
     }
     window.api.createSession({
@@ -39,7 +40,7 @@ export function QuickActionsCard({ projectPath }: QuickActionsCardProps) {
       effort: t.effort ?? 'medium',
       permissionMode: t.permissionMode
     })
-  }, [projectPath, openCommandPalette])
+  }, [projectPath, openWithTemplate])
 
   const handleGitClick = useCallback(async (g: GitPreset) => {
     if (!projectPath) return
