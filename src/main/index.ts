@@ -7,6 +7,8 @@ import { SettingsManager } from './SettingsManager'
 import { GitIdentityManager } from './git/GitIdentityManager'
 import { GitOpsManager } from './git/GitOpsManager'
 import { GitPresetManager } from './git/GitPresetManager'
+import { RoutineManager } from './routines/RoutineManager'
+import { RoutineExecutor } from './routines/RoutineExecutor'
 import { registerIpcHandlers } from './ipc/channels'
 
 let mainWindow: BrowserWindow | null = null
@@ -16,6 +18,8 @@ let sessionManager: ClaudeSessionManager
 let promptVaultManager: PromptVaultManager
 let gitOpsManager: GitOpsManager
 let gitPresetManager: GitPresetManager
+let routineManager: RoutineManager
+let routineExecutor: RoutineExecutor
 
 const isDev = !app.isPackaged
 
@@ -76,6 +80,8 @@ app.whenReady().then(() => {
   const gitIdentityManager = new GitIdentityManager()
   gitOpsManager = new GitOpsManager(gitIdentityManager)
   gitPresetManager = new GitPresetManager(app.getPath('userData'))
+  routineManager = new RoutineManager(app.getPath('userData'))
+  routineExecutor = new RoutineExecutor(sessionManager, routineManager)
 
   // Register IPC handlers
   registerIpcHandlers({
@@ -86,6 +92,8 @@ app.whenReady().then(() => {
     gitIdentityManager,
     gitOpsManager,
     gitPresetManager,
+    routineManager,
+    routineExecutor,
     getMainWindow: () => mainWindow
   })
 
@@ -106,5 +114,6 @@ app.on('window-all-closed', () => {
 })
 
 app.on('before-quit', () => {
+  routineExecutor?.dispose()
   sessionManager?.dispose()
 })

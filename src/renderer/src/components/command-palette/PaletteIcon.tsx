@@ -88,6 +88,13 @@ export function PaletteIcon({ icon, className = 'w-4 h-4 text-turbo-text-muted' 
           <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
         </svg>
       )
+    case 'routine':
+      return (
+        <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25H12" />
+          <path strokeLinecap="round" strokeLinejoin="round" d="M16 16l2.5 2.5L21 14" />
+        </svg>
+      )
     case 'task':
     default:
       return (

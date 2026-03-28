@@ -11,7 +11,9 @@ import type {
   GitIdentity,
   GitCommitPayload,
   GitExecPayload,
-  GitPreset
+  GitPreset,
+  StartRoutinePayload,
+  RoutineExecution
 } from '../../shared/types'
 import { IPC } from '../../shared/constants'
 import { ClaudeSessionManager } from '../claude/ClaudeSessionManager'
@@ -21,6 +23,8 @@ import { SettingsManager } from '../SettingsManager'
 import { GitIdentityManager } from '../git/GitIdentityManager'
 import { GitOpsManager } from '../git/GitOpsManager'
 import { GitPresetManager } from '../git/GitPresetManager'
+import { RoutineManager } from '../routines/RoutineManager'
+import { RoutineExecutor } from '../routines/RoutineExecutor'
 import { detectModels } from '../claude/ClaudeModelDetector'
 
 interface IpcHandlerOptions {
@@ -31,6 +35,8 @@ interface IpcHandlerOptions {
   gitIdentityManager: GitIdentityManager
   gitOpsManager: GitOpsManager
   gitPresetManager: GitPresetManager
+  routineManager: RoutineManager
+  routineExecutor: RoutineExecutor
   getMainWindow: () => BrowserWindow | null
 }
 
@@ -46,6 +52,8 @@ export function registerIpcHandlers(opts: IpcHandlerOptions): void {
     gitIdentityManager,
     gitOpsManager,
     gitPresetManager,
+    routineManager,
+    routineExecutor,
     getMainWindow
   } = opts
 
@@ -248,6 +256,40 @@ export function registerIpcHandlers(opts: IpcHandlerOptions): void {
     gitPresetManager.deletePreset(presetId)
   })
 
+  // ─── Routines ────────────────────────────────────────────────
+
+  ipcMain.handle(IPC.ROUTINE_LIST, async () => {
+    return routineManager.listRoutines()
+  })
+
+  ipcMain.handle(IPC.ROUTINE_START, async (_e, payload: StartRoutinePayload) => {
+    return routineExecutor.startRoutine(payload)
+  })
+
+  ipcMain.handle(IPC.ROUTINE_PAUSE, async (_e, executionId: string) => {
+    routineExecutor.pauseRoutine(executionId)
+  })
+
+  ipcMain.handle(IPC.ROUTINE_RESUME, async (_e, executionId: string) => {
+    routineExecutor.resumeRoutine(executionId)
+  })
+
+  ipcMain.handle(IPC.ROUTINE_STOP, async (_e, executionId: string) => {
+    routineExecutor.stopRoutine(executionId)
+  })
+
+  ipcMain.handle(IPC.ROUTINE_DISMISS, async (_e, executionId: string) => {
+    routineExecutor.dismissRoutine(executionId)
+  })
+
+  ipcMain.handle(IPC.ROUTINE_EXECUTIONS, async () => {
+    return routineExecutor.listExecutions()
+  })
+
+  ipcMain.handle(IPC.ROUTINE_REMOVE, async (_e, executionId: string) => {
+    routineExecutor.removeExecution(executionId)
+  })
+
   // ─── Forward events to renderer ────────────────────────────
 
   sessionManager.on('session-updated', (session: AgentSession) => {
@@ -275,6 +317,13 @@ export function registerIpcHandlers(opts: IpcHandlerOptions): void {
     const win = getMainWindow()
     if (win && !win.isDestroyed()) {
       win.webContents.send(IPC.SESSION_REMOVED, sessionId)
+    }
+  })
+
+  routineExecutor.on('routine-updated', (execution: RoutineExecution) => {
+    const win = getMainWindow()
+    if (win && !win.isDestroyed()) {
+      win.webContents.send(IPC.ROUTINE_UPDATED, execution)
     }
   })
 }

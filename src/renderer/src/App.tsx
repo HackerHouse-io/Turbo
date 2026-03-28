@@ -3,6 +3,7 @@ import { AppShell } from './components/layout/AppShell'
 import { useSessionStore } from './stores/useSessionStore'
 import { useProjectStore } from './stores/useProjectStore'
 import { useGitIdentityStore } from './stores/useGitIdentityStore'
+import { useRoutineStore } from './stores/useRoutineStore'
 import { appendTerminalData, clearTerminalBuffer } from './lib/terminalBuffer'
 
 export default function App() {
@@ -40,8 +41,16 @@ export default function App() {
       clearTerminalBuffer(sessionId)
     })
 
+    const unsubRoutine = window.api.onRoutineUpdated((execution) => {
+      useRoutineStore.getState().updateExecution(execution)
+    })
+
     window.api.listSessions().then((sessions) => {
       useSessionStore.getState().setSessions(sessions)
+    })
+
+    window.api.listRoutineExecutions().then((executions) => {
+      useRoutineStore.getState().setExecutions(executions)
     })
 
     return () => {
@@ -49,6 +58,7 @@ export default function App() {
       unsubSession()
       unsubAttention()
       unsubRemoved()
+      unsubRoutine()
     }
   }, [updateSession, addAttentionItem, removeSession])
 

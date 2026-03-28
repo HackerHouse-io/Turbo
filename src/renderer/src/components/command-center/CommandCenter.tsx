@@ -5,8 +5,10 @@ import { AttentionQueue } from './AttentionQueue'
 import { InlinePrompt } from './InlinePrompt'
 import { NerveCenter } from '../nerve-center/NerveCenter'
 import { GitStatusBar } from '../nerve-center/GitStatusBar'
+import { RoutineProgressBanner } from './RoutineProgressBanner'
 import { useSessionStore } from '../../stores/useSessionStore'
 import { useProjectStore } from '../../stores/useProjectStore'
+import { useRoutineStore } from '../../stores/useRoutineStore'
 
 export function CommandCenter() {
   const sessionsRecord = useSessionStore(s => s.sessions)
@@ -16,6 +18,7 @@ export function CommandCenter() {
   const projects = useProjectStore(s => s.projects)
   const selectedProjectId = useProjectStore(s => s.selectedProjectId)
   const addProjectFromPath = useProjectStore(s => s.addProjectFromPath)
+  const routineExecutions = useRoutineStore(s => s.executions)
   const selectedProject = projects.find(p => p.id === selectedProjectId)
 
   // Filter sessions by selected project
@@ -36,7 +39,16 @@ export function CommandCenter() {
     s => s.status === 'completed' || s.status === 'stopped'
   )
 
-  const isEmpty = sessions.length === 0
+  // Filter active routine executions
+  const activeRoutines = useMemo(() => {
+    const all = Object.values(routineExecutions)
+    const projectFiltered = selectedProject
+      ? all.filter(r => r.projectPath === selectedProject.path)
+      : all
+    return projectFiltered.filter(r => r.status !== 'completed')
+  }, [routineExecutions, selectedProject])
+
+  const isEmpty = sessions.length === 0 && activeRoutines.length === 0
   const noProjects = projects.length === 0
 
   // First launch — no projects added yet
@@ -67,6 +79,11 @@ export function CommandCenter() {
         >
           {/* Git Status Bar */}
           <GitStatusBar projectPath={selectedProject?.path} />
+
+          {/* Routine Progress */}
+          {activeRoutines.length > 0 && (
+            <RoutineProgressBanner executions={activeRoutines} />
+          )}
 
           {/* Attention Queue */}
           {attentionItems.length > 0 && (

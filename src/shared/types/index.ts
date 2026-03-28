@@ -220,6 +220,59 @@ export interface GitCommitEntry {
   relativeTime: string  // e.g. "2 hours ago"
 }
 
+// ─── Routines ────────────────────────────────────────────────
+
+export interface RoutineStepDefinition {
+  name: string
+  prompt: string                  // Supports {{variable}} syntax
+  permissionMode?: PermissionMode
+  effort?: EffortLevel
+}
+
+export interface Routine {
+  id: string
+  name: string
+  description: string
+  icon: string
+  steps: RoutineStepDefinition[]
+  variables: string[]             // Auto-extracted from step prompts
+  builtIn: boolean
+  endsWithCommit: boolean         // If true, routine enters awaiting_commit after last step
+}
+
+export type RoutineStepStatus = 'pending' | 'running' | 'completed' | 'failed' | 'skipped'
+
+export interface RoutineStepState {
+  index: number
+  name: string
+  status: RoutineStepStatus
+  sessionId?: string
+  startedAt?: number
+  completedAt?: number
+  error?: string
+}
+
+export type RoutineExecutionStatus = 'running' | 'paused' | 'awaiting_commit' | 'completed' | 'failed' | 'stopped'
+
+export interface RoutineExecution {
+  id: string
+  routineId: string
+  routineName: string
+  projectPath: string
+  status: RoutineExecutionStatus
+  steps: RoutineStepState[]
+  currentStepIndex: number
+  startedAt: number
+  completedAt?: number
+  variables: Record<string, string>
+}
+
+export interface StartRoutinePayload {
+  routineId: string
+  projectPath: string
+  variables: Record<string, string>
+}
+
 // ─── Settings ─────────────────────────────────────────────────
 
 export interface TurboSettings {

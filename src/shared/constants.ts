@@ -69,7 +69,20 @@ export const IPC = {
   // Git Presets
   GIT_PRESETS_LIST: 'git:presets:list',
   GIT_PRESETS_SAVE: 'git:presets:save',
-  GIT_PRESETS_DELETE: 'git:presets:delete'
+  GIT_PRESETS_DELETE: 'git:presets:delete',
+
+  // Routines
+  ROUTINE_LIST: 'routine:list',
+  ROUTINE_START: 'routine:start',
+  ROUTINE_PAUSE: 'routine:pause',
+  ROUTINE_RESUME: 'routine:resume',
+  ROUTINE_STOP: 'routine:stop',
+  ROUTINE_DISMISS: 'routine:dismiss',
+  ROUTINE_EXECUTIONS: 'routine:executions',
+  ROUTINE_REMOVE: 'routine:remove',
+
+  // Events (main → renderer)
+  ROUTINE_UPDATED: 'routine:updated'
 } as const
 
 export const PROMPT_HISTORY_MAX = 50

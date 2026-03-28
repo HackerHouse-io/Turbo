@@ -19,7 +19,10 @@ import type {
   GitCommitPayload,
   GitExecPayload,
   ClaudeModelInfo,
-  GitPreset
+  GitPreset,
+  Routine,
+  RoutineExecution,
+  StartRoutinePayload
 } from '../shared/types'
 
 /**
@@ -152,6 +155,32 @@ const api = {
   deleteGitPreset: (presetId: string): Promise<void> =>
     ipcRenderer.invoke(IPC.GIT_PRESETS_DELETE, presetId),
 
+  // ─── Routines ────────────────────────────────────────────
+
+  listRoutines: (): Promise<Routine[]> =>
+    ipcRenderer.invoke(IPC.ROUTINE_LIST),
+
+  startRoutine: (payload: StartRoutinePayload): Promise<RoutineExecution> =>
+    ipcRenderer.invoke(IPC.ROUTINE_START, payload),
+
+  pauseRoutine: (executionId: string): Promise<void> =>
+    ipcRenderer.invoke(IPC.ROUTINE_PAUSE, executionId),
+
+  resumeRoutine: (executionId: string): Promise<void> =>
+    ipcRenderer.invoke(IPC.ROUTINE_RESUME, executionId),
+
+  stopRoutine: (executionId: string): Promise<void> =>
+    ipcRenderer.invoke(IPC.ROUTINE_STOP, executionId),
+
+  dismissRoutine: (executionId: string): Promise<void> =>
+    ipcRenderer.invoke(IPC.ROUTINE_DISMISS, executionId),
+
+  listRoutineExecutions: (): Promise<RoutineExecution[]> =>
+    ipcRenderer.invoke(IPC.ROUTINE_EXECUTIONS),
+
+  removeRoutineExecution: (executionId: string): Promise<void> =>
+    ipcRenderer.invoke(IPC.ROUTINE_REMOVE, executionId),
+
   // ─── Event Subscriptions ──────────────────────────────────
 
   onSessionUpdated: (callback: (session: AgentSession) => void) => {
@@ -177,6 +206,12 @@ const api = {
     const handler = (_: Electron.IpcRendererEvent, sessionId: string) => callback(sessionId)
     ipcRenderer.on(IPC.SESSION_REMOVED, handler)
     return () => ipcRenderer.removeListener(IPC.SESSION_REMOVED, handler)
+  },
+
+  onRoutineUpdated: (callback: (execution: RoutineExecution) => void) => {
+    const handler = (_: Electron.IpcRendererEvent, execution: RoutineExecution) => callback(execution)
+    ipcRenderer.on(IPC.ROUTINE_UPDATED, handler)
+    return () => ipcRenderer.removeListener(IPC.ROUTINE_UPDATED, handler)
   }
 }
 

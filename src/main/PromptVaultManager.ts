@@ -3,6 +3,7 @@ import { readFileSync, writeFileSync } from 'fs'
 import { join } from 'path'
 import type { PromptTemplate, PromptHistoryItem } from '../shared/types'
 import { PROMPT_HISTORY_MAX } from '../shared/constants'
+import { extractTemplateVariables } from '../shared/templateVars'
 
 const BUILT_IN_TEMPLATES: Omit<PromptTemplate, 'id'>[] = [
   {
@@ -100,7 +101,7 @@ export class PromptVaultManager {
     const template: PromptTemplate = {
       ...t,
       id: t.id || uuid(),
-      variables: this.extractVariables(t.template)
+      variables: extractTemplateVariables([t.template])
     }
     if (existing >= 0) {
       this.templates[existing] = template
@@ -150,15 +151,6 @@ export class PromptVaultManager {
   }
 
   // ─── Private ───────────────────────────────────────────────
-
-  private extractVariables(template: string): string[] {
-    const matches = template.matchAll(/\{\{(\w+)\}\}/g)
-    const vars = new Set<string>()
-    for (const m of matches) {
-      vars.add(m[1])
-    }
-    return Array.from(vars)
-  }
 
   private load(): void {
     // Load templates — readFileSync throws on missing file, caught below

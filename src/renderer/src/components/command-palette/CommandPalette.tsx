@@ -8,8 +8,9 @@ import { useCommandPaletteData } from './useCommandPaletteData'
 import { CommandPaletteTemplateFill, type SessionFlags } from './CommandPaletteTemplateFill'
 import { CommandPaletteGitConfirm } from './CommandPaletteGitConfirm'
 import { CommandPaletteGitPresetFill } from './CommandPaletteGitPresetFill'
+import { CommandPaletteRoutineFill } from './CommandPaletteRoutineFill'
 import { PaletteIcon } from './PaletteIcon'
-import type { PromptTemplate, GitPreset } from '../../../../shared/types'
+import type { PromptTemplate, GitPreset, Routine } from '../../../../shared/types'
 
 // ─── Types ───────────────────────────────────────────────────
 
@@ -18,15 +19,16 @@ interface CommandItem {
   label: string
   description?: string
   icon: string
-  section: 'recent' | 'templates' | 'git' | 'tasks' | 'actions'
+  section: 'recent' | 'templates' | 'routines' | 'git' | 'tasks' | 'actions'
   action: () => void
   keywords?: string[]
 }
 
-const SECTION_ORDER: CommandItem['section'][] = ['recent', 'templates', 'git', 'tasks', 'actions']
+const SECTION_ORDER: CommandItem['section'][] = ['recent', 'templates', 'routines', 'git', 'tasks', 'actions']
 const SECTION_LABELS: Record<CommandItem['section'], string> = {
   recent: 'Recent Prompts',
   templates: 'Templates',
+  routines: 'Routines',
   git: 'Git Actions',
   tasks: 'Active Tasks',
   actions: 'Actions'
@@ -65,6 +67,7 @@ export function CommandPalette() {
   const [selectedIndex, setSelectedIndex] = useState(0)
   const [fillTemplate, setFillTemplate] = useState<PromptTemplate | null>(null)
   const [fillGitPreset, setFillGitPreset] = useState<GitPreset | null>(null)
+  const [fillRoutine, setFillRoutine] = useState<Routine | null>(null)
   const [gitConfirm, setGitConfirm] = useState<{ message: string; diffStat: string; pushAfter: boolean } | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const closeCommandPalette = useUIStore(s => s.closeCommandPalette)
@@ -78,7 +81,7 @@ export function CommandPalette() {
     const proj = id ? s.projects.find(p => p.id === id) : s.projects[0]
     return proj?.path
   })
-  const { templates, gitPresets, models, loading } = useCommandPaletteData()
+  const { templates, gitPresets, routines, models, loading } = useCommandPaletteData()
 
   useEffect(() => {
     inputRef.current?.focus()
@@ -153,6 +156,14 @@ export function CommandPalette() {
     closeCommandPalette()
   }, [selectedProjectPath, closeCommandPalette])
 
+  // ─── Routine handler ───────────────────────────────────────
+
+  const handleStartRoutine = useCallback(async (routineId: string, variables: Record<string, string>) => {
+    if (!selectedProjectPath) return
+    await window.api.startRoutine({ routineId, projectPath: selectedProjectPath, variables })
+    closeCommandPalette()
+  }, [selectedProjectPath, closeCommandPalette])
+
   // ─── Build command list ────────────────────────────────────
 
   const commands: CommandItem[] = useMemo(() => {
@@ -177,6 +188,25 @@ export function CommandPalette() {
           }
         },
         keywords: [t.description, t.template]
+      })
+    }
+
+    // Routines
+    for (const r of routines) {
+      items.push({
+        id: `routine-${r.id}`,
+        label: r.name,
+        description: r.description,
+        icon: 'routine',
+        section: 'routines',
+        action: () => {
+          if (r.variables.length === 0) {
+            handleStartRoutine(r.id, {})
+          } else {
+            setFillRoutine(r)
+          }
+        },
+        keywords: [r.description, ...r.steps.map(s => s.name)]
       })
     }
 
@@ -211,7 +241,7 @@ export function CommandPalette() {
     }
 
     return items
-  }, [templates, gitPresets, sessions, createSession, handleGitAction, closeCommandPalette, selectSession, setViewMode])
+  }, [templates, routines, gitPresets, sessions, createSession, handleGitAction, handleStartRoutine, closeCommandPalette, selectSession, setViewMode])
 
   // ─── Filtering ─────────────────────────────────────────────
 
@@ -267,6 +297,20 @@ export function CommandPalette() {
         closeCommandPalette()
         break
     }
+  }
+
+  // ─── Routine fill mode ──────────────────────────────────────
+
+  if (fillRoutine) {
+    return (
+      <PaletteShell onClose={closeCommandPalette}>
+        <CommandPaletteRoutineFill
+          routine={fillRoutine}
+          onSubmit={(variables) => handleStartRoutine(fillRoutine.id, variables)}
+          onBack={() => setFillRoutine(null)}
+        />
+      </PaletteShell>
+    )
   }
 
   // ─── Git confirm mode ───────────────────────────────────────

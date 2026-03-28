@@ -2,6 +2,7 @@ import { v4 as uuid } from 'uuid'
 import { readFileSync, writeFileSync } from 'fs'
 import { join } from 'path'
 import type { GitPreset } from '../../shared/types'
+import { extractTemplateVariables } from '../../shared/templateVars'
 
 const BUILT_IN_PRESETS: Omit<GitPreset, 'id'>[] = [
   {
@@ -70,7 +71,7 @@ export class GitPresetManager {
     const saved: GitPreset = {
       ...preset,
       id: preset.id || uuid(),
-      variables: this.extractVariables(preset.commands)
+      variables: extractTemplateVariables(preset.commands)
     }
     if (existing >= 0) {
       this.presets[existing] = saved
@@ -86,16 +87,6 @@ export class GitPresetManager {
     if (preset && preset.builtIn) return
     this.presets = this.presets.filter(p => p.id !== id)
     this.save()
-  }
-
-  private extractVariables(commands: string[]): string[] {
-    const vars = new Set<string>()
-    for (const cmd of commands) {
-      for (const match of cmd.matchAll(/\{\{(\w+)\}\}/g)) {
-        vars.add(match[1])
-      }
-    }
-    return Array.from(vars)
   }
 
   private load(): void {
