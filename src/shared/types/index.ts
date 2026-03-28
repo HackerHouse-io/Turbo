@@ -206,6 +206,20 @@ export interface GitExecPayload {
   commands: string[]
 }
 
+// ─── Git Nerve Center ────────────────────────────────────────
+
+export interface GitBranchInfo {
+  branch: string
+  dirty: number    // unstaged modified + untracked
+  staged: number   // staged files
+}
+
+export interface GitCommitEntry {
+  hash: string          // short hash
+  message: string       // first line
+  relativeTime: string  // e.g. "2 hours ago"
+}
+
 // ─── Settings ─────────────────────────────────────────────────
 
 export interface TurboSettings {

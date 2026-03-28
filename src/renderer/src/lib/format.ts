@@ -13,6 +13,10 @@ export function camelToTitle(s: string): string {
   return s.replace(/([A-Z])/g, ' $1').replace(/^./, c => c.toUpperCase())
 }
 
+export function formatCost(cost: number): string {
+  return cost < 0.01 ? '<$0.01' : `$${cost.toFixed(2)}`
+}
+
 export function formatElapsed(start: number, end?: number): string {
   const ms = (end || Date.now()) - start
   const seconds = Math.floor(ms / 1000)
