@@ -9,7 +9,6 @@ import { CommandPaletteTemplateFill, type SessionFlags } from './CommandPaletteT
 import { CommandPaletteGitConfirm } from './CommandPaletteGitConfirm'
 import { CommandPaletteGitPresetFill } from './CommandPaletteGitPresetFill'
 import { PaletteIcon } from './PaletteIcon'
-import { timeAgo } from '../../lib/format'
 import type { PromptTemplate, GitPreset } from '../../../../shared/types'
 
 // ─── Types ───────────────────────────────────────────────────
@@ -79,10 +78,17 @@ export function CommandPalette() {
     const proj = id ? s.projects.find(p => p.id === id) : s.projects[0]
     return proj?.path
   })
-  const { templates, history, gitPresets, models, loading } = useCommandPaletteData()
+  const { templates, gitPresets, models, loading } = useCommandPaletteData()
 
   useEffect(() => {
     inputRef.current?.focus()
+
+    // Hydrate git confirm from pending commit (set by launchpad git buttons)
+    const pending = useGitStore.getState().pendingCommit
+    if (pending) {
+      setGitConfirm({ message: pending.message, diffStat: pending.diffStat, pushAfter: pending.pushAfter })
+      useGitStore.getState().setPendingCommit(null)
+    }
   }, [])
 
   // ─── Create session helper ─────────────────────────────────
@@ -152,19 +158,6 @@ export function CommandPalette() {
   const commands: CommandItem[] = useMemo(() => {
     const items: CommandItem[] = []
 
-    // Recent Prompts
-    for (const h of history.slice(0, 10)) {
-      items.push({
-        id: `history-${h.id}`,
-        label: h.prompt.length > 60 ? h.prompt.slice(0, 57) + '...' : h.prompt,
-        description: timeAgo(h.timestamp),
-        icon: 'clock',
-        section: 'recent',
-        action: () => createSession(h.prompt),
-        keywords: [h.prompt]
-      })
-    }
-
     // Templates
     for (const t of templates) {
       items.push({
@@ -217,20 +210,8 @@ export function CommandPalette() {
       })
     }
 
-    // Actions
-    items.push({
-      id: 'action-clear-history',
-      label: 'Clear Prompt History',
-      icon: 'trash',
-      section: 'actions',
-      action: () => {
-        window.api.clearPromptHistory()
-        closeCommandPalette()
-      }
-    })
-
     return items
-  }, [history, templates, gitPresets, sessions, createSession, handleGitAction, closeCommandPalette, selectSession, setViewMode])
+  }, [templates, gitPresets, sessions, createSession, handleGitAction, closeCommandPalette, selectSession, setViewMode])
 
   // ─── Filtering ─────────────────────────────────────────────
 

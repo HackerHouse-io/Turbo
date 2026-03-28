@@ -9,6 +9,7 @@ interface PendingCommit {
 
 interface GitState {
   gitLoading: boolean
+  gitLoadingMessage: string | null
   gitError: string | null
   gitSuccess: string | null
   pendingCommit: PendingCommit | null
@@ -26,6 +27,7 @@ interface GitState {
 
 export const useGitStore = create<GitState>((set) => ({
   gitLoading: false,
+  gitLoadingMessage: null,
   gitError: null,
   gitSuccess: null,
   pendingCommit: null,
@@ -34,70 +36,84 @@ export const useGitStore = create<GitState>((set) => ({
   clearStatus: () => set({ gitError: null, gitSuccess: null }),
 
   stageAll: async (projectPath) => {
-    set({ gitLoading: true, gitError: null, gitSuccess: null })
+    set({ gitLoading: true, gitLoadingMessage: 'Staging...', gitError: null, gitSuccess: null })
     const result = await window.api.gitStageAll(projectPath)
+    if (!result.success) {
+      set({ gitLoading: false, gitLoadingMessage: null, gitError: result.stderr || 'Stage failed' })
+      return result
+    }
+    // git add -A always exits 0 — check what's actually staged
+    const diffResult = await window.api.gitExec({ projectPath, commands: ['git diff --stat --staged'] })
+    const statOutput = diffResult.steps[0]?.stdout?.trim() ?? ''
+    const fileCount = statOutput ? statOutput.split('\n').length - 1 : 0 // last line is summary
     set({
       gitLoading: false,
-      gitSuccess: result.success ? 'Staged all changes' : null,
-      gitError: result.success ? null : result.stderr || 'Stage failed'
+      gitLoadingMessage: null,
+      gitSuccess: fileCount > 0 ? `Staged ${fileCount} file(s)` : 'Nothing to stage — working tree clean'
     })
     return result
   },
 
   commit: async (projectPath, message) => {
-    set({ gitLoading: true, gitError: null, gitSuccess: null })
+    set({ gitLoading: true, gitLoadingMessage: 'Committing...', gitError: null, gitSuccess: null })
     const result = await window.api.gitCommit({ projectPath, message })
-    set({
-      gitLoading: false,
-      gitSuccess: result.success ? 'Committed successfully' : null,
-      gitError: result.success ? null : result.stderr || 'Commit failed'
-    })
+    if (result.success) {
+      set({ gitLoading: false, gitLoadingMessage: null, gitSuccess: 'Committed' })
+    } else {
+      const msg = (result.stderr || '').includes('nothing to commit') ? 'Nothing to commit' : result.stderr || 'Commit failed'
+      set({ gitLoading: false, gitLoadingMessage: null, gitError: msg })
+    }
     return result
   },
 
   push: async (projectPath) => {
-    set({ gitLoading: true, gitError: null, gitSuccess: null })
+    set({ gitLoading: true, gitLoadingMessage: 'Pushing...', gitError: null, gitSuccess: null })
     const result = await window.api.gitPush(projectPath)
-    set({
-      gitLoading: false,
-      gitSuccess: result.success ? 'Pushed successfully' : null,
-      gitError: result.success ? null : result.stderr || 'Push failed'
-    })
+    if (result.success) {
+      const output = (result.stdout || '') + (result.stderr || '')
+      const msg = output.includes('Everything up-to-date') ? 'Already up to date' : 'Pushed to remote'
+      set({ gitLoading: false, gitLoadingMessage: null, gitSuccess: msg })
+    } else {
+      set({ gitLoading: false, gitLoadingMessage: null, gitError: result.stderr || 'Push failed' })
+    }
     return result
   },
 
   pullRebase: async (projectPath) => {
-    set({ gitLoading: true, gitError: null, gitSuccess: null })
+    set({ gitLoading: true, gitLoadingMessage: 'Pulling...', gitError: null, gitSuccess: null })
     const result = await window.api.gitPullRebase(projectPath)
-    set({
-      gitLoading: false,
-      gitSuccess: result.success ? 'Pull & rebase complete' : null,
-      gitError: result.success ? null : result.stderr || 'Pull failed'
-    })
+    if (result.success) {
+      const output = (result.stdout || '') + (result.stderr || '')
+      const msg = output.includes('Already up to date') ? 'Already up to date' : 'Pulled latest changes'
+      set({ gitLoading: false, gitLoadingMessage: null, gitSuccess: msg })
+    } else {
+      set({ gitLoading: false, gitLoadingMessage: null, gitError: result.stderr || 'Pull failed' })
+    }
     return result
   },
 
   generateAIMessage: async (projectPath) => {
-    set({ gitLoading: true, gitError: null, gitSuccess: null })
+    set({ gitLoading: true, gitLoadingMessage: 'Generating commit message...', gitError: null, gitSuccess: null })
     try {
       const result = await window.api.gitAIMessage(projectPath)
-      set({ gitLoading: false })
+      set({ gitLoading: false, gitLoadingMessage: null })
       if (!result.message) {
-        set({ gitError: 'No changes to commit' })
+        set({ gitError: 'Nothing to commit' })
         return null
       }
       return result
     } catch {
-      set({ gitLoading: false, gitError: 'Failed to generate commit message' })
+      set({ gitLoading: false, gitLoadingMessage: null, gitError: 'Failed to generate message' })
       return null
     }
   },
 
   execCommands: async (projectPath, commands) => {
-    set({ gitLoading: true, gitError: null, gitSuccess: null })
+    set({ gitLoading: true, gitLoadingMessage: 'Running...', gitError: null, gitSuccess: null })
     const result = await window.api.gitExec({ projectPath, commands })
     set({
       gitLoading: false,
+      gitLoadingMessage: null,
       gitSuccess: result.success ? 'Commands completed' : null,
       gitError: result.success ? null : result.steps[result.abortedAt ?? 0]?.stderr || 'Command failed'
     })
