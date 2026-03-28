@@ -1,0 +1,75 @@
+import { motion } from 'framer-motion'
+import { useUIStore } from '../../stores/useUIStore'
+import { useSessionStore } from '../../stores/useSessionStore'
+import { XTermRenderer } from './XTermRenderer'
+
+export function TerminalDrawer() {
+  const sessionId = useUIStore(s => s.terminalDrawerSessionId)
+  const closeTerminalDrawer = useUIStore(s => s.closeTerminalDrawer)
+  const session = useSessionStore(s =>
+    sessionId ? s.sessions[sessionId] : undefined
+  )
+
+  if (!sessionId) return null
+
+  return (
+    <div className="fixed inset-0 z-40 flex flex-col">
+      {/* Backdrop (click to close) */}
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="flex-1 bg-black/40"
+        onClick={closeTerminalDrawer}
+      />
+
+      {/* Terminal drawer */}
+      <motion.div
+        initial={{ y: '100%' }}
+        animate={{ y: 0 }}
+        exit={{ y: '100%' }}
+        transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+        className="h-[60vh] bg-turbo-bg border-t border-turbo-border flex flex-col"
+      >
+        {/* Drawer header */}
+        <div className="flex items-center justify-between px-4 py-2 border-b border-turbo-border bg-turbo-surface/50">
+          <div className="flex items-center gap-2">
+            <TerminalIcon />
+            <span className="text-xs font-medium text-turbo-text">
+              {session?.name || 'Terminal'}
+            </span>
+            <span className="text-[10px] text-turbo-text-muted font-mono">
+              {sessionId.slice(0, 8)}
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] text-turbo-text-muted">
+              <kbd className="kbd">Esc</kbd> to close
+            </span>
+            <button
+              onClick={closeTerminalDrawer}
+              className="p-1 rounded hover:bg-turbo-surface-active text-turbo-text-muted transition-colors"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        {/* Terminal content */}
+        <div className="flex-1 overflow-hidden">
+          <XTermRenderer sessionId={sessionId} />
+        </div>
+      </motion.div>
+    </div>
+  )
+}
+
+function TerminalIcon() {
+  return (
+    <svg className="w-4 h-4 text-turbo-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 7.5l3 2.25-3 2.25m4.5 0h3m-9 8.25h13.5A2.25 2.25 0 0021 18V6a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 6v12a2.25 2.25 0 002.25 2.25z" />
+    </svg>
+  )
+}

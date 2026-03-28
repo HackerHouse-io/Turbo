@@ -1,0 +1,83 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+
+  html, body, #root {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    background: #0a0a0f;
+    color: #e4e4ef;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #2a2a3a;
+    border-radius: 3px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #3a3a4f;
+  }
+
+  /* Electron drag region for title bar */
+  .drag-region {
+    -webkit-app-region: drag;
+  }
+  .no-drag {
+    -webkit-app-region: no-drag;
+  }
+
+  /* xterm.js overrides */
+  .xterm {
+    padding: 8px;
+  }
+  .xterm-viewport::-webkit-scrollbar {
+    width: 6px;
+  }
+  .xterm-viewport::-webkit-scrollbar-thumb {
+    background: #2a2a3a;
+    border-radius: 3px;
+  }
+}
+
+@layer components {
+  .card {
+    @apply bg-turbo-surface border border-turbo-border rounded-lg transition-all duration-200;
+  }
+  .card:hover {
+    @apply border-turbo-border-bright bg-turbo-surface-hover;
+  }
+
+  .btn-primary {
+    @apply px-4 py-2 bg-turbo-accent hover:bg-turbo-accent-hover text-white rounded-lg
+           font-medium text-sm transition-colors duration-150 focus:outline-none
+           focus:ring-2 focus:ring-turbo-accent/50;
+  }
+
+  .btn-ghost {
+    @apply px-3 py-1.5 text-turbo-text-dim hover:text-turbo-text hover:bg-turbo-surface-hover
+           rounded-md text-sm transition-colors duration-150 focus:outline-none;
+  }
+
+  .kbd {
+    @apply inline-flex items-center px-1.5 py-0.5 text-xs font-mono
+           bg-turbo-surface-active border border-turbo-border rounded
+           text-turbo-text-dim;
+  }
+}
