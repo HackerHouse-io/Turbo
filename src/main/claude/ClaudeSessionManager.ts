@@ -10,6 +10,10 @@ import type {
   ActivityBlock
 } from '../../shared/types'
 import { COST_PER_INPUT_TOKEN, COST_PER_OUTPUT_TOKEN } from '../../shared/constants'
+import { GitIdentityManager } from '../git/GitIdentityManager'
+import type { SettingsManager } from '../SettingsManager'
+import type { ProjectManager } from '../ProjectManager'
+import type { GitIdentity } from '../../shared/types'
 
 /**
  * ClaudeSessionManager: Core orchestrator for Claude Code CLI sessions.
@@ -28,9 +32,15 @@ export class ClaudeSessionManager extends EventEmitter {
   private sessions = new Map<string, AgentSession>()
   private monitors = new Map<string, OutputMonitor>()
   private ptyManager: PtyManager
+  private settingsManager: SettingsManager
+  private projectManager: ProjectManager
+  private gitIdentity: GitIdentityManager
 
-  constructor() {
+  constructor(settingsManager: SettingsManager, projectManager: ProjectManager) {
     super()
+    this.settingsManager = settingsManager
+    this.projectManager = projectManager
+    this.gitIdentity = new GitIdentityManager()
     this.ptyManager = new PtyManager()
     this.setupPtyListeners()
   }
@@ -91,7 +101,7 @@ export class ClaudeSessionManager extends EventEmitter {
 
     monitor.onAttentionNeeded = (type, message) => {
       const s = this.sessions.get(id)
-      if (s) {
+      if (s && s.status !== 'stopped') {
         s.needsAttention = true
         s.attentionMessage = message
         s.attentionType = type
@@ -110,13 +120,14 @@ export class ClaudeSessionManager extends EventEmitter {
       }
     }
 
-    // Build the command args
+    // Build the command args and env (env is async — resolves git identity)
     const args = this.buildClaudeArgs(payload)
+    const env = await this.buildEnv(payload.projectPath)
 
     // Spawn PTY
     this.ptyManager.spawn(id, 'claude', args, {
       cwd: payload.projectPath,
-      env: this.buildEnv()
+      env
     })
 
     this.emitUpdate(id)
@@ -214,13 +225,16 @@ export class ClaudeSessionManager extends EventEmitter {
     })
 
     this.ptyManager.on('exit', (id: string, code: number) => {
-      const monitor = this.monitors.get(id)
-      if (monitor) {
-        monitor.notifyExit(code)
+      const session = this.sessions.get(id)
+      // Skip monitor notification if session was manually stopped
+      if (session?.status !== 'stopped') {
+        const monitor = this.monitors.get(id)
+        if (monitor) {
+          monitor.notifyExit(code)
+        }
       }
 
-      const session = this.sessions.get(id)
-      if (session) {
+      if (session && !session.completedAt) {
         session.completedAt = Date.now()
       }
     })
@@ -228,6 +242,10 @@ export class ClaudeSessionManager extends EventEmitter {
 
   private buildClaudeArgs(payload: CreateSessionPayload): string[] {
     const args: string[] = []
+
+    if (payload.model) {
+      args.push('--model', payload.model)
+    }
 
     if (payload.permissionMode && payload.permissionMode !== 'default') {
       args.push('--permission-mode', payload.permissionMode)
@@ -245,11 +263,21 @@ export class ClaudeSessionManager extends EventEmitter {
     return args
   }
 
-  private buildEnv(): Record<string, string> {
-    return {
-      // Ensure Claude Code uses non-interactive terminal features appropriately
+  private async buildEnv(projectPath: string): Promise<Record<string, string>> {
+    const env: Record<string, string> = {
       TURBO_MANAGED: '1'
     }
+    const project = this.projectManager.getProjectByPath(projectPath)
+    const globalOverride = this.settingsManager.get('gitIdentityGlobal') as GitIdentity | undefined
+    const resolved = await this.gitIdentity.resolveIdentity(
+      projectPath,
+      project?.gitIdentityOverride,
+      globalOverride
+    )
+    if (resolved.identity) {
+      Object.assign(env, this.gitIdentity.buildGitEnv(resolved.identity))
+    }
+    return env
   }
 
   private updateSessionStatus(id: string, status: AgentStatus, _message?: string): void {

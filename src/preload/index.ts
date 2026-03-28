@@ -10,7 +10,16 @@ import type {
   Project,
   ScannedProject,
   PromptTemplate,
-  PromptHistoryItem
+  PromptHistoryItem,
+  GitIdentity,
+  ResolvedGitIdentity,
+  GitCommandResult,
+  GitWorkflowResult,
+  GitAIMessageResult,
+  GitCommitPayload,
+  GitExecPayload,
+  ClaudeModelInfo,
+  GitPreset
 } from '../shared/types'
 
 /**
@@ -25,6 +34,9 @@ const api = {
 
   stopSession: (sessionId: string): Promise<void> =>
     ipcRenderer.invoke(IPC.SESSION_STOP, sessionId),
+
+  removeSession: (sessionId: string): Promise<void> =>
+    ipcRenderer.invoke(IPC.SESSION_REMOVE, sessionId),
 
   listSessions: (): Promise<AgentSession[]> =>
     ipcRenderer.invoke(IPC.SESSION_LIST),
@@ -59,6 +71,11 @@ const api = {
   scanProjectsDir: (dirPath: string): Promise<ScannedProject[]> =>
     ipcRenderer.invoke(IPC.PROJECTS_SCAN_DIR, dirPath),
 
+  // ─── Claude CLI ───────────────────────────────────────────
+
+  detectModels: (): Promise<ClaudeModelInfo[]> =>
+    ipcRenderer.invoke(IPC.CLAUDE_DETECT_MODELS),
+
   // ─── Settings ─────────────────────────────────────────────
 
   getSetting: (key: string): Promise<unknown> =>
@@ -83,6 +100,57 @@ const api = {
 
   clearPromptHistory: (): Promise<void> =>
     ipcRenderer.invoke(IPC.PROMPT_HISTORY_CLEAR),
+
+  // ─── Git Identity ──────────────────────────────────────────
+
+  detectGlobalGitIdentity: (): Promise<GitIdentity | null> =>
+    ipcRenderer.invoke(IPC.GIT_IDENTITY_DETECT_GLOBAL),
+
+  detectProjectGitIdentity: (projectPath: string): Promise<GitIdentity | null> =>
+    ipcRenderer.invoke(IPC.GIT_IDENTITY_DETECT_PROJECT, projectPath),
+
+  resolveGitIdentity: (projectPath: string): Promise<ResolvedGitIdentity> =>
+    ipcRenderer.invoke(IPC.GIT_IDENTITY_RESOLVE, projectPath),
+
+  setGlobalGitIdentity: (identity: GitIdentity): Promise<void> =>
+    ipcRenderer.invoke(IPC.GIT_IDENTITY_SET_GLOBAL, identity),
+
+  setProjectGitIdentity: (projectId: string, identity: GitIdentity | undefined): Promise<void> =>
+    ipcRenderer.invoke(IPC.GIT_IDENTITY_SET_PROJECT, projectId, identity),
+
+  // ─── Git Operations ────────────────────────────────────────
+
+  gitExec: (payload: GitExecPayload): Promise<GitWorkflowResult> =>
+    ipcRenderer.invoke(IPC.GIT_EXEC, payload),
+
+  gitStageAll: (projectPath: string): Promise<GitCommandResult> =>
+    ipcRenderer.invoke(IPC.GIT_STAGE_ALL, projectPath),
+
+  gitCommit: (payload: GitCommitPayload): Promise<GitCommandResult> =>
+    ipcRenderer.invoke(IPC.GIT_COMMIT, payload),
+
+  gitPush: (projectPath: string): Promise<GitCommandResult> =>
+    ipcRenderer.invoke(IPC.GIT_PUSH, projectPath),
+
+  gitPullRebase: (projectPath: string): Promise<GitCommandResult> =>
+    ipcRenderer.invoke(IPC.GIT_PULL_REBASE, projectPath),
+
+  gitAIMessage: (projectPath: string): Promise<GitAIMessageResult> =>
+    ipcRenderer.invoke(IPC.GIT_AI_MESSAGE, projectPath),
+
+  gitStatus: (projectPath: string): Promise<GitCommandResult> =>
+    ipcRenderer.invoke(IPC.GIT_STATUS, projectPath),
+
+  // ─── Git Presets ───────────────────────────────────────────
+
+  listGitPresets: (): Promise<GitPreset[]> =>
+    ipcRenderer.invoke(IPC.GIT_PRESETS_LIST),
+
+  saveGitPreset: (preset: GitPreset): Promise<GitPreset> =>
+    ipcRenderer.invoke(IPC.GIT_PRESETS_SAVE, preset),
+
+  deleteGitPreset: (presetId: string): Promise<void> =>
+    ipcRenderer.invoke(IPC.GIT_PRESETS_DELETE, presetId),
 
   // ─── Event Subscriptions ──────────────────────────────────
 

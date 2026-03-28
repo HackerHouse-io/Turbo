@@ -79,6 +79,7 @@ export interface Project {
   color: string
   lastOpened: number
   activeAgents: number
+  gitIdentityOverride?: GitIdentity
 }
 
 // ─── CLI Flag Types ─────────────────────────────────────────────
@@ -94,6 +95,12 @@ export interface CreateSessionPayload {
   name?: string
   permissionMode?: PermissionMode
   effort?: EffortLevel
+  model?: string
+}
+
+export interface ClaudeModelInfo {
+  alias: string
+  label: string
 }
 
 // ─── Prompt Vault ──────────────────────────────────────────────
@@ -145,9 +152,64 @@ export interface ScannedProject {
   hasPackageJson: boolean
 }
 
+// ─── Git Identity ─────────────────────────────────────────────
+
+export interface GitIdentity {
+  name: string
+  email: string
+}
+
+export interface ResolvedGitIdentity {
+  identity: GitIdentity | null
+  source: 'project-override' | 'project-gitconfig' | 'global-override' | 'global-gitconfig' | 'none'
+}
+
+// ─── Git Presets ──────────────────────────────────────────────
+
+export interface GitPreset {
+  id: string
+  name: string
+  description: string
+  commands: string[]
+  variables: string[]
+  builtIn: boolean
+  icon: string
+  flow?: 'quick-commit' | 'full-commit-push'
+}
+
+export interface GitCommandResult {
+  success: boolean
+  command: string
+  stdout: string
+  stderr: string
+  exitCode: number
+}
+
+export interface GitWorkflowResult {
+  success: boolean
+  steps: GitCommandResult[]
+  abortedAt?: number
+}
+
+export interface GitAIMessageResult {
+  message: string
+  diffStat: string
+}
+
+export interface GitCommitPayload {
+  projectPath: string
+  message: string
+}
+
+export interface GitExecPayload {
+  projectPath: string
+  commands: string[]
+}
+
 // ─── Settings ─────────────────────────────────────────────────
 
 export interface TurboSettings {
   defaultProjectsDir: string
+  gitIdentityGlobal?: GitIdentity
   [key: string]: unknown
 }

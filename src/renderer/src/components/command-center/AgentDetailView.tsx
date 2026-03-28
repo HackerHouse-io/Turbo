@@ -3,6 +3,7 @@ import { useSessionStore } from '../../stores/useSessionStore'
 import { useUIStore } from '../../stores/useUIStore'
 import { StatusBadge } from '../shared/StatusBadge'
 import { XTermRenderer } from '../terminal/XTermRenderer'
+import { formatElapsed } from '../../lib/format'
 import type { AgentSession } from '../../../../shared/types'
 
 interface AgentDetailViewProps {
@@ -27,7 +28,7 @@ export function AgentDetailView({ sessionId }: AgentDetailViewProps) {
     setViewMode('dashboard')
   }
 
-  const elapsed = getElapsed(session.startedAt, session.completedAt)
+  const elapsed = formatElapsed(session.startedAt, session.completedAt)
   const isActive = session.status === 'active' || session.status === 'starting'
 
   return (
@@ -155,12 +156,3 @@ function FileList({ blocks }: { blocks: AgentSession['activityBlocks'] }) {
   )
 }
 
-function getElapsed(start: number, end?: number): string {
-  const ms = (end || Date.now()) - start
-  const seconds = Math.floor(ms / 1000)
-  if (seconds < 60) return `${seconds}s`
-  const minutes = Math.floor(seconds / 60)
-  if (minutes < 60) return `${minutes}m ${seconds % 60}s`
-  const hours = Math.floor(minutes / 60)
-  return `${hours}h ${minutes % 60}m`
-}

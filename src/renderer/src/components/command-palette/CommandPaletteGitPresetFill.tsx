@@ -1,28 +1,23 @@
 import { useState, useRef, useEffect } from 'react'
-import type { PromptTemplate, CreateSessionPayload, ClaudeModelInfo, EffortLevel } from '../../../../shared/types'
+import type { GitPreset } from '../../../../shared/types'
 import { PaletteIcon } from './PaletteIcon'
-import { ModelEffortSelector } from '../shared/ModelEffortSelector'
 import { camelToTitle } from '../../lib/format'
 
-export type SessionFlags = Pick<CreateSessionPayload, 'permissionMode' | 'effort' | 'model'>
-
-interface TemplateFillProps {
-  template: PromptTemplate
-  models: ClaudeModelInfo[]
-  onSubmit: (prompt: string, flags: SessionFlags) => void
+interface GitPresetFillProps {
+  preset: GitPreset
+  loading: boolean
+  onSubmit: (commands: string[]) => void
   onBack: () => void
 }
 
-export function CommandPaletteTemplateFill({ template, models, onSubmit, onBack }: TemplateFillProps) {
+export function CommandPaletteGitPresetFill({ preset, loading, onSubmit, onBack }: GitPresetFillProps) {
   const [values, setValues] = useState<Record<string, string>>(() => {
     const init: Record<string, string> = {}
-    for (const v of template.variables) {
+    for (const v of preset.variables) {
       init[v] = ''
     }
     return init
   })
-  const [model, setModel] = useState(models[0]?.alias || 'sonnet')
-  const [effort, setEffort] = useState<EffortLevel>(template.effort || 'medium')
   const firstInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -41,15 +36,14 @@ export function CommandPaletteTemplateFill({ template, models, onSubmit, onBack 
   }
 
   const handleSubmit = () => {
-    let prompt = template.template
-    for (const [key, val] of Object.entries(values)) {
-      prompt = prompt.replaceAll(`{{${key}}}`, val || `[${camelToTitle(key)}]`)
-    }
-    onSubmit(prompt, {
-      permissionMode: template.permissionMode,
-      effort,
-      model
+    const commands = preset.commands.map(cmd => {
+      let result = cmd
+      for (const [key, val] of Object.entries(values)) {
+        result = result.replaceAll(`{{${key}}}`, val || `[${camelToTitle(key)}]`)
+      }
+      return result
     })
+    onSubmit(commands)
   }
 
   return (
@@ -64,13 +58,13 @@ export function CommandPaletteTemplateFill({ template, models, onSubmit, onBack 
             <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
           </svg>
         </button>
-        <PaletteIcon icon={template.icon} className="w-4 h-4 text-turbo-accent" />
-        <span className="text-sm font-medium text-turbo-text">{template.name}</span>
+        <PaletteIcon icon={preset.icon} className="w-4 h-4 text-turbo-accent" />
+        <span className="text-sm font-medium text-turbo-text">{preset.name}</span>
       </div>
 
       {/* Variable inputs */}
       <div className="px-4 py-3 space-y-3">
-        {template.variables.map((v, i) => (
+        {preset.variables.map((v, i) => (
           <div key={v}>
             <label className="block text-xs font-medium text-turbo-text-dim mb-1">
               {camelToTitle(v)}
@@ -81,9 +75,10 @@ export function CommandPaletteTemplateFill({ template, models, onSubmit, onBack 
               value={values[v]}
               onChange={e => setValues(prev => ({ ...prev, [v]: e.target.value }))}
               placeholder={`Enter ${camelToTitle(v).toLowerCase()}...`}
+              disabled={loading}
               className="w-full bg-turbo-bg border border-turbo-border rounded-lg px-3 py-2 text-sm
                          text-turbo-text placeholder:text-turbo-text-muted focus:outline-none
-                         focus:border-turbo-accent/50 transition-colors"
+                         focus:border-turbo-accent/50 transition-colors disabled:opacity-50"
             />
           </div>
         ))}
@@ -91,21 +86,17 @@ export function CommandPaletteTemplateFill({ template, models, onSubmit, onBack 
 
       {/* Footer */}
       <div className="flex items-center justify-between px-4 py-3 border-t border-turbo-border">
-        <ModelEffortSelector
-          models={models}
-          selectedModel={model}
-          selectedEffort={effort}
-          onModelChange={setModel}
-          onEffortChange={setEffort}
-        />
+        <p className="text-xs text-turbo-text-muted">{preset.description}</p>
         <div className="flex items-center gap-2">
           <kbd className="kbd text-[10px] h-7 flex items-center px-1.5">{(navigator.platform.includes('Mac') ? '\u2318' : 'Ctrl') + '+\u21B5'}</kbd>
           <button
             onClick={handleSubmit}
+            disabled={loading}
             className="h-7 text-[11px] px-3 rounded-md bg-turbo-accent text-white font-medium
-                       hover:bg-turbo-accent/90 transition-colors"
+                       hover:bg-turbo-accent/90 transition-colors
+                       disabled:opacity-30 disabled:cursor-not-allowed"
           >
-            Launch
+            {loading ? 'Running...' : 'Run'}
           </button>
         </div>
       </div>

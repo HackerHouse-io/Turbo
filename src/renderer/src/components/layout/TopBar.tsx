@@ -1,9 +1,11 @@
-import { useMemo } from 'react'
+import { useState, useMemo } from 'react'
 import { AnimatePresence } from 'framer-motion'
 import { useUIStore } from '../../stores/useUIStore'
 import { useSessionStore } from '../../stores/useSessionStore'
 import { useProjectStore } from '../../stores/useProjectStore'
+import { useGitIdentityStore } from '../../stores/useGitIdentityStore'
 import { ProjectSelector } from '../project/ProjectSelector'
+import { GitIdentitySelector } from '../git/GitIdentitySelector'
 
 export function TopBar() {
   const openCommandPalette = useUIStore(s => s.openCommandPalette)
@@ -15,6 +17,9 @@ export function TopBar() {
   const projects = useProjectStore(s => s.projects)
   const selectedProjectId = useProjectStore(s => s.selectedProjectId)
   const selectedProject = projects.find(p => p.id === selectedProjectId)
+  const currentResolved = useGitIdentityStore(s => s.currentResolved)
+
+  const [gitDropdownOpen, setGitDropdownOpen] = useState(false)
 
   // Count active tasks across all projects for queue badge
   const sessionsRecord = useSessionStore(s => s.sessions)
@@ -25,7 +30,7 @@ export function TopBar() {
   }, [sessionsRecord])
 
   return (
-    <div className="no-drag flex items-center gap-3 px-4 py-2 border-b border-turbo-border bg-turbo-bg/80 backdrop-blur-sm">
+    <div className="no-drag relative z-40 flex items-center gap-3 px-4 py-2 border-b border-turbo-border bg-turbo-bg/80 backdrop-blur-sm">
       {/* Logo */}
       <div className="flex items-center gap-2 mr-2">
         <div className="w-6 h-6 rounded-md bg-turbo-accent flex items-center justify-center">
@@ -75,6 +80,39 @@ export function TopBar() {
         </span>
       </button>
 
+      {/* Git Identity Badge */}
+      {currentResolved && (
+        <div className="relative">
+          <button
+            onClick={() => setGitDropdownOpen(o => !o)}
+            className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg
+                       bg-turbo-surface border border-turbo-border text-xs
+                       hover:border-turbo-border-bright transition-colors cursor-pointer"
+          >
+            <GitBranchIcon />
+            {currentResolved.source !== 'none' && currentResolved.identity ? (
+              <>
+                <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 flex-shrink-0" />
+                <span className="text-turbo-text-dim truncate max-w-[180px]">
+                  {currentResolved.identity.name} &lt;{currentResolved.identity.email}&gt;
+                </span>
+              </>
+            ) : (
+              <>
+                <div className="w-1.5 h-1.5 rounded-full bg-yellow-500 flex-shrink-0" />
+                <span className="text-yellow-400/80">No git identity</span>
+              </>
+            )}
+            <ChevronIcon />
+          </button>
+          <AnimatePresence>
+            {gitDropdownOpen && (
+              <GitIdentitySelector onClose={() => setGitDropdownOpen(false)} />
+            )}
+          </AnimatePresence>
+        </div>
+      )}
+
       {/* Action buttons */}
       <div className="flex items-center gap-2 ml-auto">
         {/* Queue count */}
@@ -111,6 +149,17 @@ function BellIcon() {
   return (
     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
       <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+    </svg>
+  )
+}
+
+function GitBranchIcon() {
+  return (
+    <svg className="w-3.5 h-3.5 text-turbo-text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <circle cx="18" cy="6" r="2.5" />
+      <circle cx="6" cy="6" r="2.5" />
+      <circle cx="6" cy="18" r="2.5" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M6 8.5v7m12-2.5c0 2.5-2 4-6 4h-0" />
     </svg>
   )
 }

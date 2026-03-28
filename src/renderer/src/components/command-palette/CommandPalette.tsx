@@ -3,30 +3,32 @@ import { motion } from 'framer-motion'
 import { useUIStore } from '../../stores/useUIStore'
 import { useSessionStore } from '../../stores/useSessionStore'
 import { useProjectStore } from '../../stores/useProjectStore'
+import { useGitStore } from '../../stores/useGitStore'
 import { useCommandPaletteData } from './useCommandPaletteData'
-import { CommandPaletteTemplateFill } from './CommandPaletteTemplateFill'
+import { CommandPaletteTemplateFill, type SessionFlags } from './CommandPaletteTemplateFill'
+import { CommandPaletteGitConfirm } from './CommandPaletteGitConfirm'
+import { CommandPaletteGitPresetFill } from './CommandPaletteGitPresetFill'
 import { PaletteIcon } from './PaletteIcon'
 import { timeAgo } from '../../lib/format'
-import type { PromptTemplate, CreateSessionPayload } from '../../../../shared/types'
+import type { PromptTemplate, GitPreset } from '../../../../shared/types'
 
 // ─── Types ───────────────────────────────────────────────────
-
-type SessionFlags = Pick<CreateSessionPayload, 'permissionMode' | 'effort'>
 
 interface CommandItem {
   id: string
   label: string
   description?: string
   icon: string
-  section: 'recent' | 'templates' | 'tasks' | 'actions'
+  section: 'recent' | 'templates' | 'git' | 'tasks' | 'actions'
   action: () => void
   keywords?: string[]
 }
 
-const SECTION_ORDER: CommandItem['section'][] = ['recent', 'templates', 'tasks', 'actions']
+const SECTION_ORDER: CommandItem['section'][] = ['recent', 'templates', 'git', 'tasks', 'actions']
 const SECTION_LABELS: Record<CommandItem['section'], string> = {
   recent: 'Recent Prompts',
   templates: 'Templates',
+  git: 'Git Actions',
   tasks: 'Active Tasks',
   actions: 'Actions'
 }
@@ -63,18 +65,21 @@ export function CommandPalette() {
   const [query, setQuery] = useState('')
   const [selectedIndex, setSelectedIndex] = useState(0)
   const [fillTemplate, setFillTemplate] = useState<PromptTemplate | null>(null)
+  const [fillGitPreset, setFillGitPreset] = useState<GitPreset | null>(null)
+  const [gitConfirm, setGitConfirm] = useState<{ message: string; diffStat: string; pushAfter: boolean } | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const closeCommandPalette = useUIStore(s => s.closeCommandPalette)
   const selectSession = useSessionStore(s => s.selectSession)
   const setViewMode = useUIStore(s => s.setViewMode)
   const sessionsRecord = useSessionStore(s => s.sessions)
   const sessions = useMemo(() => Object.values(sessionsRecord), [sessionsRecord])
+  const gitLoading = useGitStore(s => s.gitLoading)
   const selectedProjectPath = useProjectStore(s => {
     const id = s.selectedProjectId
     const proj = id ? s.projects.find(p => p.id === id) : s.projects[0]
     return proj?.path
   })
-  const { templates, history, loading } = useCommandPaletteData()
+  const { templates, history, gitPresets, models, loading } = useCommandPaletteData()
 
   useEffect(() => {
     inputRef.current?.focus()
@@ -88,8 +93,57 @@ export function CommandPalette() {
       projectPath: selectedProjectPath,
       prompt,
       permissionMode: flags?.permissionMode,
-      effort: flags?.effort
+      effort: flags?.effort,
+      model: flags?.model
     })
+    closeCommandPalette()
+  }, [selectedProjectPath, closeCommandPalette])
+
+  // ─── Git action handler ────────────────────────────────────
+
+  const handleGitAction = useCallback(async (preset: GitPreset) => {
+    if (!selectedProjectPath) return
+
+    // Special AI commit flows
+    if (preset.flow === 'quick-commit' || preset.flow === 'full-commit-push') {
+      const pushAfter = preset.flow === 'full-commit-push'
+      const result = await useGitStore.getState().generateAIMessage(selectedProjectPath)
+      if (result) {
+        setGitConfirm({ message: result.message, diffStat: result.diffStat, pushAfter })
+      }
+      return
+    }
+
+    // Custom preset with variables
+    if (preset.variables.length > 0) {
+      setFillGitPreset(preset)
+      return
+    }
+
+    // Direct execution
+    await useGitStore.getState().execCommands(selectedProjectPath, preset.commands)
+    closeCommandPalette()
+  }, [selectedProjectPath, closeCommandPalette])
+
+  // ─── Git confirm handler ───────────────────────────────────
+
+  const handleGitConfirm = useCallback(async (message: string) => {
+    if (!selectedProjectPath || !gitConfirm) return
+
+    const commitResult = await useGitStore.getState().commit(selectedProjectPath, message)
+    if (commitResult.success && gitConfirm.pushAfter) {
+      await useGitStore.getState().push(selectedProjectPath)
+    }
+    setGitConfirm(null)
+    closeCommandPalette()
+  }, [selectedProjectPath, gitConfirm, closeCommandPalette])
+
+  // ─── Git preset fill handler ───────────────────────────────
+
+  const handleGitPresetFill = useCallback(async (commands: string[]) => {
+    if (!selectedProjectPath) return
+    await useGitStore.getState().execCommands(selectedProjectPath, commands)
+    setFillGitPreset(null)
     closeCommandPalette()
   }, [selectedProjectPath, closeCommandPalette])
 
@@ -133,6 +187,19 @@ export function CommandPalette() {
       })
     }
 
+    // Git Actions
+    for (const g of gitPresets) {
+      items.push({
+        id: `git-${g.id}`,
+        label: g.name,
+        description: g.description,
+        icon: g.icon,
+        section: 'git',
+        action: () => handleGitAction(g),
+        keywords: ['git', g.description, ...g.commands]
+      })
+    }
+
     // Active Tasks
     for (const s of sessions) {
       items.push({
@@ -163,7 +230,7 @@ export function CommandPalette() {
     })
 
     return items
-  }, [history, templates, sessions, createSession, closeCommandPalette, selectSession, setViewMode])
+  }, [history, templates, gitPresets, sessions, createSession, handleGitAction, closeCommandPalette, selectSession, setViewMode])
 
   // ─── Filtering ─────────────────────────────────────────────
 
@@ -221,6 +288,38 @@ export function CommandPalette() {
     }
   }
 
+  // ─── Git confirm mode ───────────────────────────────────────
+
+  if (gitConfirm) {
+    return (
+      <PaletteShell onClose={closeCommandPalette}>
+        <CommandPaletteGitConfirm
+          message={gitConfirm.message}
+          diffStat={gitConfirm.diffStat}
+          pushAfter={gitConfirm.pushAfter}
+          loading={gitLoading}
+          onConfirm={handleGitConfirm}
+          onBack={() => setGitConfirm(null)}
+        />
+      </PaletteShell>
+    )
+  }
+
+  // ─── Git preset fill mode ──────────────────────────────────
+
+  if (fillGitPreset) {
+    return (
+      <PaletteShell onClose={closeCommandPalette}>
+        <CommandPaletteGitPresetFill
+          preset={fillGitPreset}
+          loading={gitLoading}
+          onSubmit={handleGitPresetFill}
+          onBack={() => setFillGitPreset(null)}
+        />
+      </PaletteShell>
+    )
+  }
+
   // ─── Template fill mode ────────────────────────────────────
 
   if (fillTemplate) {
@@ -228,6 +327,7 @@ export function CommandPalette() {
       <PaletteShell onClose={closeCommandPalette}>
         <CommandPaletteTemplateFill
           template={fillTemplate}
+          models={models}
           onSubmit={(prompt, flags) => createSession(prompt, flags)}
           onBack={() => setFillTemplate(null)}
         />
@@ -248,7 +348,7 @@ export function CommandPalette() {
           value={query}
           onChange={e => { setQuery(e.target.value); setSelectedIndex(0) }}
           onKeyDown={handleKeyDown}
-          placeholder="Search prompts, templates, tasks..."
+          placeholder="Search prompts, templates, git actions..."
           className="flex-1 bg-transparent text-sm text-turbo-text placeholder:text-turbo-text-muted
                      focus:outline-none"
         />

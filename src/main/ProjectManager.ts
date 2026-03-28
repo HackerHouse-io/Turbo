@@ -1,7 +1,7 @@
 import { v4 as uuid } from 'uuid'
 import { readdirSync, existsSync, readFileSync, writeFileSync } from 'fs'
 import { join, basename } from 'path'
-import type { Project, AddProjectPayload, ScannedProject } from '../shared/types'
+import type { Project, AddProjectPayload, ScannedProject, GitIdentity } from '../shared/types'
 import { PROJECT_COLORS } from '../shared/constants'
 
 /**
@@ -69,6 +69,14 @@ export class ProjectManager {
     const project = this.projects.get(id)
     if (project) {
       project.lastOpened = Date.now()
+      this.save()
+    }
+  }
+
+  setGitIdentityOverride(projectId: string, identity: GitIdentity | undefined): void {
+    const project = this.projects.get(projectId)
+    if (project) {
+      project.gitIdentityOverride = identity
       this.save()
     }
   }

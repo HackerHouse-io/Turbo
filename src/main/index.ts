@@ -4,13 +4,18 @@ import { ClaudeSessionManager } from './claude/ClaudeSessionManager'
 import { ProjectManager } from './ProjectManager'
 import { PromptVaultManager } from './PromptVaultManager'
 import { SettingsManager } from './SettingsManager'
+import { GitIdentityManager } from './git/GitIdentityManager'
+import { GitOpsManager } from './git/GitOpsManager'
+import { GitPresetManager } from './git/GitPresetManager'
 import { registerIpcHandlers } from './ipc/channels'
 
 let mainWindow: BrowserWindow | null = null
-let sessionManager: ClaudeSessionManager
-let projectManager: ProjectManager
-let promptVaultManager: PromptVaultManager
 let settingsManager: SettingsManager
+let projectManager: ProjectManager
+let sessionManager: ClaudeSessionManager
+let promptVaultManager: PromptVaultManager
+let gitOpsManager: GitOpsManager
+let gitPresetManager: GitPresetManager
 
 const isDev = !app.isPackaged
 
@@ -62,14 +67,27 @@ function createWindow(): void {
 }
 
 app.whenReady().then(() => {
-  // Initialize managers
-  sessionManager = new ClaudeSessionManager()
-  projectManager = new ProjectManager(app.getPath('userData'))
-  promptVaultManager = new PromptVaultManager(app.getPath('userData'))
+  // Initialize managers (settings + project first — session manager depends on them)
   settingsManager = new SettingsManager()
+  projectManager = new ProjectManager(app.getPath('userData'))
+  sessionManager = new ClaudeSessionManager(settingsManager, projectManager)
+  promptVaultManager = new PromptVaultManager(app.getPath('userData'))
+
+  const gitIdentityManager = new GitIdentityManager()
+  gitOpsManager = new GitOpsManager(gitIdentityManager)
+  gitPresetManager = new GitPresetManager(app.getPath('userData'))
 
   // Register IPC handlers
-  registerIpcHandlers(sessionManager, projectManager, promptVaultManager, settingsManager, () => mainWindow)
+  registerIpcHandlers({
+    sessionManager,
+    projectManager,
+    promptVaultManager,
+    settingsManager,
+    gitIdentityManager,
+    gitOpsManager,
+    gitPresetManager,
+    getMainWindow: () => mainWindow
+  })
 
   // Create main window
   createWindow()

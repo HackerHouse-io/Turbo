@@ -4,6 +4,7 @@ import { useSessionStore } from '../../stores/useSessionStore'
 import { useUIStore } from '../../stores/useUIStore'
 import { StatusBadge } from '../shared/StatusBadge'
 import { ProgressBar } from '../shared/ProgressBar'
+import { formatElapsed } from '../../lib/format'
 
 interface AgentCardProps {
   session: AgentSession
@@ -29,8 +30,14 @@ export function AgentCard({ session }: AgentCardProps) {
     window.api.stopSession(session.id)
   }
 
-  const elapsed = getElapsedTime(session.startedAt, session.completedAt)
+  const handleRemove = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    window.api.removeSession(session.id)
+  }
+
+  const elapsed = formatElapsed(session.startedAt, session.completedAt)
   const isActive = session.status === 'active' || session.status === 'starting'
+  const isFinished = session.status === 'completed' || session.status === 'stopped' || session.status === 'error'
   const progress = estimateProgress(session)
 
   return (
@@ -96,6 +103,15 @@ export function AgentCard({ session }: AgentCardProps) {
               <StopIcon />
             </button>
           )}
+          {isFinished && (
+            <button
+              onClick={handleRemove}
+              className="p-1 rounded hover:bg-turbo-error/20 text-turbo-text-muted hover:text-turbo-error transition-colors"
+              title="Remove Task"
+            >
+              <DismissIcon />
+            </button>
+          )}
         </div>
       </div>
     </motion.div>
@@ -103,16 +119,6 @@ export function AgentCard({ session }: AgentCardProps) {
 }
 
 // ─── Helpers ────────────────────────────────────────────────────
-
-function getElapsedTime(start: number, end?: number): string {
-  const ms = (end || Date.now()) - start
-  const seconds = Math.floor(ms / 1000)
-  if (seconds < 60) return `${seconds}s`
-  const minutes = Math.floor(seconds / 60)
-  if (minutes < 60) return `${minutes}m ${seconds % 60}s`
-  const hours = Math.floor(minutes / 60)
-  return `${hours}h ${minutes % 60}m`
-}
 
 function estimateProgress(session: AgentSession): number {
   // Rough heuristic based on blocks
@@ -137,6 +143,14 @@ function StopIcon() {
   return (
     <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
       <rect x="6" y="6" width="12" height="12" rx="2" />
+    </svg>
+  )
+}
+
+function DismissIcon() {
+  return (
+    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
     </svg>
   )
 }

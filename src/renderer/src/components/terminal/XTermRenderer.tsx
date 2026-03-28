@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react'
 import { Terminal } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import { WebLinksAddon } from '@xterm/addon-web-links'
+import { getTerminalBuffer } from '../../lib/terminalBuffer'
 import '@xterm/xterm/css/xterm.css'
 
 interface XTermRendererProps {
@@ -56,10 +57,36 @@ export function XTermRenderer({ sessionId }: XTermRendererProps) {
     terminal.loadAddon(webLinksAddon)
 
     terminal.open(containerRef.current)
-    fitAddon.fit()
 
     termRef.current = terminal
     fitRef.current = fitAddon
+
+    // Safe fit helper — FitAddon crashes if container has zero dimensions
+    const safeFit = () => {
+      try {
+        const el = containerRef.current
+        if (el && el.clientWidth > 0 && el.clientHeight > 0) {
+          fitAddon.fit()
+        }
+      } catch {
+        // FitAddon can throw if element is detached
+      }
+    }
+
+    // Defer initial fit to next frame so layout is settled
+    requestAnimationFrame(() => {
+      safeFit()
+
+      // Replay buffered data from before this terminal mounted
+      const buffered = getTerminalBuffer(sessionId)
+      if (buffered) {
+        terminal.write(buffered)
+      }
+
+      // Send initial resize
+      const { cols, rows } = terminal
+      window.api.resizeTerminal(sessionId, cols, rows)
+    })
 
     // Send input to PTY via IPC
     terminal.onData((data) => {
@@ -73,13 +100,9 @@ export function XTermRenderer({ sessionId }: XTermRendererProps) {
       }
     })
 
-    // Send initial resize
-    const { cols, rows } = terminal
-    window.api.resizeTerminal(sessionId, cols, rows)
-
     // Handle resize
     const resizeObserver = new ResizeObserver(() => {
-      fitAddon.fit()
+      safeFit()
       const { cols, rows } = terminal
       window.api.resizeTerminal(sessionId, cols, rows)
     })

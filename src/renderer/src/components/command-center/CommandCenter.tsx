@@ -66,7 +66,7 @@ export function CommandCenter() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.4, ease: 'easeOut' }}
-              className="h-full flex flex-col items-center justify-center text-center"
+              className="h-full flex flex-col items-center justify-center text-center -mt-10"
             >
               <div className="w-16 h-16 rounded-2xl bg-turbo-surface border border-turbo-border
                               flex items-center justify-center mb-6">
@@ -77,9 +77,10 @@ export function CommandCenter() {
               <h2 className="text-lg font-semibold text-turbo-text mb-2">
                 No tasks yet in {selectedProject?.name || 'this project'}
               </h2>
-              <p className="text-sm text-turbo-text-dim mb-4 max-w-sm">
+              <p className="text-sm text-turbo-text-dim mb-2 max-w-sm">
                 What do you want to work on?
               </p>
+              <InlinePrompt />
             </motion.div>
           ) : (
             <motion.div

@@ -8,6 +8,7 @@ export const IPC = {
   SESSION_INPUT: 'session:input',
   SESSION_LIST: 'session:list',
   SESSION_GET: 'session:get',
+  SESSION_REMOVE: 'session:remove',
 
   // Terminal data
   TERMINAL_DATA: 'terminal:data',
@@ -39,12 +40,36 @@ export const IPC = {
   // App
   APP_GET_PATH: 'app:get-path',
 
+  // Claude CLI
+  CLAUDE_DETECT_MODELS: 'claude:detect-models',
+
   // Prompt Vault
   PROMPT_TEMPLATES_LIST: 'prompt:templates:list',
   PROMPT_TEMPLATES_SAVE: 'prompt:templates:save',
   PROMPT_TEMPLATES_DELETE: 'prompt:templates:delete',
   PROMPT_HISTORY_LIST: 'prompt:history:list',
-  PROMPT_HISTORY_CLEAR: 'prompt:history:clear'
+  PROMPT_HISTORY_CLEAR: 'prompt:history:clear',
+
+  // Git Identity
+  GIT_IDENTITY_DETECT_GLOBAL: 'git:identity:detect-global',
+  GIT_IDENTITY_DETECT_PROJECT: 'git:identity:detect-project',
+  GIT_IDENTITY_RESOLVE: 'git:identity:resolve',
+  GIT_IDENTITY_SET_GLOBAL: 'git:identity:set-global',
+  GIT_IDENTITY_SET_PROJECT: 'git:identity:set-project',
+
+  // Git Operations
+  GIT_EXEC: 'git:exec',
+  GIT_STAGE_ALL: 'git:stage-all',
+  GIT_COMMIT: 'git:commit',
+  GIT_PUSH: 'git:push',
+  GIT_PULL_REBASE: 'git:pull-rebase',
+  GIT_AI_MESSAGE: 'git:ai-message',
+  GIT_STATUS: 'git:status',
+
+  // Git Presets
+  GIT_PRESETS_LIST: 'git:presets:list',
+  GIT_PRESETS_SAVE: 'git:presets:save',
+  GIT_PRESETS_DELETE: 'git:presets:delete'
 } as const
 
 export const PROMPT_HISTORY_MAX = 50

@@ -7,24 +7,48 @@ import type {
   AddProjectPayload,
   AgentSession,
   AttentionItem,
-  PromptTemplate
+  PromptTemplate,
+  GitIdentity,
+  GitCommitPayload,
+  GitExecPayload,
+  GitPreset
 } from '../../shared/types'
 import { IPC } from '../../shared/constants'
 import { ClaudeSessionManager } from '../claude/ClaudeSessionManager'
 import { ProjectManager } from '../ProjectManager'
 import { PromptVaultManager } from '../PromptVaultManager'
 import { SettingsManager } from '../SettingsManager'
+import { GitIdentityManager } from '../git/GitIdentityManager'
+import { GitOpsManager } from '../git/GitOpsManager'
+import { GitPresetManager } from '../git/GitPresetManager'
+import { detectModels } from '../claude/ClaudeModelDetector'
+
+interface IpcHandlerOptions {
+  sessionManager: ClaudeSessionManager
+  projectManager: ProjectManager
+  promptVaultManager: PromptVaultManager
+  settingsManager: SettingsManager
+  gitIdentityManager: GitIdentityManager
+  gitOpsManager: GitOpsManager
+  gitPresetManager: GitPresetManager
+  getMainWindow: () => BrowserWindow | null
+}
 
 /**
  * Register all IPC handlers. Called once from main process init.
  */
-export function registerIpcHandlers(
-  sessionManager: ClaudeSessionManager,
-  projectManager: ProjectManager,
-  promptVaultManager: PromptVaultManager,
-  settingsManager: SettingsManager,
-  getMainWindow: () => BrowserWindow | null
-): void {
+export function registerIpcHandlers(opts: IpcHandlerOptions): void {
+  const {
+    sessionManager,
+    projectManager,
+    promptVaultManager,
+    settingsManager,
+    gitIdentityManager,
+    gitOpsManager,
+    gitPresetManager,
+    getMainWindow
+  } = opts
+
   // ─── Session Lifecycle ──────────────────────────────────────
 
   ipcMain.handle(IPC.SESSION_CREATE, async (_e, payload: CreateSessionPayload) => {
@@ -51,6 +75,10 @@ export function registerIpcHandlers(
 
   ipcMain.handle(IPC.SESSION_STOP, async (_e, sessionId: string) => {
     sessionManager.stopSession(sessionId)
+  })
+
+  ipcMain.handle(IPC.SESSION_REMOVE, async (_e, sessionId: string) => {
+    sessionManager.removeSession(sessionId)
   })
 
   ipcMain.handle(IPC.SESSION_LIST, async () => {
@@ -101,6 +129,12 @@ export function registerIpcHandlers(
     return projectManager.scanDirectory(dirPath)
   })
 
+  // ─── Claude CLI ─────────────────────────────────────────────
+
+  ipcMain.handle(IPC.CLAUDE_DETECT_MODELS, async () => {
+    return detectModels()
+  })
+
   // ─── Settings ───────────────────────────────────────────────
 
   ipcMain.handle(IPC.SETTINGS_GET, async (_e, key: string) => {
@@ -131,6 +165,87 @@ export function registerIpcHandlers(
 
   ipcMain.handle(IPC.PROMPT_HISTORY_CLEAR, async () => {
     promptVaultManager.clearHistory()
+  })
+
+  // ─── Git Identity ──────────────────────────────────────────
+
+  ipcMain.handle(IPC.GIT_IDENTITY_DETECT_GLOBAL, async () => {
+    return await gitIdentityManager.detectGlobalIdentity()
+  })
+
+  ipcMain.handle(IPC.GIT_IDENTITY_DETECT_PROJECT, async (_e, projectPath: string) => {
+    return await gitIdentityManager.detectProjectIdentity(projectPath)
+  })
+
+  ipcMain.handle(IPC.GIT_IDENTITY_RESOLVE, async (_e, projectPath: string) => {
+    const project = projectManager.getProjectByPath(projectPath)
+    const globalOverride = settingsManager.get('gitIdentityGlobal') as GitIdentity | undefined
+    return await gitIdentityManager.resolveIdentity(projectPath, project?.gitIdentityOverride, globalOverride)
+  })
+
+  ipcMain.handle(IPC.GIT_IDENTITY_SET_GLOBAL, async (_e, identity: GitIdentity) => {
+    settingsManager.set('gitIdentityGlobal', identity)
+  })
+
+  ipcMain.handle(IPC.GIT_IDENTITY_SET_PROJECT, async (_e, projectId: string, identity: GitIdentity | undefined) => {
+    projectManager.setGitIdentityOverride(projectId, identity)
+  })
+
+  // ─── Git Operations ────────────────────────────────────────
+
+  // Shared helper — resolves identity for a project path
+  async function resolveIdentityFor(projectPath: string) {
+    const project = projectManager.getProjectByPath(projectPath)
+    const globalOverride = settingsManager.get('gitIdentityGlobal') as GitIdentity | undefined
+    const resolved = await gitIdentityManager.resolveIdentity(projectPath, project?.gitIdentityOverride, globalOverride)
+    return resolved.identity
+  }
+
+  ipcMain.handle(IPC.GIT_EXEC, async (_e, payload: GitExecPayload) => {
+    const identity = await resolveIdentityFor(payload.projectPath)
+    return gitOpsManager.runCommands(payload.projectPath, payload.commands, identity)
+  })
+
+  ipcMain.handle(IPC.GIT_STAGE_ALL, async (_e, projectPath: string) => {
+    return gitOpsManager.stageAll(projectPath)
+  })
+
+  ipcMain.handle(IPC.GIT_COMMIT, async (_e, payload: GitCommitPayload) => {
+    const identity = await resolveIdentityFor(payload.projectPath)
+    return gitOpsManager.commit(payload.projectPath, payload.message, identity)
+  })
+
+  ipcMain.handle(IPC.GIT_PUSH, async (_e, projectPath: string) => {
+    const identity = await resolveIdentityFor(projectPath)
+    return gitOpsManager.push(projectPath, identity)
+  })
+
+  ipcMain.handle(IPC.GIT_PULL_REBASE, async (_e, projectPath: string) => {
+    const identity = await resolveIdentityFor(projectPath)
+    return gitOpsManager.pullRebase(projectPath, identity)
+  })
+
+  ipcMain.handle(IPC.GIT_AI_MESSAGE, async (_e, projectPath: string) => {
+    const identity = await resolveIdentityFor(projectPath)
+    return gitOpsManager.generateAICommitMessage(projectPath, identity)
+  })
+
+  ipcMain.handle(IPC.GIT_STATUS, async (_e, projectPath: string) => {
+    return gitOpsManager.getStatus(projectPath)
+  })
+
+  // ─── Git Presets ───────────────────────────────────────────
+
+  ipcMain.handle(IPC.GIT_PRESETS_LIST, async () => {
+    return gitPresetManager.listPresets()
+  })
+
+  ipcMain.handle(IPC.GIT_PRESETS_SAVE, async (_e, preset: GitPreset) => {
+    return gitPresetManager.savePreset(preset)
+  })
+
+  ipcMain.handle(IPC.GIT_PRESETS_DELETE, async (_e, presetId: string) => {
+    gitPresetManager.deletePreset(presetId)
   })
 
   // ─── Forward events to renderer ────────────────────────────
