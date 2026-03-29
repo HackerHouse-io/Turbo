@@ -1,6 +1,5 @@
 import { motion } from 'framer-motion'
 import { InlinePrompt } from '../command-center/InlinePrompt'
-import { GitOverviewCard } from './GitOverviewCard'
 import { SessionSummaryCard } from './SessionSummaryCard'
 import { QuickActionsCard } from './QuickActionsCard'
 import { RecentCommitsCard } from './RecentCommitsCard'
@@ -23,7 +22,7 @@ export function NerveCenter() {
   const selectedProject = projects.find(p => p.id === selectedProjectId)
   const projectPath = selectedProject?.path
 
-  const { git, commits, loading, error, refresh } = useNerveCenterData(projectPath)
+  const { git, commits, loading, refresh } = useNerveCenterData(projectPath)
 
   return (
     <div className="h-full overflow-y-auto px-6 py-4">
@@ -54,17 +53,14 @@ export function NerveCenter() {
 
         {/* Row 1: 3-column grid */}
         <motion.div variants={fadeUp} className="w-full grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
-          <GitOverviewCard git={git} loading={loading} error={error} onRefresh={refresh} />
+          <RoutinesCard />
           <SessionSummaryCard projectPath={projectPath} />
           <QuickActionsCard projectPath={projectPath ?? ''} branch={git?.branch ?? null} onGitRefresh={refresh} />
         </motion.div>
 
-        {/* Row 2: Recent Commits + Routines */}
-        <motion.div variants={fadeUp} className="w-full grid grid-cols-1 md:grid-cols-3 gap-3 mb-6">
-          <div className="md:col-span-2">
-            <RecentCommitsCard commits={commits} loading={loading} />
-          </div>
-          <RoutinesCard />
+        {/* Row 2: Recent Commits */}
+        <motion.div variants={fadeUp} className="w-full mb-6">
+          <RecentCommitsCard commits={commits} loading={loading} />
         </motion.div>
 
         {/* Footer hint */}
