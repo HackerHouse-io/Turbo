@@ -26,9 +26,30 @@ export function AgentCard({ session }: AgentCardProps) {
     openTerminalDrawer(session.id)
   }
 
+  const [showStopConfirm, setShowStopConfirm] = useState(false)
+
   const handleStop = (e: React.MouseEvent) => {
     e.stopPropagation()
+    const skipConfirm = localStorage.getItem('turbo:skipStopConfirm') === 'true'
+    if (skipConfirm) {
+      window.api.stopSession(session.id)
+    } else {
+      setShowStopConfirm(true)
+    }
+  }
+
+  const confirmStop = (e: React.MouseEvent, dontAskAgain: boolean) => {
+    e.stopPropagation()
+    if (dontAskAgain) {
+      localStorage.setItem('turbo:skipStopConfirm', 'true')
+    }
     window.api.stopSession(session.id)
+    setShowStopConfirm(false)
+  }
+
+  const cancelStop = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    setShowStopConfirm(false)
   }
 
   const handleRemove = (e: React.MouseEvent) => {
@@ -38,6 +59,7 @@ export function AgentCard({ session }: AgentCardProps) {
 
   const elapsed = formatElapsed(session.startedAt, session.completedAt)
   const isActive = session.status === 'active' || session.status === 'starting'
+  const isRunning = isActive || session.status === 'waiting_for_input' || session.status === 'paused'
   const isFinished = session.status === 'completed' || session.status === 'stopped' || session.status === 'error'
 
   const progress = useTimedProgress(session)
@@ -101,7 +123,7 @@ export function AgentCard({ session }: AgentCardProps) {
           >
             <TerminalIcon />
           </button>
-          {isActive && (
+          {isRunning && (
             <button
               onClick={handleStop}
               className="p-1 rounded hover:bg-turbo-error/20 text-turbo-error transition-colors"
@@ -121,6 +143,9 @@ export function AgentCard({ session }: AgentCardProps) {
           )}
         </div>
       </div>
+
+      {/* Stop confirmation dialog */}
+      {showStopConfirm && <StopConfirmDialog onConfirm={confirmStop} onCancel={cancelStop} />}
     </motion.div>
   )
 }
@@ -241,5 +266,52 @@ function DismissIcon() {
     <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
       <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
     </svg>
+  )
+}
+
+function StopConfirmDialog({
+  onConfirm,
+  onCancel
+}: {
+  onConfirm: (e: React.MouseEvent, dontAskAgain: boolean) => void
+  onCancel: (e: React.MouseEvent) => void
+}) {
+  const [dontAsk, setDontAsk] = useState(false)
+
+  return (
+    <div
+      className="absolute inset-0 z-10 flex items-center justify-center bg-turbo-bg/90 backdrop-blur-sm rounded-xl"
+      onClick={onCancel}
+    >
+      <div className="text-center px-4" onClick={e => e.stopPropagation()}>
+        <p className="text-xs font-medium text-turbo-text mb-3">Stop this task?</p>
+        <div className="flex items-center justify-center gap-2 mb-3">
+          <button
+            onClick={onCancel}
+            className="px-3 py-1.5 text-xs rounded-lg bg-turbo-surface-active hover:bg-turbo-surface-hover text-turbo-text-dim transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={(e) => onConfirm(e, dontAsk)}
+            className="px-3 py-1.5 text-xs rounded-lg bg-turbo-error/20 hover:bg-turbo-error/30 text-turbo-error font-medium transition-colors"
+          >
+            Stop
+          </button>
+        </div>
+        <label
+          className="flex items-center justify-center gap-1.5 cursor-pointer"
+          onClick={e => e.stopPropagation()}
+        >
+          <input
+            type="checkbox"
+            checked={dontAsk}
+            onChange={e => setDontAsk(e.target.checked)}
+            className="w-3 h-3 rounded border-turbo-border accent-turbo-accent"
+          />
+          <span className="text-[10px] text-turbo-text-muted">Don't ask again</span>
+        </label>
+      </div>
+    </div>
   )
 }

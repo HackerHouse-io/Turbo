@@ -29,6 +29,7 @@ export function AgentDetailView({ sessionId }: AgentDetailViewProps) {
 
   const elapsed = formatElapsed(session.startedAt, session.completedAt)
   const isActive = session.status === 'active' || session.status === 'starting'
+  const isRunning = isActive || session.status === 'waiting_for_input' || session.status === 'paused'
 
   return (
     <motion.div
@@ -65,7 +66,7 @@ export function AgentDetailView({ sessionId }: AgentDetailViewProps) {
         </div>
 
         <div className="flex items-center gap-2">
-          {isActive && (
+          {isRunning && (
             <button
               onClick={() => window.api.stopSession(sessionId)}
               className="btn-ghost text-xs text-turbo-error hover:bg-turbo-error/10"
