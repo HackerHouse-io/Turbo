@@ -8,23 +8,14 @@ export function TerminalDrawer() {
   const target = useUIStore(s => s.terminalDrawerTarget)
   const closeTerminalDrawer = useUIStore(s => s.closeTerminalDrawer)
 
-  const isPlain = target?.type === 'plain'
-  const terminalId = target
-    ? target.type === 'session' ? target.sessionId : target.terminalId
-    : null
+  // Drawer only handles session terminals now (workspace handles plain terminals)
+  const terminalId = target?.type === 'session' ? target.sessionId : null
 
   const session = useSessionStore(s =>
     target?.type === 'session' ? s.sessions[target.sessionId] : undefined
   )
 
   if (!terminalId) return null
-
-  const handleKill = async () => {
-    if (isPlain) {
-      await window.api.killPlainTerminal(terminalId)
-    }
-    closeTerminalDrawer()
-  }
 
   return (
     <div className="fixed inset-0 z-40 flex flex-col">
@@ -50,28 +41,13 @@ export function TerminalDrawer() {
           <div className="flex items-center gap-2">
             <PaletteIcon icon="terminal" className="w-4 h-4 text-turbo-accent" />
             <span className="text-xs font-medium text-turbo-text">
-              {isPlain ? 'Terminal' : (session?.name || 'Terminal')}
+              {session?.name || 'Terminal'}
             </span>
-            {isPlain ? (
-              <span className="text-[10px] px-1.5 py-0.5 rounded bg-turbo-surface-active text-turbo-text-muted font-mono">
-                shell
-              </span>
-            ) : (
-              <span className="text-[10px] text-turbo-text-muted font-mono">
-                {terminalId.slice(0, 8)}
-              </span>
-            )}
+            <span className="text-[10px] text-turbo-text-muted font-mono">
+              {terminalId.slice(0, 8)}
+            </span>
           </div>
           <div className="flex items-center gap-2">
-            {isPlain && (
-              <button
-                onClick={handleKill}
-                className="p-1 rounded hover:bg-red-500/20 text-turbo-text-muted hover:text-red-400 transition-colors"
-                title="Kill terminal"
-              >
-                <PaletteIcon icon="trash" className="w-4 h-4" />
-              </button>
-            )}
             <span className="text-[10px] text-turbo-text-muted">
               <kbd className="kbd">Esc</kbd> to close
             </span>
@@ -88,7 +64,7 @@ export function TerminalDrawer() {
 
         {/* Terminal content */}
         <div className="flex-1 overflow-hidden">
-          <XTermRenderer terminalId={terminalId} mode={isPlain ? 'plain' : 'session'} />
+          <XTermRenderer terminalId={terminalId} mode="session" />
         </div>
       </motion.div>
     </div>

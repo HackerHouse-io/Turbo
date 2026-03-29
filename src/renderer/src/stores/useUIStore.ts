@@ -47,6 +47,11 @@ interface UIState {
   planOverlayOpen: boolean
   openPlanOverlay: () => void
   closePlanOverlay: () => void
+
+  // Terminal workspace
+  terminalWorkspaceOpen: boolean
+  openTerminalWorkspace: () => void
+  closeTerminalWorkspace: () => void
 }
 
 export const useUIStore = create<UIState>((set) => ({
@@ -86,5 +91,9 @@ export const useUIStore = create<UIState>((set) => ({
 
   planOverlayOpen: false,
   openPlanOverlay: () => set({ planOverlayOpen: true }),
-  closePlanOverlay: () => set({ planOverlayOpen: false })
+  closePlanOverlay: () => set({ planOverlayOpen: false }),
+
+  terminalWorkspaceOpen: false,
+  openTerminalWorkspace: () => set({ terminalWorkspaceOpen: true }),
+  closeTerminalWorkspace: () => set({ terminalWorkspaceOpen: false })
 }))

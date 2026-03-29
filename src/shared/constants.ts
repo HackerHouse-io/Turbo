@@ -98,7 +98,10 @@ export const IPC = {
   PLAIN_TERMINAL_INPUT: 'plain-terminal:input',
   PLAIN_TERMINAL_RESIZE: 'plain-terminal:resize',
   PLAIN_TERMINAL_DATA: 'plain-terminal:data',
-  PLAIN_TERMINAL_EXIT: 'plain-terminal:exit'
+  PLAIN_TERMINAL_EXIT: 'plain-terminal:exit',
+  PLAIN_TERMINAL_LIST: 'plain-terminal:list',
+  PLAIN_TERMINAL_CREATED: 'plain-terminal:created',
+  PLAIN_TERMINAL_REMOVED: 'plain-terminal:removed'
 } as const
 
 export const PROMPT_HISTORY_MAX = 50

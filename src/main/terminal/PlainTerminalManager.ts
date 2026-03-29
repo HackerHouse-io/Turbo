@@ -1,22 +1,24 @@
 import { EventEmitter } from 'events'
 import { v4 as uuid } from 'uuid'
 import { PtyManager } from '../pty/PtyManager'
-import type { PlainTerminal } from '../../shared/types'
+import type { PlainTerminal, PlainTerminalType } from '../../shared/types'
 
 /**
- * PlainTerminalManager: Manages plain shell terminals (not tied to Claude sessions).
+ * PlainTerminalManager: Manages plain shell and claude terminals (not tied to Claude sessions).
  *
  * Events:
  * - 'terminal-data' (id: string, data: string) — buffered output
  * - 'terminal-exit' (id: string, code: number) — process exited
+ * - 'terminal-created' (terminal: PlainTerminal) — new terminal registered
+ * - 'terminal-removed' (terminalId: string) — terminal removed (killed or exited)
  */
 export class PlainTerminalManager extends EventEmitter {
   private pty = new PtyManager()
   private terminals = new Map<string, PlainTerminal>()
-  /** Reverse lookup: projectPath → terminal id (one terminal per project) */
-  private byProject = new Map<string, string>()
   /** Tracks which terminals have had their PTY spawned (lazy spawn on first resize) */
   private spawned = new Set<string>()
+  /** Pending env vars for terminals that haven't been spawned yet (e.g. claude git env) */
+  private pendingEnv = new Map<string, Record<string, string>>()
 
   constructor() {
     super()
@@ -28,39 +30,38 @@ export class PlainTerminalManager extends EventEmitter {
     this.pty.on('exit', (id: string, code: number) => {
       const terminal = this.terminals.get(id)
       if (terminal) {
-        this.byProject.delete(terminal.projectPath)
         this.terminals.delete(id)
+        this.emit('terminal-removed', id)
       }
       this.spawned.delete(id)
+      this.pendingEnv.delete(id)
       this.emit('terminal-exit', id, code)
     })
   }
 
   /**
-   * Create a plain shell terminal for the given project path.
-   * Returns existing terminal if one is already open for that path.
+   * Create a plain terminal for the given project path.
+   * No one-per-project constraint — multiple terminals per project allowed (max 4 enforced by caller).
    */
-  create(projectPath: string): PlainTerminal {
-    const existingId = this.byProject.get(projectPath)
-    if (existingId) {
-      const existing = this.terminals.get(existingId)
-      if (existing) return existing
-    }
-
+  create(projectPath: string, type: PlainTerminalType, env?: Record<string, string>): PlainTerminal {
     const id = `plain-${uuid()}`
-    const shell = process.env.SHELL || '/bin/zsh'
+    const shell = type === 'claude' ? 'claude' : (process.env.SHELL || '/bin/zsh')
 
-    // Don't spawn PTY yet — wait for first resize so shell starts at correct dimensions
     const terminal: PlainTerminal = {
       id,
+      type,
       projectPath,
       shell,
       createdAt: Date.now()
     }
 
     this.terminals.set(id, terminal)
-    this.byProject.set(projectPath, id)
 
+    if (env) {
+      this.pendingEnv.set(id, env)
+    }
+
+    this.emit('terminal-created', terminal)
     return terminal
   }
 
@@ -74,8 +75,15 @@ export class PlainTerminalManager extends EventEmitter {
       // First resize — spawn PTY at the correct dimensions
       const terminal = this.terminals.get(id)
       if (terminal) {
-        this.pty.spawn(id, terminal.shell, [], { cwd: terminal.projectPath, cols, rows })
+        const env = this.pendingEnv.get(id)
+        this.pty.spawn(id, terminal.shell, [], {
+          cwd: terminal.projectPath,
+          cols,
+          rows,
+          ...(env ? { env: { ...process.env, ...env } } : {})
+        })
         this.spawned.add(id)
+        this.pendingEnv.delete(id)
       }
       return
     }
@@ -85,17 +93,30 @@ export class PlainTerminalManager extends EventEmitter {
   kill(id: string): void {
     const terminal = this.terminals.get(id)
     if (terminal) {
-      this.byProject.delete(terminal.projectPath)
       this.terminals.delete(id)
+      this.emit('terminal-removed', id)
     }
     this.spawned.delete(id)
+    this.pendingEnv.delete(id)
     this.pty.kill(id)
+  }
+
+  list(): PlainTerminal[] {
+    return Array.from(this.terminals.values())
+  }
+
+  countByProject(projectPath: string): number {
+    let count = 0
+    for (const t of this.terminals.values()) {
+      if (t.projectPath === projectPath) count++
+    }
+    return count
   }
 
   dispose(): void {
     this.pty.killAll()
     this.terminals.clear()
-    this.byProject.clear()
     this.spawned.clear()
+    this.pendingEnv.clear()
   }
 }

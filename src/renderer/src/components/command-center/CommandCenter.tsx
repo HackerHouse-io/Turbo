@@ -9,6 +9,8 @@ import { RoutineProgressBanner } from './RoutineProgressBanner'
 import { useSessionStore } from '../../stores/useSessionStore'
 import { useProjectStore } from '../../stores/useProjectStore'
 import { useRoutineStore } from '../../stores/useRoutineStore'
+import { useTerminalStore } from '../../stores/useTerminalStore'
+import { WorkspaceCard } from './TerminalCard'
 
 export function CommandCenter() {
   const sessionsRecord = useSessionStore(s => s.sessions)
@@ -48,7 +50,15 @@ export function CommandCenter() {
     return projectFiltered.filter(r => r.status !== 'completed')
   }, [routineExecutions, selectedProject])
 
-  const isEmpty = sessions.length === 0 && activeRoutines.length === 0
+  // Filter terminals by selected project
+  const allTerminals = useTerminalStore(s => s.terminals)
+  const terminals = useMemo(() => {
+    const all = Object.values(allTerminals)
+    if (!selectedProject) return all
+    return all.filter(t => t.projectPath === selectedProject.path)
+  }, [allTerminals, selectedProject])
+
+  const isEmpty = sessions.length === 0 && activeRoutines.length === 0 && terminals.length === 0
   const noProjects = projects.length === 0
 
   // First launch — no projects added yet
@@ -126,6 +136,13 @@ export function CommandCenter() {
               {completed.map(s => (
                 <AgentCard key={s.id} session={s} />
               ))}
+            </Section>
+          )}
+
+          {/* Terminals */}
+          {terminals.length > 0 && (
+            <Section title="Terminals" count={terminals.length} variant="default">
+              <WorkspaceCard terminalCount={terminals.length} terminalIds={terminals.map(t => t.id)} />
             </Section>
           )}
         </motion.div>

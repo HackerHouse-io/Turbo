@@ -1,4 +1,5 @@
 import { ipcMain, BrowserWindow, dialog } from 'electron'
+import { EventEmitter } from 'events'
 import { basename } from 'path'
 import type {
   CreateSessionPayload,
@@ -15,7 +16,9 @@ import type {
   StartRoutinePayload,
   RoutineExecution,
   Routine,
-  PlanSavePayload
+  PlanSavePayload,
+  CreatePlainTerminalPayload,
+  PlainTerminal
 } from '../../shared/types'
 import { IPC } from '../../shared/constants'
 import { ClaudeSessionManager } from '../claude/ClaudeSessionManager'
@@ -334,8 +337,23 @@ export function registerIpcHandlers(opts: IpcHandlerOptions): void {
 
   // ─── Plain Terminal ──────────────────────────────────────────
 
-  ipcMain.handle(IPC.PLAIN_TERMINAL_CREATE, async (_e, payload: { projectPath: string }) => {
-    return plainTerminalManager.create(payload.projectPath)
+  ipcMain.handle(IPC.PLAIN_TERMINAL_CREATE, async (_e, payload: CreatePlainTerminalPayload) => {
+    let env: Record<string, string> | undefined
+    if (payload.type === 'claude') {
+      const project = projectManager.getProjectByPath(payload.projectPath)
+      const globalOverride = settingsManager.get('gitIdentityGlobal') as GitIdentity | undefined
+      const resolved = await gitIdentityManager.resolveIdentity(
+        payload.projectPath, project?.gitIdentityOverride, globalOverride
+      )
+      if (resolved.identity) {
+        env = gitIdentityManager.buildGitEnv(resolved.identity)
+      }
+    }
+    return plainTerminalManager.create(payload.projectPath, payload.type, env)
+  })
+
+  ipcMain.handle(IPC.PLAIN_TERMINAL_LIST, async () => {
+    return plainTerminalManager.list()
   })
 
   ipcMain.handle(IPC.PLAIN_TERMINAL_KILL, async (_e, terminalId: string) => {
@@ -352,52 +370,22 @@ export function registerIpcHandlers(opts: IpcHandlerOptions): void {
 
   // ─── Forward events to renderer ────────────────────────────
 
-  sessionManager.on('session-updated', (session: AgentSession) => {
-    const win = getMainWindow()
-    if (win && !win.isDestroyed()) {
-      win.webContents.send(IPC.SESSION_UPDATED, session)
-    }
-  })
+  function forward(emitter: EventEmitter, event: string, channel: string): void {
+    emitter.on(event, (...args: unknown[]) => {
+      const win = getMainWindow()
+      if (win && !win.isDestroyed()) {
+        win.webContents.send(channel, ...args)
+      }
+    })
+  }
 
-  sessionManager.on('terminal-data', (sessionId: string, data: string) => {
-    const win = getMainWindow()
-    if (win && !win.isDestroyed()) {
-      win.webContents.send(IPC.TERMINAL_DATA, sessionId, data)
-    }
-  })
-
-  sessionManager.on('attention-needed', (item: AttentionItem) => {
-    const win = getMainWindow()
-    if (win && !win.isDestroyed()) {
-      win.webContents.send(IPC.ATTENTION_NEW, item)
-    }
-  })
-
-  sessionManager.on('session-removed', (sessionId: string) => {
-    const win = getMainWindow()
-    if (win && !win.isDestroyed()) {
-      win.webContents.send(IPC.SESSION_REMOVED, sessionId)
-    }
-  })
-
-  routineExecutor.on('routine-updated', (execution: RoutineExecution) => {
-    const win = getMainWindow()
-    if (win && !win.isDestroyed()) {
-      win.webContents.send(IPC.ROUTINE_UPDATED, execution)
-    }
-  })
-
-  plainTerminalManager.on('terminal-data', (terminalId: string, data: string) => {
-    const win = getMainWindow()
-    if (win && !win.isDestroyed()) {
-      win.webContents.send(IPC.PLAIN_TERMINAL_DATA, terminalId, data)
-    }
-  })
-
-  plainTerminalManager.on('terminal-exit', (terminalId: string, code: number) => {
-    const win = getMainWindow()
-    if (win && !win.isDestroyed()) {
-      win.webContents.send(IPC.PLAIN_TERMINAL_EXIT, terminalId, code)
-    }
-  })
+  forward(sessionManager, 'session-updated', IPC.SESSION_UPDATED)
+  forward(sessionManager, 'terminal-data', IPC.TERMINAL_DATA)
+  forward(sessionManager, 'attention-needed', IPC.ATTENTION_NEW)
+  forward(sessionManager, 'session-removed', IPC.SESSION_REMOVED)
+  forward(routineExecutor, 'routine-updated', IPC.ROUTINE_UPDATED)
+  forward(plainTerminalManager, 'terminal-data', IPC.PLAIN_TERMINAL_DATA)
+  forward(plainTerminalManager, 'terminal-exit', IPC.PLAIN_TERMINAL_EXIT)
+  forward(plainTerminalManager, 'terminal-created', IPC.PLAIN_TERMINAL_CREATED)
+  forward(plainTerminalManager, 'terminal-removed', IPC.PLAIN_TERMINAL_REMOVED)
 }

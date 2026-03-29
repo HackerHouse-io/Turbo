@@ -1,8 +1,9 @@
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback } from 'react'
 import type { Routine } from '../../../../shared/types'
 import { PaletteIcon } from '../command-palette/PaletteIcon'
 import { useUIStore } from '../../stores/useUIStore'
 import { useRoutineStore } from '../../stores/useRoutineStore'
+import { useConfirmAction } from '../../hooks/useConfirmAction'
 
 interface RoutineDetailOverlayProps {
   routine: Routine
@@ -14,14 +15,6 @@ export function RoutineDetailOverlay({ routine }: RoutineDetailOverlayProps) {
   const openCommandPaletteWithRoutine = useUIStore(s => s.openCommandPaletteWithRoutine)
   const deleteRoutine = useRoutineStore(s => s.deleteRoutine)
   const [expandedSteps, setExpandedSteps] = useState<Set<number>>(new Set())
-  const [confirmDelete, setConfirmDelete] = useState(false)
-
-  // Auto-reset delete confirmation after 3s
-  useEffect(() => {
-    if (!confirmDelete) return
-    const t = setTimeout(() => setConfirmDelete(false), 3000)
-    return () => clearTimeout(t)
-  }, [confirmDelete])
 
   const toggleStep = useCallback((index: number) => {
     setExpandedSteps(prev => {
@@ -47,14 +40,12 @@ export function RoutineDetailOverlay({ routine }: RoutineDetailOverlayProps) {
     openRoutineEditor(routine, 'duplicate')
   }, [routine, closeRoutineDetail, openRoutineEditor])
 
-  const handleDelete = useCallback(async () => {
-    if (!confirmDelete) {
-      setConfirmDelete(true)
-      return
-    }
-    await deleteRoutine(routine.id)
-    closeRoutineDetail()
-  }, [confirmDelete, deleteRoutine, routine.id, closeRoutineDetail])
+  const { armed: confirmDelete, trigger: handleDelete } = useConfirmAction(
+    useCallback(async () => {
+      await deleteRoutine(routine.id)
+      closeRoutineDetail()
+    }, [deleteRoutine, routine.id, closeRoutineDetail])
+  )
 
   return (
     <div className="fixed inset-0 z-40 flex items-center justify-center">

@@ -73,11 +73,19 @@ export interface AttentionItem {
 
 // ─── Plain Terminal ─────────────────────────────────────────────
 
+export type PlainTerminalType = 'shell' | 'claude'
+
 export interface PlainTerminal {
   id: string
+  type: PlainTerminalType
   projectPath: string
   shell: string
   createdAt: number
+}
+
+export interface CreatePlainTerminalPayload {
+  projectPath: string
+  type: PlainTerminalType
 }
 
 // ─── Projects ───────────────────────────────────────────────────

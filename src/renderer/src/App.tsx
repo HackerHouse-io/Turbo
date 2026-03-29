@@ -4,6 +4,7 @@ import { useSessionStore } from './stores/useSessionStore'
 import { useProjectStore } from './stores/useProjectStore'
 import { useGitIdentityStore } from './stores/useGitIdentityStore'
 import { useRoutineStore } from './stores/useRoutineStore'
+import { useTerminalStore } from './stores/useTerminalStore'
 import { appendTerminalData, clearTerminalBuffer } from './lib/terminalBuffer'
 
 export default function App() {
@@ -34,6 +35,14 @@ export default function App() {
       clearTerminalBuffer(terminalId)
     })
 
+    const unsubPlainTerminalCreated = window.api.onPlainTerminalCreated((terminal) => {
+      useTerminalStore.getState().addTerminal(terminal)
+    })
+
+    const unsubPlainTerminalRemoved = window.api.onPlainTerminalRemoved((terminalId) => {
+      useTerminalStore.getState().removeTerminal(terminalId)
+    })
+
     const unsubSession = window.api.onSessionUpdated((session) => {
       updateSession(session)
       // Refresh projects to update activeAgents counts
@@ -57,6 +66,10 @@ export default function App() {
       useSessionStore.getState().setSessions(sessions)
     })
 
+    window.api.listPlainTerminals().then((terminals) => {
+      useTerminalStore.getState().setTerminals(terminals)
+    })
+
     window.api.listRoutineExecutions().then((executions) => {
       useRoutineStore.getState().setExecutions(executions)
     })
@@ -67,6 +80,8 @@ export default function App() {
       unsubTerminal()
       unsubPlainTerminal()
       unsubPlainTerminalExit()
+      unsubPlainTerminalCreated()
+      unsubPlainTerminalRemoved()
       unsubSession()
       unsubAttention()
       unsubRemoved()

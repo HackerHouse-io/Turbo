@@ -283,11 +283,39 @@ export function CommandPalette() {
       section: 'actions',
       action: async () => {
         if (!selectedProjectPath) return
-        const terminal = await window.api.createPlainTerminal(selectedProjectPath)
+        await window.api.createPlainTerminal({ projectPath: selectedProjectPath, type: 'shell' })
         closeCommandPalette()
-        useUIStore.getState().openPlainTerminalDrawer(terminal.id)
+        useUIStore.getState().openTerminalWorkspace()
       },
       keywords: ['terminal', 'shell', 'bash', 'zsh', 'console']
+    })
+
+    items.push({
+      id: 'action-open-claude',
+      label: 'Open Claude Code',
+      description: 'Interactive Claude session in the current project',
+      icon: 'bolt',
+      section: 'actions',
+      action: async () => {
+        if (!selectedProjectPath) return
+        await window.api.createPlainTerminal({ projectPath: selectedProjectPath, type: 'claude' })
+        closeCommandPalette()
+        useUIStore.getState().openTerminalWorkspace()
+      },
+      keywords: ['claude', 'code', 'repl', 'interactive', 'ai', 'agent']
+    })
+
+    items.push({
+      id: 'action-terminal-workspace',
+      label: 'Terminal Workspace',
+      description: 'Open the multi-terminal workspace',
+      icon: 'terminal',
+      section: 'actions',
+      action: () => {
+        closeCommandPalette()
+        useUIStore.getState().openTerminalWorkspace()
+      },
+      keywords: ['workspace', 'terminals', 'panes', 'split']
     })
 
     return items

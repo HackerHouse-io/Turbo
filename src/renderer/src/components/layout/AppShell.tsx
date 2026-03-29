@@ -4,12 +4,14 @@ import { CommandCenter } from '../command-center/CommandCenter'
 import { AgentDetailView } from '../command-center/AgentDetailView'
 import { CommandPalette } from '../command-palette/CommandPalette'
 import { TerminalDrawer } from '../terminal/TerminalDrawer'
+import { TerminalWorkspace } from '../terminal/TerminalWorkspace'
 import { RoutineDetailOverlay } from '../routines/RoutineDetailOverlay'
 import { RoutineEditorOverlay } from '../routines/RoutineEditorOverlay'
 import { PlanOverlay } from '../plan/PlanOverlay'
 import { useUIStore } from '../../stores/useUIStore'
 import { useSessionStore } from '../../stores/useSessionStore'
 import { useProjectStore } from '../../stores/useProjectStore'
+import { useTerminalStore } from '../../stores/useTerminalStore'
 
 export function AppShell() {
   const viewMode = useUIStore(s => s.viewMode)
@@ -19,6 +21,7 @@ export function AppShell() {
   const routineDetailRoutine = useUIStore(s => s.routineDetailRoutine)
   const routineEditorState = useUIStore(s => s.routineEditorState)
   const planOverlayOpen = useUIStore(s => s.planOverlayOpen)
+  const terminalWorkspaceOpen = useUIStore(s => s.terminalWorkspaceOpen)
   const selectedSessionId = useSessionStore(s => s.selectedSessionId)
 
   // Global keyboard shortcuts — reads fresh state via getState() so no reactive deps needed
@@ -29,20 +32,22 @@ export function AppShell() {
         e.preventDefault()
         useUIStore.getState().toggleCommandPalette()
       }
-      // Ctrl+` -> Toggle plain terminal
+      // Ctrl+` -> Toggle terminal workspace
       if (e.ctrlKey && e.key === '`') {
         e.preventDefault()
         const ui = useUIStore.getState()
-        if (ui.terminalDrawerTarget?.type === 'plain') {
-          ui.closeTerminalDrawer()
+        if (ui.terminalWorkspaceOpen) {
+          ui.closeTerminalWorkspace()
         } else {
           const store = useProjectStore.getState()
           const proj = store.projects.find(p => p.id === store.selectedProjectId) || store.projects[0]
           if (proj?.path) {
-            window.api.createPlainTerminal(proj.path).then(t => {
-              ui.openPlainTerminalDrawer(t.id)
-            })
+            const panes = useTerminalStore.getState().workspacePanes[proj.path]
+            if (!panes || panes.length === 0) {
+              window.api.createPlainTerminal({ projectPath: proj.path, type: 'shell' })
+            }
           }
+          ui.openTerminalWorkspace()
         }
         return
       }
@@ -54,6 +59,8 @@ export function AppShell() {
           ui.closeRoutineEditor()
         } else if (ui.planOverlayOpen) {
           ui.closePlanOverlay()
+        } else if (ui.terminalWorkspaceOpen) {
+          ui.closeTerminalWorkspace()
         } else if (ui.routineDetailRoutine) {
           ui.closeRoutineDetail()
         } else if (ui.projectSelectorOpen) {
@@ -94,6 +101,7 @@ export function AppShell() {
       {routineDetailRoutine && <RoutineDetailOverlay routine={routineDetailRoutine} />}
       {routineEditorState && <RoutineEditorOverlay />}
       {planOverlayOpen && <PlanOverlay />}
+      {terminalWorkspaceOpen && <TerminalWorkspace />}
       {commandPaletteOpen && <CommandPalette />}
       {terminalDrawerOpen && <TerminalDrawer />}
     </div>

@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import type { Project } from '../../../shared/types'
+import { useUIStore } from './useUIStore'
 
 interface ProjectState {
   projects: Project[]
@@ -44,7 +45,10 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
 
   setProjects: (projects) => set({ projects }),
 
-  selectProject: (projectId) => set({ selectedProjectId: projectId }),
+  selectProject: (projectId) => {
+    useUIStore.getState().closeTerminalWorkspace()
+    set({ selectedProjectId: projectId })
+  },
 
   addProjectFromPath: async (folderPath: string) => {
     const name = folderPath.split('/').pop() || folderPath
