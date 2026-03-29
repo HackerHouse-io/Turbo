@@ -7,15 +7,7 @@ import { RoutinesCard } from './RoutinesCard'
 import { PlanCard } from './PlanCard'
 import { useNerveCenterData } from '../../hooks/useNerveCenterData'
 import { useProjectStore } from '../../stores/useProjectStore'
-
-const stagger = {
-  hidden: {},
-  show: { transition: { staggerChildren: 0.05 } }
-}
-const fadeUp = {
-  hidden: { opacity: 0, y: 12 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.35, ease: 'easeOut' } }
-}
+import { stagger, fadeUp } from '../../lib/animations'
 
 export function NerveCenter() {
   const selectedProjectId = useProjectStore(s => s.selectedProjectId)

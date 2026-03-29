@@ -30,8 +30,9 @@ interface UIState {
   closeTerminalDrawer: () => void
 
   // View mode
-  viewMode: 'dashboard' | 'detail'
-  setViewMode: (mode: 'dashboard' | 'detail') => void
+  viewMode: 'dashboard' | 'detail' | 'overview'
+  setViewMode: (mode: 'dashboard' | 'detail' | 'overview') => void
+  toggleOverview: () => void
 
   // Routine detail overlay
   routineDetailRoutine: Routine | null
@@ -85,6 +86,7 @@ export const useUIStore = create<UIState>((set) => ({
 
   viewMode: 'dashboard',
   setViewMode: (mode) => set({ viewMode: mode }),
+  toggleOverview: () => set(s => ({ viewMode: s.viewMode === 'overview' ? 'dashboard' : 'overview' })),
 
   routineDetailRoutine: null,
   openRoutineDetail: (routine) => set({ routineDetailRoutine: routine }),

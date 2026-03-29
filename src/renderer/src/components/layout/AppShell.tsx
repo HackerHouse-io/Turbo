@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { TopBar } from './TopBar'
 import { CommandCenter } from '../command-center/CommandCenter'
 import { AgentDetailView } from '../command-center/AgentDetailView'
+import { ProjectOverview } from '../overview/ProjectOverview'
 import { CommandPalette } from '../command-palette/CommandPalette'
 import { TerminalDrawer } from '../terminal/TerminalDrawer'
 import { TerminalWorkspace } from '../terminal/TerminalWorkspace'
@@ -53,8 +54,14 @@ export function AppShell() {
         }
         return
       }
+      // Cmd+Shift+O -> Toggle project overview
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && (e.key === 'O' || e.key === 'o' || e.code === 'KeyO')) {
+        e.preventDefault()
+        useUIStore.getState().toggleOverview()
+        return
+      }
       // Cmd+Shift+T -> Toggle session timeline
-      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === 'T') {
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && (e.key === 'T' || e.key === 't' || e.code === 'KeyT')) {
         e.preventDefault()
         const ui = useUIStore.getState()
         if (ui.timelineOpen) {
@@ -84,6 +91,8 @@ export function AppShell() {
           ui.closeCommandPalette()
         } else if (ui.terminalDrawerOpen) {
           ui.closeTerminalDrawer()
+        } else if (ui.viewMode === 'overview') {
+          ui.setViewMode('dashboard')
         } else if (session.selectedSessionId) {
           session.selectSession(null)
           ui.setViewMode('dashboard')
@@ -105,7 +114,9 @@ export function AppShell() {
 
       {/* Main content */}
       <main className="flex-1 overflow-hidden">
-        {viewMode === 'dashboard' || !selectedSessionId ? (
+        {viewMode === 'overview' ? (
+          <ProjectOverview />
+        ) : viewMode === 'dashboard' || !selectedSessionId ? (
           <CommandCenter />
         ) : (
           <AgentDetailView sessionId={selectedSessionId} />

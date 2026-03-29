@@ -276,6 +276,19 @@ export function CommandPalette() {
 
     // Actions
     items.push({
+      id: 'action-project-overview',
+      label: 'Project Overview',
+      description: 'View all projects at a glance',
+      icon: 'eye',
+      section: 'actions',
+      action: () => {
+        closeCommandPalette()
+        useUIStore.getState().setViewMode('overview')
+      },
+      keywords: ['overview', 'all projects', 'multi', 'dashboard', 'grid', 'projects']
+    })
+
+    items.push({
       id: 'action-session-timeline',
       label: 'Session Timeline',
       description: 'View work history and session activity',

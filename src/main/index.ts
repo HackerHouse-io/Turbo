@@ -27,6 +27,10 @@ let plainTerminalManager: PlainTerminalManager
 
 const isDev = !app.isPackaged
 
+// Prevent EPIPE crashes when stdout/stderr pipe is closed (e.g. during dev reload)
+process.stdout?.on('error', () => {})
+process.stderr?.on('error', () => {})
+
 function createWindow(): void {
   mainWindow = new BrowserWindow({
     width: 1400,

@@ -3,6 +3,7 @@ import { motion } from 'framer-motion'
 import { useProjectStore } from '../../stores/useProjectStore'
 import { useSessionStore } from '../../stores/useSessionStore'
 import { useUIStore } from '../../stores/useUIStore'
+import { PaletteIcon } from '../command-palette/PaletteIcon'
 
 export function ProjectSelector() {
   const projects = useProjectStore(s => s.projects)
@@ -10,6 +11,8 @@ export function ProjectSelector() {
   const selectProject = useProjectStore(s => s.selectProject)
   const addProjectFromPath = useProjectStore(s => s.addProjectFromPath)
   const closeProjectSelector = useUIStore(s => s.closeProjectSelector)
+  const viewMode = useUIStore(s => s.viewMode)
+  const setViewMode = useUIStore(s => s.setViewMode)
   const sessionsRecord = useSessionStore(s => s.sessions)
   const ref = useRef<HTMLDivElement>(null)
 
@@ -61,6 +64,25 @@ export function ProjectSelector() {
       className="absolute top-full left-0 mt-1 w-64 bg-turbo-surface border border-turbo-border
                  rounded-lg shadow-2xl overflow-hidden z-50"
     >
+      {/* All Projects button */}
+      <div className="py-1 border-b border-turbo-border">
+        <button
+          onClick={() => {
+            setViewMode('overview')
+            closeProjectSelector()
+          }}
+          className={`w-full flex items-center gap-2 px-3 py-2 text-sm text-left transition-colors ${
+            viewMode === 'overview'
+              ? 'bg-turbo-accent/10 text-turbo-text'
+              : 'text-turbo-text-dim hover:bg-turbo-surface-hover'
+          }`}
+        >
+          <PaletteIcon icon="grid" className="w-3.5 h-3.5" />
+          All Projects
+          <kbd className="kbd text-[9px] ml-auto">&#8984;&#8679;O</kbd>
+        </button>
+      </div>
+
       <div className="py-1">
         {projects.map(project => {
           const count = taskCounts[project.id] || 0

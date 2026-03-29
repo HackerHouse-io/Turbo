@@ -194,7 +194,7 @@ function Section({
 
 // ─── Welcome state (no projects) ────────────────────────────────
 
-function WelcomeState({ onAddProject }: { onAddProject: () => void }) {
+export function WelcomeState({ onAddProject }: { onAddProject: () => void }) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
