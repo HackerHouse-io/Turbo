@@ -4,7 +4,6 @@ import { useUIStore } from '../../stores/useUIStore'
 import { StatusBadge } from '../shared/StatusBadge'
 import { XTermRenderer } from '../terminal/XTermRenderer'
 import { formatElapsed } from '../../lib/format'
-import type { AgentSession } from '../../../../shared/types'
 
 interface AgentDetailViewProps {
   sessionId: string
@@ -104,7 +103,7 @@ export function AgentDetailView({ sessionId }: AgentDetailViewProps) {
           </ContextSection>
 
           <ContextSection title="Files Touched">
-            <FileList blocks={session.activityBlocks} />
+            <FileList touchedFiles={session.touchedFiles} />
           </ContextSection>
         </div>
       </div>
@@ -132,25 +131,29 @@ function StatRow({ label, value }: { label: string; value: string }) {
   )
 }
 
-function FileList({ blocks }: { blocks: AgentSession['activityBlocks'] }) {
-  const allFiles = new Set<string>()
-  for (const block of blocks) {
-    if (block.files) {
-      for (const f of block.files) allFiles.add(f)
-    }
-  }
-
-  if (allFiles.size === 0) {
+function FileList({ touchedFiles }: { touchedFiles?: string[] }) {
+  if (!touchedFiles || touchedFiles.length === 0) {
     return <p className="text-xs text-turbo-text-muted">No files yet</p>
   }
 
+  const files = touchedFiles.slice(0, 20)
+
   return (
-    <ul className="space-y-0.5">
-      {Array.from(allFiles).slice(0, 20).map(f => (
-        <li key={f} className="text-xs text-turbo-text-dim font-mono truncate">{f}</li>
-      ))}
-      {allFiles.size > 20 && (
-        <li className="text-xs text-turbo-text-muted">+{allFiles.size - 20} more</li>
+    <ul className="space-y-1">
+      {files.map(f => {
+        const parts = f.split('/')
+        const fileName = parts.pop() || f
+        const dir = parts.length > 0 ? parts.join('/') + '/' : ''
+
+        return (
+          <li key={f} className="text-xs font-mono truncate">
+            {dir && <span className="text-turbo-text-muted">{dir}</span>}
+            <span className="text-turbo-text-dim">{fileName}</span>
+          </li>
+        )
+      })}
+      {touchedFiles.length > 20 && (
+        <li className="text-[10px] text-turbo-text-muted mt-1">+{touchedFiles.length - 20} more</li>
       )}
     </ul>
   )

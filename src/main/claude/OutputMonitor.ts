@@ -183,8 +183,7 @@ export class OutputMonitor {
       title,
       content,
       timestamp: Date.now(),
-      collapsed: false,
-      files: []
+      collapsed: false
     }
 
     this.currentBlock = block
@@ -195,17 +194,6 @@ export class OutputMonitor {
   private appendToBlock(content: string): void {
     if (!this.currentBlock) return
     this.currentBlock.content += (this.currentBlock.content ? '\n' : '') + content
-
-    // Extract file paths from content
-    const filePaths = content.match(/[\w./\-]+\.\w{1,10}/g)
-    if (filePaths && this.currentBlock.files) {
-      for (const fp of filePaths) {
-        if (!this.currentBlock.files.includes(fp)) {
-          this.currentBlock.files.push(fp)
-        }
-      }
-    }
-
     this.onBlockUpdated?.(this.currentBlock)
   }
 

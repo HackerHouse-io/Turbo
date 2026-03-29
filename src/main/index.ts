@@ -76,11 +76,12 @@ app.whenReady().then(() => {
   // Initialize managers (settings + project first — session manager depends on them)
   settingsManager = new SettingsManager()
   projectManager = new ProjectManager(app.getPath('userData'))
-  sessionManager = new ClaudeSessionManager(settingsManager, projectManager)
-  promptVaultManager = new PromptVaultManager(app.getPath('userData'))
 
   const gitIdentityManager = new GitIdentityManager()
   gitOpsManager = new GitOpsManager(gitIdentityManager)
+
+  sessionManager = new ClaudeSessionManager(settingsManager, projectManager, gitOpsManager)
+  promptVaultManager = new PromptVaultManager(app.getPath('userData'))
   gitPresetManager = new GitPresetManager(app.getPath('userData'))
   routineManager = new RoutineManager(app.getPath('userData'))
   routineExecutor = new RoutineExecutor(sessionManager, routineManager)

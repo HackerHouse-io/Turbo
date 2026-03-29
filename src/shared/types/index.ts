@@ -54,6 +54,7 @@ export interface AgentSession {
   needsAttention: boolean
   attentionMessage?: string
   attentionType?: AttentionType
+  touchedFiles?: string[]
 }
 
 // ─── Attention Queue ────────────────────────────────────────────

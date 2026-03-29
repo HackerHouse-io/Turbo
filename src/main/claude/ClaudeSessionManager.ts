@@ -11,6 +11,7 @@ import type {
 } from '../../shared/types'
 import { COST_PER_INPUT_TOKEN, COST_PER_OUTPUT_TOKEN } from '../../shared/constants'
 import { GitIdentityManager } from '../git/GitIdentityManager'
+import type { GitOpsManager } from '../git/GitOpsManager'
 import type { SettingsManager } from '../SettingsManager'
 import type { ProjectManager } from '../ProjectManager'
 import type { GitIdentity } from '../../shared/types'
@@ -31,15 +32,18 @@ import type { GitIdentity } from '../../shared/types'
 export class ClaudeSessionManager extends EventEmitter {
   private sessions = new Map<string, AgentSession>()
   private monitors = new Map<string, OutputMonitor>()
+  private gitSnapshots = new Map<string, { headSha: string; dirtyFiles: Set<string> }>()
   private ptyManager: PtyManager
   private settingsManager: SettingsManager
   private projectManager: ProjectManager
+  private gitOpsManager: GitOpsManager
   private gitIdentity: GitIdentityManager
 
-  constructor(settingsManager: SettingsManager, projectManager: ProjectManager) {
+  constructor(settingsManager: SettingsManager, projectManager: ProjectManager, gitOpsManager: GitOpsManager) {
     super()
     this.settingsManager = settingsManager
     this.projectManager = projectManager
+    this.gitOpsManager = gitOpsManager
     this.gitIdentity = new GitIdentityManager()
     this.ptyManager = new PtyManager()
     this.setupPtyListeners()
@@ -124,6 +128,9 @@ export class ClaudeSessionManager extends EventEmitter {
     const args = this.buildClaudeArgs(payload)
     const env = await this.buildEnv(payload.projectPath)
 
+    // Capture git baseline before spawning
+    this.captureGitSnapshot(id, payload.projectPath)
+
     // Spawn PTY
     this.ptyManager.spawn(id, 'claude', args, {
       cwd: payload.projectPath,
@@ -137,12 +144,13 @@ export class ClaudeSessionManager extends EventEmitter {
   /**
    * Stop (kill) a session.
    */
-  stopSession(sessionId: string): void {
+  async stopSession(sessionId: string): Promise<void> {
     this.ptyManager.kill(sessionId)
     const session = this.sessions.get(sessionId)
     if (session) {
       session.status = 'stopped'
       session.completedAt = Date.now()
+      session.touchedFiles = await this.computeTouchedFiles(sessionId, session.projectPath)
       this.emitUpdate(sessionId)
     }
   }
@@ -189,6 +197,7 @@ export class ClaudeSessionManager extends EventEmitter {
   removeSession(sessionId: string): void {
     this.sessions.delete(sessionId)
     this.monitors.delete(sessionId)
+    this.gitSnapshots.delete(sessionId)
     this.emit('session-removed', sessionId)
   }
 
@@ -199,6 +208,7 @@ export class ClaudeSessionManager extends EventEmitter {
     this.ptyManager.killAll()
     this.sessions.clear()
     this.monitors.clear()
+    this.gitSnapshots.clear()
   }
 
   // ─── Private ────────────────────────────────────────────────
@@ -237,7 +247,76 @@ export class ClaudeSessionManager extends EventEmitter {
       if (session && !session.completedAt) {
         session.completedAt = Date.now()
       }
+
+      // Compute touched files from git diff
+      if (session) {
+        this.computeTouchedFiles(id, session.projectPath).then(files => {
+          session.touchedFiles = files
+          this.emitUpdate(id)
+        })
+      }
     })
+  }
+
+  private async captureGitSnapshot(sessionId: string, projectPath: string): Promise<void> {
+    try {
+      const [statusResult, headResult] = await Promise.all([
+        this.gitOpsManager.getStatus(projectPath),
+        this.gitOpsManager.exec(projectPath, 'git', ['rev-parse', 'HEAD'])
+      ])
+      if (!headResult.success) return // not a git repo
+      const headSha = headResult.stdout.trim()
+      const dirtyFiles = new Set<string>()
+      for (const line of statusResult.stdout.split('\n')) {
+        // Porcelain format: XY filename (or XY old -> new for renames)
+        const file = line.slice(3).split(' -> ').pop()?.trim()
+        if (file) dirtyFiles.add(file)
+      }
+      this.gitSnapshots.set(sessionId, { headSha, dirtyFiles })
+    } catch {
+      // Not a git repo or git not available — skip
+    }
+  }
+
+  private async computeTouchedFiles(sessionId: string, projectPath: string): Promise<string[]> {
+    const snapshot = this.gitSnapshots.get(sessionId)
+    if (!snapshot) return []
+    try {
+      const touched = new Set<string>()
+
+      // 1. Current dirty files NOT in start snapshot → new modifications
+      const statusResult = await this.gitOpsManager.getStatus(projectPath)
+      if (statusResult.success) {
+        for (const line of statusResult.stdout.split('\n')) {
+          const file = line.slice(3).split(' -> ').pop()?.trim()
+          if (file && !snapshot.dirtyFiles.has(file)) {
+            touched.add(file)
+          }
+        }
+      }
+
+      // 2. Committed changes during session: diff startSha..HEAD
+      const headResult = await this.gitOpsManager.exec(projectPath, 'git', ['rev-parse', 'HEAD'])
+      if (headResult.success) {
+        const currentSha = headResult.stdout.trim()
+        if (currentSha !== snapshot.headSha) {
+          const diffResult = await this.gitOpsManager.exec(
+            projectPath, 'git', ['diff', '--name-only', `${snapshot.headSha}..${currentSha}`]
+          )
+          if (diffResult.success) {
+            for (const file of diffResult.stdout.split('\n')) {
+              if (file.trim()) touched.add(file.trim())
+            }
+          }
+        }
+      }
+
+      return Array.from(touched).sort()
+    } catch {
+      return []
+    } finally {
+      this.gitSnapshots.delete(sessionId)
+    }
   }
 
   private buildClaudeArgs(payload: CreateSessionPayload): string[] {
