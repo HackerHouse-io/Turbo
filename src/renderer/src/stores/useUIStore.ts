@@ -37,6 +37,11 @@ interface UIState {
   routineEditorState: { routine: Routine | null; mode: 'create' | 'edit' | 'duplicate' } | null
   openRoutineEditor: (routine: Routine | null, mode: 'create' | 'edit' | 'duplicate') => void
   closeRoutineEditor: () => void
+
+  // Plan overlay
+  planOverlayOpen: boolean
+  openPlanOverlay: () => void
+  closePlanOverlay: () => void
 }
 
 export const useUIStore = create<UIState>((set) => ({
@@ -70,5 +75,9 @@ export const useUIStore = create<UIState>((set) => ({
 
   routineEditorState: null,
   openRoutineEditor: (routine, mode) => set({ routineEditorState: { routine, mode } }),
-  closeRoutineEditor: () => set({ routineEditorState: null })
+  closeRoutineEditor: () => set({ routineEditorState: null }),
+
+  planOverlayOpen: false,
+  openPlanOverlay: () => set({ planOverlayOpen: true }),
+  closePlanOverlay: () => set({ planOverlayOpen: false })
 }))

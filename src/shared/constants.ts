@@ -85,7 +85,12 @@ export const IPC = {
   ROUTINE_DUPLICATE: 'routine:duplicate',
 
   // Events (main → renderer)
-  ROUTINE_UPDATED: 'routine:updated'
+  ROUTINE_UPDATED: 'routine:updated',
+
+  // Plan
+  PLAN_READ: 'plan:read',
+  PLAN_SAVE: 'plan:save',
+  PLAN_FILE_CHANGED: 'plan:file-changed'
 } as const
 
 export const PROMPT_HISTORY_MAX = 50

@@ -22,7 +22,10 @@ import type {
   GitPreset,
   Routine,
   RoutineExecution,
-  StartRoutinePayload
+  StartRoutinePayload,
+  PlanReadResult,
+  PlanSavePayload,
+  PlanSaveResult
 } from '../shared/types'
 
 /**
@@ -189,6 +192,20 @@ const api = {
 
   removeRoutineExecution: (executionId: string): Promise<void> =>
     ipcRenderer.invoke(IPC.ROUTINE_REMOVE, executionId),
+
+  // ─── Plan ──────────────────────────────────────────────────
+
+  planRead: (projectPath: string): Promise<PlanReadResult> =>
+    ipcRenderer.invoke(IPC.PLAN_READ, projectPath),
+
+  planSave: (payload: PlanSavePayload): Promise<PlanSaveResult> =>
+    ipcRenderer.invoke(IPC.PLAN_SAVE, payload),
+
+  onPlanFileChanged: (callback: (result: PlanReadResult) => void) => {
+    const handler = (_: Electron.IpcRendererEvent, result: PlanReadResult) => callback(result)
+    ipcRenderer.on(IPC.PLAN_FILE_CHANGED, handler)
+    return () => ipcRenderer.removeListener(IPC.PLAN_FILE_CHANGED, handler)
+  },
 
   // ─── Event Subscriptions ──────────────────────────────────
 

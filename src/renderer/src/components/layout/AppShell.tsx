@@ -6,6 +6,7 @@ import { CommandPalette } from '../command-palette/CommandPalette'
 import { TerminalDrawer } from '../terminal/TerminalDrawer'
 import { RoutineDetailOverlay } from '../routines/RoutineDetailOverlay'
 import { RoutineEditorOverlay } from '../routines/RoutineEditorOverlay'
+import { PlanOverlay } from '../plan/PlanOverlay'
 import { useUIStore } from '../../stores/useUIStore'
 import { useSessionStore } from '../../stores/useSessionStore'
 
@@ -16,6 +17,7 @@ export function AppShell() {
   const projectSelectorOpen = useUIStore(s => s.projectSelectorOpen)
   const routineDetailRoutine = useUIStore(s => s.routineDetailRoutine)
   const routineEditorState = useUIStore(s => s.routineEditorState)
+  const planOverlayOpen = useUIStore(s => s.planOverlayOpen)
   const selectedSessionId = useSessionStore(s => s.selectedSessionId)
 
   // Global keyboard shortcuts — reads fresh state via getState() so no reactive deps needed
@@ -32,6 +34,8 @@ export function AppShell() {
         const session = useSessionStore.getState()
         if (ui.routineEditorState) {
           ui.closeRoutineEditor()
+        } else if (ui.planOverlayOpen) {
+          ui.closePlanOverlay()
         } else if (ui.routineDetailRoutine) {
           ui.closeRoutineDetail()
         } else if (ui.projectSelectorOpen) {
@@ -71,6 +75,7 @@ export function AppShell() {
       {/* Overlays */}
       {routineDetailRoutine && <RoutineDetailOverlay routine={routineDetailRoutine} />}
       {routineEditorState && <RoutineEditorOverlay />}
+      {planOverlayOpen && <PlanOverlay />}
       {commandPaletteOpen && <CommandPalette />}
       {terminalDrawerOpen && <TerminalDrawer />}
     </div>

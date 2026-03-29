@@ -4,6 +4,7 @@ import { SessionSummaryCard } from './SessionSummaryCard'
 import { QuickActionsCard } from './QuickActionsCard'
 import { RecentCommitsCard } from './RecentCommitsCard'
 import { RoutinesCard } from './RoutinesCard'
+import { PlanCard } from './PlanCard'
 import { useNerveCenterData } from '../../hooks/useNerveCenterData'
 import { useProjectStore } from '../../stores/useProjectStore'
 
@@ -49,6 +50,11 @@ export function NerveCenter() {
         {/* Hero input */}
         <motion.div variants={fadeUp} className="w-full max-w-3xl mb-8">
           <InlinePrompt hero />
+        </motion.div>
+
+        {/* Plan card (full width, only if plan exists) */}
+        <motion.div variants={fadeUp} className="w-full mb-3">
+          <PlanCard projectPath={projectPath} />
         </motion.div>
 
         {/* Row 1: 3-column grid */}

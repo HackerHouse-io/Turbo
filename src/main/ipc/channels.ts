@@ -14,7 +14,8 @@ import type {
   GitPreset,
   StartRoutinePayload,
   RoutineExecution,
-  Routine
+  Routine,
+  PlanSavePayload
 } from '../../shared/types'
 import { IPC } from '../../shared/constants'
 import { ClaudeSessionManager } from '../claude/ClaudeSessionManager'
@@ -26,6 +27,7 @@ import { GitOpsManager } from '../git/GitOpsManager'
 import { GitPresetManager } from '../git/GitPresetManager'
 import { RoutineManager } from '../routines/RoutineManager'
 import { RoutineExecutor } from '../routines/RoutineExecutor'
+import { PlanFileManager } from '../plan/PlanFileManager'
 import { detectModels } from '../claude/ClaudeModelDetector'
 
 interface IpcHandlerOptions {
@@ -38,6 +40,7 @@ interface IpcHandlerOptions {
   gitPresetManager: GitPresetManager
   routineManager: RoutineManager
   routineExecutor: RoutineExecutor
+  planFileManager: PlanFileManager
   getMainWindow: () => BrowserWindow | null
 }
 
@@ -55,6 +58,7 @@ export function registerIpcHandlers(opts: IpcHandlerOptions): void {
     gitPresetManager,
     routineManager,
     routineExecutor,
+    planFileManager,
     getMainWindow
   } = opts
 
@@ -301,6 +305,28 @@ export function registerIpcHandlers(opts: IpcHandlerOptions): void {
 
   ipcMain.handle(IPC.ROUTINE_DUPLICATE, async (_e, id: string) => {
     return routineManager.duplicateRoutine(id)
+  })
+
+  // ─── Plan ─────────────────────────────────────────────────
+
+  ipcMain.handle(IPC.PLAN_READ, async (_e, projectPath: string) => {
+    const result = planFileManager.readPlan(projectPath)
+    // Start watching if found
+    if (result.found && result.filePath) {
+      const watchPath = result.filePath
+      planFileManager.watchFile(watchPath, () => {
+        const win = getMainWindow()
+        if (win && !win.isDestroyed()) {
+          const updated = planFileManager.readPlan(projectPath)
+          win.webContents.send(IPC.PLAN_FILE_CHANGED, updated)
+        }
+      })
+    }
+    return result
+  })
+
+  ipcMain.handle(IPC.PLAN_SAVE, async (_e, payload: PlanSavePayload) => {
+    return planFileManager.savePlan(payload)
   })
 
   // ─── Forward events to renderer ────────────────────────────

@@ -273,6 +273,28 @@ export interface StartRoutinePayload {
   variables: Record<string, string>
 }
 
+// ─── Plan ─────────────────────────────────────────────────────
+
+export interface PlanReadResult {
+  found: boolean
+  filePath: string | null
+  raw: string | null
+  lastModified: number
+  searchedPaths: string[]
+}
+
+export interface PlanSavePayload {
+  filePath: string
+  content: string
+  lastModified: number
+}
+
+export interface PlanSaveResult {
+  success: boolean
+  conflict: boolean
+  lastModified: number
+}
+
 // ─── Settings ─────────────────────────────────────────────────
 
 export interface TurboSettings {
