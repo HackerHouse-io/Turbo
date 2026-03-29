@@ -63,7 +63,7 @@ export class OutputMonitor {
   onStatusChange?: (status: AgentStatus, message?: string) => void
   onBlockCreated?: (block: ActivityBlock) => void
   onBlockUpdated?: (block: ActivityBlock) => void
-  onAttentionNeeded?: (type: 'decision' | 'stuck' | 'error', message: string) => void
+  onAttentionNeeded?: (type: 'decision' | 'stuck' | 'error' | 'completed', message: string) => void
 
   constructor() {}
 
@@ -97,6 +97,7 @@ export class OutputMonitor {
 
     if (code === 0) {
       this.setStatus('completed')
+      this.onAttentionNeeded?.('completed', 'Task completed successfully')
     } else {
       this.setStatus('error')
       this.onAttentionNeeded?.('error', `Task exited with code ${code}`)
@@ -221,6 +222,16 @@ export class OutputMonitor {
     // If no output for 60s while active, might be stuck
     this.idleTimer = setTimeout(() => {
       if (this.status === 'active') {
+        // Check lineBuffer for prompts without trailing newline
+        const pending = this.lineBuffer.trim()
+        if (pending) {
+          for (const pattern of WAITING_PATTERNS) {
+            if (pattern.test(pending)) {
+              this.setStatus('waiting_for_input')
+              return
+            }
+          }
+        }
         this.onAttentionNeeded?.(
           'stuck',
           'Task has been idle for over 60 seconds'

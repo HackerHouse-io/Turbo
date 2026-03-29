@@ -105,23 +105,25 @@ export class ClaudeSessionManager extends EventEmitter {
 
     monitor.onAttentionNeeded = (type, message) => {
       const s = this.sessions.get(id)
-      if (s && s.status !== 'stopped') {
-        s.needsAttention = true
-        s.attentionMessage = message
-        s.attentionType = type
-        this.emitUpdate(id)
+      if (!s || s.status === 'stopped') return
+      // Block 'stuck' alerts on sessions that already reached a terminal state
+      if (type === 'stuck' && (s.status === 'completed' || s.status === 'error')) return
 
-        const item: AttentionItem = {
-          id: uuid(),
-          sessionId: id,
-          type,
-          title: s.name,
-          message,
-          timestamp: Date.now(),
-          dismissed: false
-        }
-        this.emit('attention-needed', item)
+      s.needsAttention = true
+      s.attentionMessage = message
+      s.attentionType = type
+      this.emitUpdate(id)
+
+      const item: AttentionItem = {
+        id: uuid(),
+        sessionId: id,
+        type,
+        title: s.name,
+        message,
+        timestamp: Date.now(),
+        dismissed: false
       }
+      this.emit('attention-needed', item)
     }
 
     // Build the command args and env (env is async — resolves git identity)
@@ -366,6 +368,11 @@ export class ClaudeSessionManager extends EventEmitter {
     session.status = status
     if (status === 'completed' || status === 'error' || status === 'stopped') {
       session.completedAt = Date.now()
+      // Clear stale attention (e.g., lingering 'stuck' from idle timer)
+      // Fresh attention ('completed'/'error') will be set immediately after by notifyExit
+      session.needsAttention = false
+      session.attentionMessage = undefined
+      session.attentionType = undefined
     }
 
     this.emitUpdate(id)
