@@ -11,6 +11,7 @@ import { RoutineManager } from './routines/RoutineManager'
 import { RoutineExecutor } from './routines/RoutineExecutor'
 import { PlanFileManager } from './plan/PlanFileManager'
 import { PlainTerminalManager } from './terminal/PlainTerminalManager'
+import { NotificationManager } from './NotificationManager'
 import { registerIpcHandlers } from './ipc/channels'
 
 let mainWindow: BrowserWindow | null = null
@@ -24,6 +25,7 @@ let routineManager: RoutineManager
 let routineExecutor: RoutineExecutor
 let planFileManager: PlanFileManager
 let plainTerminalManager: PlainTerminalManager
+let notificationManager: NotificationManager
 
 const isDev = !app.isPackaged
 
@@ -110,8 +112,18 @@ app.whenReady().then(() => {
     getMainWindow: () => mainWindow
   })
 
+  notificationManager = new NotificationManager(settingsManager)
+
   // Create main window
   createWindow()
+
+  // Wire up OS notifications for attention events
+  if (mainWindow) {
+    notificationManager.setMainWindow(mainWindow)
+  }
+  sessionManager.on('attention-needed', (item) => {
+    notificationManager.notify(item)
+  })
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {

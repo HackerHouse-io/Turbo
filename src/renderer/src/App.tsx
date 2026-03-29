@@ -5,6 +5,7 @@ import { useProjectStore } from './stores/useProjectStore'
 import { useGitIdentityStore } from './stores/useGitIdentityStore'
 import { useRoutineStore } from './stores/useRoutineStore'
 import { useTerminalStore } from './stores/useTerminalStore'
+import { useUIStore } from './stores/useUIStore'
 import { appendTerminalData, clearTerminalBuffer } from './lib/terminalBuffer'
 
 export default function App() {
@@ -62,6 +63,11 @@ export default function App() {
       useRoutineStore.getState().updateExecution(execution)
     })
 
+    const unsubNotifClick = window.api.onNotificationClick((sessionId) => {
+      useSessionStore.getState().selectSession(sessionId)
+      useUIStore.getState().setViewMode('detail')
+    })
+
     window.api.listSessions().then((sessions) => {
       useSessionStore.getState().setSessions(sessions)
     })
@@ -86,6 +92,7 @@ export default function App() {
       unsubAttention()
       unsubRemoved()
       unsubRoutine()
+      unsubNotifClick()
     }
   }, [updateSession, addAttentionItem, removeSession])
 

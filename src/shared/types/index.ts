@@ -318,5 +318,6 @@ export interface PlanSaveResult {
 export interface TurboSettings {
   defaultProjectsDir: string
   gitIdentityGlobal?: GitIdentity
+  notificationsEnabled?: boolean
   [key: string]: unknown
 }

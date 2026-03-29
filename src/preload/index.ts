@@ -285,6 +285,12 @@ const api = {
     const handler = (_: Electron.IpcRendererEvent, execution: RoutineExecution) => callback(execution)
     ipcRenderer.on(IPC.ROUTINE_UPDATED, handler)
     return () => ipcRenderer.removeListener(IPC.ROUTINE_UPDATED, handler)
+  },
+
+  onNotificationClick: (callback: (sessionId: string) => void) => {
+    const handler = (_: Electron.IpcRendererEvent, sessionId: string) => callback(sessionId)
+    ipcRenderer.on(IPC.NOTIFICATION_CLICK, handler)
+    return () => ipcRenderer.removeListener(IPC.NOTIFICATION_CLICK, handler)
   }
 }
 
