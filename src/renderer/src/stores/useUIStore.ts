@@ -52,6 +52,11 @@ interface UIState {
   terminalWorkspaceOpen: boolean
   openTerminalWorkspace: () => void
   closeTerminalWorkspace: () => void
+
+  // Session timeline
+  timelineOpen: boolean
+  openTimeline: () => void
+  closeTimeline: () => void
 }
 
 export const useUIStore = create<UIState>((set) => ({
@@ -95,5 +100,9 @@ export const useUIStore = create<UIState>((set) => ({
 
   terminalWorkspaceOpen: false,
   openTerminalWorkspace: () => set({ terminalWorkspaceOpen: true }),
-  closeTerminalWorkspace: () => set({ terminalWorkspaceOpen: false })
+  closeTerminalWorkspace: () => set({ terminalWorkspaceOpen: false }),
+
+  timelineOpen: false,
+  openTimeline: () => set({ timelineOpen: true }),
+  closeTimeline: () => set({ timelineOpen: false })
 }))

@@ -8,6 +8,7 @@ import { TerminalWorkspace } from '../terminal/TerminalWorkspace'
 import { RoutineDetailOverlay } from '../routines/RoutineDetailOverlay'
 import { RoutineEditorOverlay } from '../routines/RoutineEditorOverlay'
 import { PlanOverlay } from '../plan/PlanOverlay'
+import { SessionTimeline } from '../timeline/SessionTimeline'
 import { useUIStore } from '../../stores/useUIStore'
 import { useSessionStore } from '../../stores/useSessionStore'
 import { useProjectStore } from '../../stores/useProjectStore'
@@ -22,6 +23,7 @@ export function AppShell() {
   const routineEditorState = useUIStore(s => s.routineEditorState)
   const planOverlayOpen = useUIStore(s => s.planOverlayOpen)
   const terminalWorkspaceOpen = useUIStore(s => s.terminalWorkspaceOpen)
+  const timelineOpen = useUIStore(s => s.timelineOpen)
   const selectedSessionId = useSessionStore(s => s.selectedSessionId)
 
   // Global keyboard shortcuts — reads fresh state via getState() so no reactive deps needed
@@ -51,6 +53,17 @@ export function AppShell() {
         }
         return
       }
+      // Cmd+Shift+T -> Toggle session timeline
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === 'T') {
+        e.preventDefault()
+        const ui = useUIStore.getState()
+        if (ui.timelineOpen) {
+          ui.closeTimeline()
+        } else {
+          ui.openTimeline()
+        }
+        return
+      }
       // Escape -> Close overlays (highest z-index first)
       if (e.key === 'Escape') {
         const ui = useUIStore.getState()
@@ -61,6 +74,8 @@ export function AppShell() {
           ui.closePlanOverlay()
         } else if (ui.terminalWorkspaceOpen) {
           ui.closeTerminalWorkspace()
+        } else if (ui.timelineOpen) {
+          ui.closeTimeline()
         } else if (ui.routineDetailRoutine) {
           ui.closeRoutineDetail()
         } else if (ui.projectSelectorOpen) {
@@ -102,6 +117,7 @@ export function AppShell() {
       {routineEditorState && <RoutineEditorOverlay />}
       {planOverlayOpen && <PlanOverlay />}
       {terminalWorkspaceOpen && <TerminalWorkspace />}
+      {timelineOpen && <SessionTimeline />}
       {commandPaletteOpen && <CommandPalette />}
       {terminalDrawerOpen && <TerminalDrawer />}
     </div>

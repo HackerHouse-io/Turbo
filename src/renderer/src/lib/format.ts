@@ -19,6 +19,11 @@ export function formatCost(cost: number): string {
 
 export function formatElapsed(start: number, end?: number): string {
   const ms = (end || Date.now()) - start
+  return formatDuration(ms)
+}
+
+export function formatDuration(ms: number): string {
+  if (ms <= 0) return '0s'
   const seconds = Math.floor(ms / 1000)
   if (seconds < 60) return `${seconds}s`
   const minutes = Math.floor(seconds / 60)

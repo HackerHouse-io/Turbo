@@ -46,7 +46,9 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   setProjects: (projects) => set({ projects }),
 
   selectProject: (projectId) => {
-    useUIStore.getState().closeTerminalWorkspace()
+    const ui = useUIStore.getState()
+    ui.closeTerminalWorkspace()
+    ui.closeTimeline()
     set({ selectedProjectId: projectId })
   },
 

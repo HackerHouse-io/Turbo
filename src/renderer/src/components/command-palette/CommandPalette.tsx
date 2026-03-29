@@ -276,6 +276,19 @@ export function CommandPalette() {
 
     // Actions
     items.push({
+      id: 'action-session-timeline',
+      label: 'Session Timeline',
+      description: 'View work history and session activity',
+      icon: 'clock',
+      section: 'actions',
+      action: () => {
+        closeCommandPalette()
+        useUIStore.getState().openTimeline()
+      },
+      keywords: ['timeline', 'gantt', 'sessions', 'chart', 'history', 'status']
+    })
+
+    items.push({
       id: 'action-open-terminal',
       label: 'Open Terminal',
       description: 'Open a shell in the current project',
