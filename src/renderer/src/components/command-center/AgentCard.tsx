@@ -1,5 +1,6 @@
+import { useState, useEffect, useRef } from 'react'
 import { motion } from 'framer-motion'
-import type { AgentSession } from '../../../../shared/types'
+import type { AgentSession, AttentionType } from '../../../../shared/types'
 import { useSessionStore } from '../../stores/useSessionStore'
 import { useUIStore } from '../../stores/useUIStore'
 import { StatusBadge } from '../shared/StatusBadge'
@@ -38,7 +39,17 @@ export function AgentCard({ session }: AgentCardProps) {
   const elapsed = formatElapsed(session.startedAt, session.completedAt)
   const isActive = session.status === 'active' || session.status === 'starting'
   const isFinished = session.status === 'completed' || session.status === 'stopped' || session.status === 'error'
-  const progress = estimateProgress(session)
+
+  const progress = useTimedProgress(session)
+  const borderClass = cardBorderClass(session.status, session.needsAttention, session.attentionType)
+
+  // Action text: merge attention message when needs attention
+  const actionText = session.needsAttention && session.attentionMessage
+    ? session.attentionMessage
+    : session.currentAction || session.lastActivity || 'Starting...'
+  const actionColor = session.needsAttention
+    ? attentionTextColor(session.attentionType)
+    : 'text-turbo-text-dim'
 
   return (
     <motion.div
@@ -48,9 +59,7 @@ export function AgentCard({ session }: AgentCardProps) {
       exit={{ opacity: 0, scale: 0.95 }}
       transition={{ duration: 0.2 }}
       onClick={handleClick}
-      className={`card p-4 cursor-pointer group relative overflow-hidden ${
-        session.needsAttention ? 'border-turbo-warning/50' : ''
-      }`}
+      className={`card p-4 cursor-pointer group relative overflow-hidden ${borderClass}`}
     >
       {/* Active shimmer effect */}
       {isActive && (
@@ -60,26 +69,24 @@ export function AgentCard({ session }: AgentCardProps) {
 
       {/* Header */}
       <div className="flex items-start justify-between gap-2 mb-2 relative">
-        <h3 className="text-sm font-medium text-turbo-text truncate flex-1">
+        <h3 className="text-sm font-medium text-turbo-text truncate flex-1 flex items-center gap-1.5">
+          {session.status === 'completed' && <CheckmarkIcon />}
           {session.name}
         </h3>
-        <StatusBadge status={session.status} needsAttention={session.needsAttention} />
+        <StatusBadge
+          status={session.status}
+          needsAttention={session.needsAttention}
+          attentionType={session.attentionType}
+        />
       </div>
 
-      {/* Current action */}
-      <p className="text-xs text-turbo-text-dim truncate mb-3">
-        {session.currentAction || session.lastActivity || 'Starting...'}
+      {/* Current action / attention message */}
+      <p className={`text-xs truncate mb-3 ${actionColor}`}>
+        {actionText}
       </p>
 
-      {/* Progress bar for active sessions */}
-      {isActive && <ProgressBar value={progress} className="mb-3" />}
-
-      {/* Attention message */}
-      {session.needsAttention && session.attentionMessage && (
-        <div className="text-xs text-turbo-warning bg-turbo-warning/10 rounded px-2 py-1.5 mb-3 line-clamp-2">
-          {session.attentionMessage}
-        </div>
-      )}
+      {/* Progress bar for all statuses */}
+      <ProgressBar value={progress} status={session.status} className="mb-3" />
 
       {/* Footer */}
       <div className="flex items-center justify-between text-[11px] text-turbo-text-muted relative">
@@ -118,17 +125,99 @@ export function AgentCard({ session }: AgentCardProps) {
   )
 }
 
+// ─── Hooks ─────────────────────────────────────────────────────
+
+function useTimedProgress(session: AgentSession): number {
+  const isActive = session.status === 'active' || session.status === 'starting'
+  const frozenRef = useRef(0)
+  const [progress, setProgress] = useState(() => {
+    if (session.status === 'completed') return 100
+    if (!isActive) return frozenRef.current
+    return timeToProgress(Date.now() - session.startedAt)
+  })
+
+  useEffect(() => {
+    if (session.status === 'completed') {
+      setProgress(100)
+      return
+    }
+    if (!isActive) {
+      // Freeze at current value for error/stopped
+      return
+    }
+
+    const tick = () => {
+      const ms = Date.now() - session.startedAt
+      const p = timeToProgress(ms)
+      setProgress(p)
+      frozenRef.current = p
+    }
+    tick()
+    const interval = setInterval(tick, 1000)
+    return () => clearInterval(interval)
+  }, [session.status, session.startedAt, isActive])
+
+  return progress
+}
+
+/** Logarithmic curve: fast early, asymptotic approach to 90% */
+function timeToProgress(ms: number): number {
+  const s = ms / 1000
+  return Math.min(90, (Math.log(1 + s / 10) / Math.log(61)) * 90)
+}
+
 // ─── Helpers ────────────────────────────────────────────────────
 
-function estimateProgress(session: AgentSession): number {
-  // Rough heuristic based on blocks
-  const blocks = session.activityBlocks.length
-  if (blocks === 0) return 5
-  if (blocks < 3) return 15
-  if (blocks < 6) return 35
-  if (blocks < 10) return 55
-  if (blocks < 15) return 75
-  return 85
+function cardBorderClass(
+  status: AgentSession['status'],
+  needsAttention?: boolean,
+  attentionType?: AttentionType
+): string {
+  if (needsAttention && attentionType) {
+    switch (attentionType) {
+      case 'error':
+      case 'stuck':
+        return 'border-turbo-error/50'
+      case 'decision':
+        return 'border-turbo-warning/50'
+      case 'completed':
+      case 'review':
+        return 'border-turbo-success/40'
+    }
+  }
+  switch (status) {
+    case 'completed':
+      return 'border-turbo-success/40'
+    case 'error':
+      return 'border-turbo-error/40'
+    case 'stopped':
+      return 'border-turbo-text-muted/30'
+    default:
+      return ''
+  }
+}
+
+function attentionTextColor(type?: AttentionType): string {
+  switch (type) {
+    case 'error':
+    case 'stuck':
+      return 'text-turbo-error'
+    case 'decision':
+      return 'text-turbo-warning'
+    case 'completed':
+    case 'review':
+      return 'text-turbo-success'
+    default:
+      return 'text-turbo-warning'
+  }
+}
+
+function CheckmarkIcon() {
+  return (
+    <svg className="w-3.5 h-3.5 text-turbo-success flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+    </svg>
+  )
 }
 
 function TerminalIcon() {

@@ -1,8 +1,9 @@
-import type { AgentStatus } from '../../../../shared/types'
+import type { AgentStatus, AttentionType } from '../../../../shared/types'
 
 interface StatusBadgeProps {
   status: AgentStatus
   needsAttention?: boolean
+  attentionType?: AttentionType
   size?: 'sm' | 'md'
 }
 
@@ -44,13 +45,37 @@ const STATUS_CONFIG: Record<AgentStatus, { label: string; color: string; dot: st
   }
 }
 
-export function StatusBadge({ status, needsAttention, size = 'sm' }: StatusBadgeProps) {
-  const config = needsAttention
-    ? {
-        label: 'Needs Attention',
-        color: 'bg-turbo-warning/10 text-turbo-warning border-turbo-warning/20',
-        dot: 'bg-turbo-warning animate-pulse'
-      }
+const ATTENTION_CONFIG: Record<AttentionType, { label: string; color: string; dot: string }> = {
+  decision: {
+    label: 'Decision',
+    color: 'bg-turbo-warning/10 text-turbo-warning border-turbo-warning/20',
+    dot: 'bg-turbo-warning'
+  },
+  stuck: {
+    label: 'Stuck',
+    color: 'bg-turbo-error/10 text-turbo-error border-turbo-error/20',
+    dot: 'bg-turbo-error animate-pulse'
+  },
+  error: {
+    label: 'Error',
+    color: 'bg-turbo-error/10 text-turbo-error border-turbo-error/20',
+    dot: 'bg-turbo-error'
+  },
+  completed: {
+    label: 'Done',
+    color: 'bg-turbo-success/10 text-turbo-success border-turbo-success/20',
+    dot: 'bg-turbo-success'
+  },
+  review: {
+    label: 'Review',
+    color: 'bg-turbo-success/10 text-turbo-success border-turbo-success/20',
+    dot: 'bg-turbo-success'
+  }
+}
+
+export function StatusBadge({ status, needsAttention, attentionType, size = 'sm' }: StatusBadgeProps) {
+  const config = needsAttention && attentionType
+    ? ATTENTION_CONFIG[attentionType]
     : STATUS_CONFIG[status]
 
   const sizeClasses = size === 'sm'

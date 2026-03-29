@@ -1,4 +1,5 @@
-import { motion } from 'framer-motion'
+import { useState, useEffect, useRef } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
 import type { AttentionItem } from '../../../../shared/types'
 import { useSessionStore } from '../../stores/useSessionStore'
 import { useUIStore } from '../../stores/useUIStore'
@@ -53,24 +54,68 @@ export function AttentionQueue({ items }: AttentionQueueProps) {
   const setViewMode = useUIStore(s => s.setViewMode)
   const openTerminalDrawer = useUIStore(s => s.openTerminalDrawer)
 
+  const [flashingId, setFlashingId] = useState<string | null>(null)
+  const autoDismissTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({})
+
+  // Auto-dismiss completed/review items after 10s
+  useEffect(() => {
+    const timers = autoDismissTimers.current
+    for (const item of items) {
+      if ((item.type === 'completed' || item.type === 'review') && !timers[item.id]) {
+        timers[item.id] = setTimeout(() => {
+          dismissAttentionItem(item.id)
+          delete timers[item.id]
+        }, 10_000)
+      }
+    }
+
+    // Cleanup timers for items no longer in list
+    for (const id of Object.keys(timers)) {
+      if (!items.find(i => i.id === id)) {
+        clearTimeout(timers[id])
+        delete timers[id]
+      }
+    }
+
+    return () => {
+      for (const id of Object.keys(timers)) {
+        clearTimeout(timers[id])
+      }
+    }
+  }, [items, dismissAttentionItem])
+
   const handleQuickAction = (item: AttentionItem, qa: QuickAction) => {
+    // Flash feedback
+    setFlashingId(item.id)
+
+    const dismiss = () => {
+      setTimeout(() => {
+        setFlashingId(prev => prev === item.id ? null : prev)
+      }, 300)
+    }
+
     switch (qa.action) {
       case 'pty-input':
         if (qa.ptyInput) {
           window.api.sendTerminalInput(item.sessionId, qa.ptyInput)
         }
+        dismiss()
         dismissAttentionItem(item.id)
         break
       case 'open-terminal':
         openTerminalDrawer(item.sessionId)
+        dismiss()
+        dismissAttentionItem(item.id)
         break
       case 'stop-session':
         window.api.stopSession(item.sessionId)
+        dismiss()
         dismissAttentionItem(item.id)
         break
       case 'open-detail':
         selectSession(item.sessionId)
         setViewMode('detail')
+        dismiss()
         dismissAttentionItem(item.id)
         break
     }
@@ -87,55 +132,59 @@ export function AttentionQueue({ items }: AttentionQueueProps) {
       </div>
 
       <div className="space-y-2">
-        {items.map((item, i) => {
-          const actions = getQuickActions(item)
+        <AnimatePresence initial={false}>
+          {items.map((item, i) => {
+            const actions = getQuickActions(item)
+            const isFlashing = flashingId === item.id
 
-          return (
-            <motion.div
-              key={item.id}
-              initial={{ opacity: 0, x: -10 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: i * 0.05 }}
-              className={`card p-3 border-l-2 ${borderColor(item.type)}`}
-            >
-              <div className="flex items-start gap-3">
-                <AttentionIcon type={item.type} />
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-0.5">
-                    <span className="text-[10px] font-medium uppercase tracking-wider text-turbo-text-muted">
-                      {typeLabel(item.type)}
-                    </span>
-                    <span className="text-[10px] text-turbo-text-muted">
-                      {timeAgo(item.timestamp)}
-                    </span>
+            return (
+              <motion.div
+                key={item.id}
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 20, height: 0, marginBottom: 0, paddingTop: 0, paddingBottom: 0, overflow: 'hidden' }}
+                transition={{ delay: i * 0.05, exit: { duration: 0.25 } }}
+                className={`card p-3 border-l-2 ${borderColor(item.type)} ${isFlashing ? 'bg-turbo-accent/10' : ''}`}
+              >
+                <div className="flex items-start gap-3">
+                  <AttentionIcon type={item.type} />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-0.5">
+                      <span className="text-[10px] font-medium uppercase tracking-wider text-turbo-text-muted">
+                        {typeLabel(item.type)}
+                      </span>
+                      <span className="text-[10px] text-turbo-text-muted">
+                        {timeAgo(item.timestamp)}
+                      </span>
+                    </div>
+                    <h3 className="text-sm font-medium text-turbo-text mb-1">{item.title}</h3>
+                    <p className="text-xs text-turbo-text-dim line-clamp-2">{item.message}</p>
                   </div>
-                  <h3 className="text-sm font-medium text-turbo-text mb-1">{item.title}</h3>
-                  <p className="text-xs text-turbo-text-dim line-clamp-2">{item.message}</p>
-                </div>
-                <div className="flex items-center gap-1 flex-shrink-0">
-                  {actions.map((qa) => (
+                  <div className="flex items-center gap-1 flex-shrink-0">
+                    {actions.map((qa) => (
+                      <button
+                        key={qa.label}
+                        onClick={() => handleQuickAction(item, qa)}
+                        className={actionButtonClass(qa.variant)}
+                      >
+                        {qa.label}
+                      </button>
+                    ))}
                     <button
-                      key={qa.label}
-                      onClick={() => handleQuickAction(item, qa)}
-                      className={actionButtonClass(qa.variant)}
+                      onClick={() => dismissAttentionItem(item.id)}
+                      className="p-1 rounded hover:bg-turbo-surface-active text-turbo-text-muted transition-colors"
+                      title="Dismiss"
                     >
-                      {qa.label}
+                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                      </svg>
                     </button>
-                  ))}
-                  <button
-                    onClick={() => dismissAttentionItem(item.id)}
-                    className="p-1 rounded hover:bg-turbo-surface-active text-turbo-text-muted transition-colors"
-                    title="Dismiss"
-                  >
-                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </button>
+                  </div>
                 </div>
-              </div>
-            </motion.div>
-          )
-        })}
+              </motion.div>
+            )
+          })}
+        </AnimatePresence>
       </div>
     </section>
   )
@@ -196,4 +245,3 @@ function AttentionIcon({ type }: { type: AttentionItem['type'] }) {
     </div>
   )
 }
-
