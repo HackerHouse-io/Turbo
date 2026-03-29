@@ -27,9 +27,22 @@ export const useSessionStore = create<SessionState>((set) => ({
   },
 
   updateSession: (session) => {
-    set(state => ({
-      sessions: { ...state.sessions, [session.id]: session }
-    }))
+    set(state => {
+      // Auto-dismiss stale attention items when session no longer needs attention
+      // (user responded via terminal, session went back to active, etc.)
+      const attentionItems = !session.needsAttention
+        ? state.attentionItems.map(item =>
+            item.sessionId === session.id && !item.dismissed
+              ? { ...item, dismissed: true }
+              : item
+          )
+        : state.attentionItems
+
+      return {
+        sessions: { ...state.sessions, [session.id]: session },
+        attentionItems
+      }
+    })
   },
 
   removeSession: (sessionId) => {
