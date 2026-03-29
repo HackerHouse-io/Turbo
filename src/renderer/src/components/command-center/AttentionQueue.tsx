@@ -19,19 +19,19 @@ function getQuickActions(item: AttentionItem): QuickAction[] {
       const msg = item.message
       if (/allow/i.test(msg) || /\(y\/n\)/i.test(msg)) {
         return [
-          { label: 'Allow', variant: 'primary', action: 'pty-input', ptyInput: 'yes\n' },
-          { label: 'Deny', variant: 'danger', action: 'pty-input', ptyInput: 'no\n' }
+          { label: 'Allow', variant: 'primary', action: 'pty-input', ptyInput: 'yes\r' },
+          { label: 'Deny', variant: 'danger', action: 'pty-input', ptyInput: 'no\r' }
         ]
       }
       return [
-        { label: 'Yes', variant: 'primary', action: 'pty-input', ptyInput: 'yes\n' },
-        { label: 'No', variant: 'danger', action: 'pty-input', ptyInput: 'no\n' },
+        { label: 'Yes', variant: 'primary', action: 'pty-input', ptyInput: 'yes\r' },
+        { label: 'No', variant: 'danger', action: 'pty-input', ptyInput: 'no\r' },
         { label: 'Open Terminal', variant: 'ghost', action: 'open-terminal' }
       ]
     }
     case 'stuck':
       return [
-        { label: 'Nudge', variant: 'primary', action: 'pty-input', ptyInput: '\n' },
+        { label: 'Nudge', variant: 'primary', action: 'pty-input', ptyInput: '\r' },
         { label: 'Open Terminal', variant: 'ghost', action: 'open-terminal' }
       ]
     case 'error':

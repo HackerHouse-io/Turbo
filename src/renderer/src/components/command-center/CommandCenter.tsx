@@ -68,10 +68,10 @@ export function CommandCenter() {
     return <NerveCenter />
   }
 
-  // Tasks state — cards + fixed bottom prompt
+  // Tasks state — cards + sticky bottom prompt
   return (
-    <div className="h-full flex flex-col">
-      <div className="flex-1 overflow-y-auto px-6 py-4 min-h-0">
+    <div className="h-full overflow-y-auto">
+      <div className="px-6 py-4">
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -131,8 +131,8 @@ export function CommandCenter() {
         </motion.div>
       </div>
 
-      {/* Fixed bottom prompt — only when tasks exist */}
-      <div className="flex-shrink-0 px-6 pb-4">
+      {/* Sticky bottom prompt — flows after cards, sticks when scrolling */}
+      <div className="sticky bottom-0 px-6 pb-4 pt-2 bg-gradient-to-t from-turbo-bg from-60% to-transparent">
         <InlinePrompt />
       </div>
     </div>
