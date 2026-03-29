@@ -80,17 +80,29 @@ export function CommandPaletteRoutineFill({ routine, onSubmit, onBack }: Routine
           Steps
         </span>
         {routine.steps.map((step, i) => (
-          <div key={i} className="flex items-center gap-2 text-sm text-turbo-text-dim">
+          <div key={i} className="flex gap-2 text-sm text-turbo-text-dim">
             <span className="w-5 h-5 rounded-full bg-turbo-surface border border-turbo-border
-                           flex items-center justify-center text-[10px] text-turbo-text-muted flex-shrink-0">
+                           flex items-center justify-center text-[10px] text-turbo-text-muted flex-shrink-0 mt-0.5">
               {i + 1}
             </span>
-            <span>{step.name}</span>
-            {step.permissionMode && step.permissionMode !== 'default' && (
-              <span className="text-[10px] px-1.5 py-0.5 rounded bg-turbo-surface border border-turbo-border text-turbo-text-muted">
-                {step.permissionMode}
-              </span>
-            )}
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2">
+                <span>{step.name}</span>
+                {step.permissionMode && step.permissionMode !== 'default' && (
+                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-turbo-surface border border-turbo-border text-turbo-text-muted">
+                    {step.permissionMode}
+                  </span>
+                )}
+                {step.effort && (
+                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-turbo-surface border border-turbo-border text-turbo-text-muted">
+                    {step.effort}
+                  </span>
+                )}
+              </div>
+              <p className="text-turbo-text-muted text-[11px] truncate mt-0.5">
+                {step.prompt.length > 80 ? step.prompt.slice(0, 80) + '...' : step.prompt}
+              </p>
+            </div>
           </div>
         ))}
         {routine.endsWithCommit && (

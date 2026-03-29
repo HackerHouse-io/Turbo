@@ -53,6 +53,8 @@ export default function App() {
       useRoutineStore.getState().setExecutions(executions)
     })
 
+    useRoutineStore.getState().loadRoutines()
+
     return () => {
       unsubTerminal()
       unsubSession()

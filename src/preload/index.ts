@@ -160,6 +160,15 @@ const api = {
   listRoutines: (): Promise<Routine[]> =>
     ipcRenderer.invoke(IPC.ROUTINE_LIST),
 
+  saveRoutine: (routine: Routine): Promise<Routine> =>
+    ipcRenderer.invoke(IPC.ROUTINE_SAVE, routine),
+
+  deleteRoutine: (routineId: string): Promise<void> =>
+    ipcRenderer.invoke(IPC.ROUTINE_DELETE, routineId),
+
+  duplicateRoutine: (routineId: string): Promise<Routine> =>
+    ipcRenderer.invoke(IPC.ROUTINE_DUPLICATE, routineId),
+
   startRoutine: (payload: StartRoutinePayload): Promise<RoutineExecution> =>
     ipcRenderer.invoke(IPC.ROUTINE_START, payload),
 

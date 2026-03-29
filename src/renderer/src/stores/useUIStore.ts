@@ -1,12 +1,14 @@
 import { create } from 'zustand'
-import type { PromptTemplate } from '../../../shared/types'
+import type { PromptTemplate, Routine } from '../../../shared/types'
 
 interface UIState {
   // Command palette
   commandPaletteOpen: boolean
   pendingTemplateFill: PromptTemplate | null
+  pendingRoutineFill: Routine | null
   openCommandPalette: () => void
   openCommandPaletteWithTemplate: (template: PromptTemplate) => void
+  openCommandPaletteWithRoutine: (routine: Routine) => void
   closeCommandPalette: () => void
   toggleCommandPalette: () => void
 
@@ -25,14 +27,26 @@ interface UIState {
   // View mode
   viewMode: 'dashboard' | 'detail'
   setViewMode: (mode: 'dashboard' | 'detail') => void
+
+  // Routine detail overlay
+  routineDetailRoutine: Routine | null
+  openRoutineDetail: (routine: Routine) => void
+  closeRoutineDetail: () => void
+
+  // Routine editor overlay
+  routineEditorState: { routine: Routine | null; mode: 'create' | 'edit' | 'duplicate' } | null
+  openRoutineEditor: (routine: Routine | null, mode: 'create' | 'edit' | 'duplicate') => void
+  closeRoutineEditor: () => void
 }
 
 export const useUIStore = create<UIState>((set) => ({
   commandPaletteOpen: false,
   pendingTemplateFill: null,
+  pendingRoutineFill: null,
   openCommandPalette: () => set({ commandPaletteOpen: true }),
   openCommandPaletteWithTemplate: (template) => set({ commandPaletteOpen: true, pendingTemplateFill: template }),
-  closeCommandPalette: () => set({ commandPaletteOpen: false, pendingTemplateFill: null }),
+  openCommandPaletteWithRoutine: (routine) => set({ commandPaletteOpen: true, pendingRoutineFill: routine }),
+  closeCommandPalette: () => set({ commandPaletteOpen: false, pendingTemplateFill: null, pendingRoutineFill: null }),
   toggleCommandPalette: () => set(s => ({ commandPaletteOpen: !s.commandPaletteOpen })),
 
   projectSelectorOpen: false,
@@ -48,5 +62,13 @@ export const useUIStore = create<UIState>((set) => ({
     set({ terminalDrawerOpen: false, terminalDrawerSessionId: null }),
 
   viewMode: 'dashboard',
-  setViewMode: (mode) => set({ viewMode: mode })
+  setViewMode: (mode) => set({ viewMode: mode }),
+
+  routineDetailRoutine: null,
+  openRoutineDetail: (routine) => set({ routineDetailRoutine: routine }),
+  closeRoutineDetail: () => set({ routineDetailRoutine: null }),
+
+  routineEditorState: null,
+  openRoutineEditor: (routine, mode) => set({ routineEditorState: { routine, mode } }),
+  closeRoutineEditor: () => set({ routineEditorState: null })
 }))

@@ -13,7 +13,8 @@ import type {
   GitExecPayload,
   GitPreset,
   StartRoutinePayload,
-  RoutineExecution
+  RoutineExecution,
+  Routine
 } from '../../shared/types'
 import { IPC } from '../../shared/constants'
 import { ClaudeSessionManager } from '../claude/ClaudeSessionManager'
@@ -288,6 +289,18 @@ export function registerIpcHandlers(opts: IpcHandlerOptions): void {
 
   ipcMain.handle(IPC.ROUTINE_REMOVE, async (_e, executionId: string) => {
     routineExecutor.removeExecution(executionId)
+  })
+
+  ipcMain.handle(IPC.ROUTINE_SAVE, async (_e, routine: Routine) => {
+    return routineManager.saveRoutine(routine)
+  })
+
+  ipcMain.handle(IPC.ROUTINE_DELETE, async (_e, id: string) => {
+    routineManager.deleteRoutine(id)
+  })
+
+  ipcMain.handle(IPC.ROUTINE_DUPLICATE, async (_e, id: string) => {
+    return routineManager.duplicateRoutine(id)
   })
 
   // ─── Forward events to renderer ────────────────────────────

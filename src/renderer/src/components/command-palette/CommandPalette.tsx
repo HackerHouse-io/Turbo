@@ -99,6 +99,13 @@ export function CommandPalette() {
       setFillTemplate(pendingTemplate)
       useUIStore.setState({ pendingTemplateFill: null })
     }
+
+    // Hydrate routine fill from pending routine (set by detail overlay Run)
+    const pendingRoutine = useUIStore.getState().pendingRoutineFill
+    if (pendingRoutine) {
+      setFillRoutine(pendingRoutine)
+      useUIStore.setState({ pendingRoutineFill: null })
+    }
   }, [])
 
   // ─── Create session helper ─────────────────────────────────

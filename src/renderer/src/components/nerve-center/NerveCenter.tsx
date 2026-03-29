@@ -4,6 +4,7 @@ import { GitOverviewCard } from './GitOverviewCard'
 import { SessionSummaryCard } from './SessionSummaryCard'
 import { QuickActionsCard } from './QuickActionsCard'
 import { RecentCommitsCard } from './RecentCommitsCard'
+import { RoutinesCard } from './RoutinesCard'
 import { useNerveCenterData } from '../../hooks/useNerveCenterData'
 import { useProjectStore } from '../../stores/useProjectStore'
 
@@ -58,9 +59,12 @@ export function NerveCenter() {
           <QuickActionsCard projectPath={projectPath ?? ''} />
         </motion.div>
 
-        {/* Row 2: Recent Commits */}
-        <motion.div variants={fadeUp} className="w-full mb-6">
-          <RecentCommitsCard commits={commits} loading={loading} />
+        {/* Row 2: Recent Commits + Routines */}
+        <motion.div variants={fadeUp} className="w-full grid grid-cols-1 md:grid-cols-3 gap-3 mb-6">
+          <div className="md:col-span-2">
+            <RecentCommitsCard commits={commits} loading={loading} />
+          </div>
+          <RoutinesCard />
         </motion.div>
 
         {/* Footer hint */}

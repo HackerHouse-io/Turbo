@@ -272,6 +272,48 @@ export class RoutineManager {
     return this.routines.find(r => r.id === id)
   }
 
+  saveRoutine(routine: Routine): Routine {
+    const existing = routine.id ? this.routines.findIndex(r => r.id === routine.id) : -1
+    const saved: Routine = {
+      ...routine,
+      id: existing >= 0 ? routine.id : uuid(),
+      builtIn: existing >= 0 ? this.routines[existing].builtIn : false,
+      variables: extractTemplateVariables(routine.steps.map(s => s.prompt))
+    }
+    if (existing >= 0) {
+      // Don't allow editing built-in routines
+      if (this.routines[existing].builtIn) return this.routines[existing]
+      this.routines[existing] = saved
+    } else {
+      this.routines.push(saved)
+    }
+    this.save()
+    return saved
+  }
+
+  deleteRoutine(id: string): void {
+    const filtered = this.routines.filter(r => r.id !== id || r.builtIn)
+    if (filtered.length === this.routines.length) return // nothing removed
+    this.routines = filtered
+    this.save()
+  }
+
+  duplicateRoutine(id: string): Routine {
+    const source = this.routines.find(r => r.id === id)
+    if (!source) throw new Error(`Routine ${id} not found`)
+    const clone: Routine = {
+      ...source,
+      id: uuid(),
+      name: source.name + ' (Copy)',
+      builtIn: false,
+      variables: [...source.variables],
+      steps: source.steps.map(s => ({ ...s }))
+    }
+    this.routines.push(clone)
+    this.save()
+    return clone
+  }
+
   // ─── Private ───────────────────────────────────────────────
 
   private load(): void {

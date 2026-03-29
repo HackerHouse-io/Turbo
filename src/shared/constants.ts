@@ -80,6 +80,9 @@ export const IPC = {
   ROUTINE_DISMISS: 'routine:dismiss',
   ROUTINE_EXECUTIONS: 'routine:executions',
   ROUTINE_REMOVE: 'routine:remove',
+  ROUTINE_SAVE: 'routine:save',
+  ROUTINE_DELETE: 'routine:delete',
+  ROUTINE_DUPLICATE: 'routine:duplicate',
 
   // Events (main → renderer)
   ROUTINE_UPDATED: 'routine:updated'

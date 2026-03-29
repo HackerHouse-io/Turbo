@@ -4,6 +4,8 @@ import { CommandCenter } from '../command-center/CommandCenter'
 import { AgentDetailView } from '../command-center/AgentDetailView'
 import { CommandPalette } from '../command-palette/CommandPalette'
 import { TerminalDrawer } from '../terminal/TerminalDrawer'
+import { RoutineDetailOverlay } from '../routines/RoutineDetailOverlay'
+import { RoutineEditorOverlay } from '../routines/RoutineEditorOverlay'
 import { useUIStore } from '../../stores/useUIStore'
 import { useSessionStore } from '../../stores/useSessionStore'
 
@@ -12,9 +14,11 @@ export function AppShell() {
   const commandPaletteOpen = useUIStore(s => s.commandPaletteOpen)
   const terminalDrawerOpen = useUIStore(s => s.terminalDrawerOpen)
   const projectSelectorOpen = useUIStore(s => s.projectSelectorOpen)
+  const routineDetailRoutine = useUIStore(s => s.routineDetailRoutine)
+  const routineEditorState = useUIStore(s => s.routineEditorState)
   const selectedSessionId = useSessionStore(s => s.selectedSessionId)
 
-  // Global keyboard shortcuts
+  // Global keyboard shortcuts — reads fresh state via getState() so no reactive deps needed
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
       // Cmd+K -> Command Palette
@@ -22,24 +26,30 @@ export function AppShell() {
         e.preventDefault()
         useUIStore.getState().toggleCommandPalette()
       }
-      // Escape -> Close overlays
+      // Escape -> Close overlays (highest z-index first)
       if (e.key === 'Escape') {
-        if (projectSelectorOpen) {
-          useUIStore.getState().closeProjectSelector()
-        } else if (commandPaletteOpen) {
-          useUIStore.getState().closeCommandPalette()
-        } else if (terminalDrawerOpen) {
-          useUIStore.getState().closeTerminalDrawer()
-        } else if (selectedSessionId) {
-          useSessionStore.getState().selectSession(null)
-          useUIStore.getState().setViewMode('dashboard')
+        const ui = useUIStore.getState()
+        const session = useSessionStore.getState()
+        if (ui.routineEditorState) {
+          ui.closeRoutineEditor()
+        } else if (ui.routineDetailRoutine) {
+          ui.closeRoutineDetail()
+        } else if (ui.projectSelectorOpen) {
+          ui.closeProjectSelector()
+        } else if (ui.commandPaletteOpen) {
+          ui.closeCommandPalette()
+        } else if (ui.terminalDrawerOpen) {
+          ui.closeTerminalDrawer()
+        } else if (session.selectedSessionId) {
+          session.selectSession(null)
+          ui.setViewMode('dashboard')
         }
       }
     }
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [commandPaletteOpen, terminalDrawerOpen, projectSelectorOpen, selectedSessionId])
+  }, [])
 
   return (
     <div className="h-full flex flex-col bg-turbo-bg">
@@ -59,6 +69,8 @@ export function AppShell() {
       </main>
 
       {/* Overlays */}
+      {routineDetailRoutine && <RoutineDetailOverlay routine={routineDetailRoutine} />}
+      {routineEditorState && <RoutineEditorOverlay />}
       {commandPaletteOpen && <CommandPalette />}
       {terminalDrawerOpen && <TerminalDrawer />}
     </div>
