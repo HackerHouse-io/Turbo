@@ -71,6 +71,15 @@ export interface AttentionItem {
   dismissed: boolean
 }
 
+// ─── Plain Terminal ─────────────────────────────────────────────
+
+export interface PlainTerminal {
+  id: string
+  projectPath: string
+  shell: string
+  createdAt: number
+}
+
 // ─── Projects ───────────────────────────────────────────────────
 
 export interface Project {

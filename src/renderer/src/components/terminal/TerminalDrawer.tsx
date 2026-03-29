@@ -2,15 +2,29 @@ import { motion } from 'framer-motion'
 import { useUIStore } from '../../stores/useUIStore'
 import { useSessionStore } from '../../stores/useSessionStore'
 import { XTermRenderer } from './XTermRenderer'
+import { PaletteIcon } from '../command-palette/PaletteIcon'
 
 export function TerminalDrawer() {
-  const sessionId = useUIStore(s => s.terminalDrawerSessionId)
+  const target = useUIStore(s => s.terminalDrawerTarget)
   const closeTerminalDrawer = useUIStore(s => s.closeTerminalDrawer)
+
+  const isPlain = target?.type === 'plain'
+  const terminalId = target
+    ? target.type === 'session' ? target.sessionId : target.terminalId
+    : null
+
   const session = useSessionStore(s =>
-    sessionId ? s.sessions[sessionId] : undefined
+    target?.type === 'session' ? s.sessions[target.sessionId] : undefined
   )
 
-  if (!sessionId) return null
+  if (!terminalId) return null
+
+  const handleKill = async () => {
+    if (isPlain) {
+      await window.api.killPlainTerminal(terminalId)
+    }
+    closeTerminalDrawer()
+  }
 
   return (
     <div className="fixed inset-0 z-40 flex flex-col">
@@ -34,15 +48,30 @@ export function TerminalDrawer() {
         {/* Drawer header */}
         <div className="flex items-center justify-between px-4 py-2 border-b border-turbo-border bg-turbo-surface/50">
           <div className="flex items-center gap-2">
-            <TerminalIcon />
+            <PaletteIcon icon="terminal" className="w-4 h-4 text-turbo-accent" />
             <span className="text-xs font-medium text-turbo-text">
-              {session?.name || 'Terminal'}
+              {isPlain ? 'Terminal' : (session?.name || 'Terminal')}
             </span>
-            <span className="text-[10px] text-turbo-text-muted font-mono">
-              {sessionId.slice(0, 8)}
-            </span>
+            {isPlain ? (
+              <span className="text-[10px] px-1.5 py-0.5 rounded bg-turbo-surface-active text-turbo-text-muted font-mono">
+                shell
+              </span>
+            ) : (
+              <span className="text-[10px] text-turbo-text-muted font-mono">
+                {terminalId.slice(0, 8)}
+              </span>
+            )}
           </div>
           <div className="flex items-center gap-2">
+            {isPlain && (
+              <button
+                onClick={handleKill}
+                className="p-1 rounded hover:bg-red-500/20 text-turbo-text-muted hover:text-red-400 transition-colors"
+                title="Kill terminal"
+              >
+                <PaletteIcon icon="trash" className="w-4 h-4" />
+              </button>
+            )}
             <span className="text-[10px] text-turbo-text-muted">
               <kbd className="kbd">Esc</kbd> to close
             </span>
@@ -59,17 +88,9 @@ export function TerminalDrawer() {
 
         {/* Terminal content */}
         <div className="flex-1 overflow-hidden">
-          <XTermRenderer sessionId={sessionId} />
+          <XTermRenderer terminalId={terminalId} mode={isPlain ? 'plain' : 'session'} />
         </div>
       </motion.div>
     </div>
-  )
-}
-
-function TerminalIcon() {
-  return (
-    <svg className="w-4 h-4 text-turbo-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 7.5l3 2.25-3 2.25m4.5 0h3m-9 8.25h13.5A2.25 2.25 0 0021 18V6a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 6v12a2.25 2.25 0 002.25 2.25z" />
-    </svg>
   )
 }

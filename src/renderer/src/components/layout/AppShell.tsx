@@ -9,6 +9,7 @@ import { RoutineEditorOverlay } from '../routines/RoutineEditorOverlay'
 import { PlanOverlay } from '../plan/PlanOverlay'
 import { useUIStore } from '../../stores/useUIStore'
 import { useSessionStore } from '../../stores/useSessionStore'
+import { useProjectStore } from '../../stores/useProjectStore'
 
 export function AppShell() {
   const viewMode = useUIStore(s => s.viewMode)
@@ -27,6 +28,23 @@ export function AppShell() {
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
         e.preventDefault()
         useUIStore.getState().toggleCommandPalette()
+      }
+      // Ctrl+` -> Toggle plain terminal
+      if (e.ctrlKey && e.key === '`') {
+        e.preventDefault()
+        const ui = useUIStore.getState()
+        if (ui.terminalDrawerTarget?.type === 'plain') {
+          ui.closeTerminalDrawer()
+        } else {
+          const store = useProjectStore.getState()
+          const proj = store.projects.find(p => p.id === store.selectedProjectId) || store.projects[0]
+          if (proj?.path) {
+            window.api.createPlainTerminal(proj.path).then(t => {
+              ui.openPlainTerminalDrawer(t.id)
+            })
+          }
+        }
+        return
       }
       // Escape -> Close overlays (highest z-index first)
       if (e.key === 'Escape') {

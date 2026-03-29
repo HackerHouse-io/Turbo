@@ -26,6 +26,14 @@ export default function App() {
       appendTerminalData(sessionId, data)
     })
 
+    // Buffer plain terminal data the same way
+    const unsubPlainTerminal = window.api.onPlainTerminalData((terminalId, data) => {
+      appendTerminalData(terminalId, data)
+    })
+    const unsubPlainTerminalExit = window.api.onPlainTerminalExit((terminalId) => {
+      clearTerminalBuffer(terminalId)
+    })
+
     const unsubSession = window.api.onSessionUpdated((session) => {
       updateSession(session)
       // Refresh projects to update activeAgents counts
@@ -57,6 +65,8 @@ export default function App() {
 
     return () => {
       unsubTerminal()
+      unsubPlainTerminal()
+      unsubPlainTerminalExit()
       unsubSession()
       unsubAttention()
       unsubRemoved()

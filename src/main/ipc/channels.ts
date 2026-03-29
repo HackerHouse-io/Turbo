@@ -28,6 +28,7 @@ import { GitPresetManager } from '../git/GitPresetManager'
 import { RoutineManager } from '../routines/RoutineManager'
 import { RoutineExecutor } from '../routines/RoutineExecutor'
 import { PlanFileManager } from '../plan/PlanFileManager'
+import { PlainTerminalManager } from '../terminal/PlainTerminalManager'
 import { detectModels } from '../claude/ClaudeModelDetector'
 
 interface IpcHandlerOptions {
@@ -41,6 +42,7 @@ interface IpcHandlerOptions {
   routineManager: RoutineManager
   routineExecutor: RoutineExecutor
   planFileManager: PlanFileManager
+  plainTerminalManager: PlainTerminalManager
   getMainWindow: () => BrowserWindow | null
 }
 
@@ -59,6 +61,7 @@ export function registerIpcHandlers(opts: IpcHandlerOptions): void {
     routineManager,
     routineExecutor,
     planFileManager,
+    plainTerminalManager,
     getMainWindow
   } = opts
 
@@ -329,6 +332,24 @@ export function registerIpcHandlers(opts: IpcHandlerOptions): void {
     return planFileManager.savePlan(payload)
   })
 
+  // ─── Plain Terminal ──────────────────────────────────────────
+
+  ipcMain.handle(IPC.PLAIN_TERMINAL_CREATE, async (_e, payload: { projectPath: string }) => {
+    return plainTerminalManager.create(payload.projectPath)
+  })
+
+  ipcMain.handle(IPC.PLAIN_TERMINAL_KILL, async (_e, terminalId: string) => {
+    plainTerminalManager.kill(terminalId)
+  })
+
+  ipcMain.on(IPC.PLAIN_TERMINAL_INPUT, (_e, terminalId: string, data: string) => {
+    plainTerminalManager.write(terminalId, data)
+  })
+
+  ipcMain.on(IPC.PLAIN_TERMINAL_RESIZE, (_e, payload: { terminalId: string; cols: number; rows: number }) => {
+    plainTerminalManager.resize(payload.terminalId, payload.cols, payload.rows)
+  })
+
   // ─── Forward events to renderer ────────────────────────────
 
   sessionManager.on('session-updated', (session: AgentSession) => {
@@ -363,6 +384,20 @@ export function registerIpcHandlers(opts: IpcHandlerOptions): void {
     const win = getMainWindow()
     if (win && !win.isDestroyed()) {
       win.webContents.send(IPC.ROUTINE_UPDATED, execution)
+    }
+  })
+
+  plainTerminalManager.on('terminal-data', (terminalId: string, data: string) => {
+    const win = getMainWindow()
+    if (win && !win.isDestroyed()) {
+      win.webContents.send(IPC.PLAIN_TERMINAL_DATA, terminalId, data)
+    }
+  })
+
+  plainTerminalManager.on('terminal-exit', (terminalId: string, code: number) => {
+    const win = getMainWindow()
+    if (win && !win.isDestroyed()) {
+      win.webContents.send(IPC.PLAIN_TERMINAL_EXIT, terminalId, code)
     }
   })
 }

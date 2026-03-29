@@ -6,10 +6,11 @@ import { getTerminalBuffer } from '../../lib/terminalBuffer'
 import '@xterm/xterm/css/xterm.css'
 
 interface XTermRendererProps {
-  sessionId: string
+  terminalId: string
+  mode?: 'session' | 'plain'
 }
 
-export function XTermRenderer({ sessionId }: XTermRendererProps) {
+export function XTermRenderer({ terminalId, mode = 'session' }: XTermRendererProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const termRef = useRef<Terminal | null>(null)
   const fitRef = useRef<FitAddon | null>(null)
@@ -73,29 +74,34 @@ export function XTermRenderer({ sessionId }: XTermRendererProps) {
       }
     }
 
+    // Resolve API functions once based on mode
+    const sendInput = mode === 'plain' ? window.api.sendPlainTerminalInput : window.api.sendTerminalInput
+    const sendResize = mode === 'plain' ? window.api.resizePlainTerminal : window.api.resizeTerminal
+    const subscribeData = mode === 'plain' ? window.api.onPlainTerminalData : window.api.onTerminalData
+
     // Defer initial fit to next frame so layout is settled
     requestAnimationFrame(() => {
       safeFit()
 
       // Replay buffered data from before this terminal mounted
-      const buffered = getTerminalBuffer(sessionId)
+      const buffered = getTerminalBuffer(terminalId)
       if (buffered) {
         terminal.write(buffered)
       }
 
       // Send initial resize
       const { cols, rows } = terminal
-      window.api.resizeTerminal(sessionId, cols, rows)
+      sendResize(terminalId, cols, rows)
     })
 
     // Send input to PTY via IPC
     terminal.onData((data) => {
-      window.api.sendTerminalInput(sessionId, data)
+      sendInput(terminalId, data)
     })
 
     // Receive output from PTY
-    const unsubData = window.api.onTerminalData((sid, data) => {
-      if (sid === sessionId) {
+    const unsubData = subscribeData((sid, data) => {
+      if (sid === terminalId) {
         terminal.write(data)
       }
     })
@@ -104,21 +110,23 @@ export function XTermRenderer({ sessionId }: XTermRendererProps) {
     const resizeObserver = new ResizeObserver(() => {
       safeFit()
       const { cols, rows } = terminal
-      window.api.resizeTerminal(sessionId, cols, rows)
+      sendResize(terminalId, cols, rows)
     })
     resizeObserver.observe(containerRef.current)
 
-    // Focus terminal
+    // Focus terminal — delay slightly so drawer animation settles
     terminal.focus()
+    const focusTimer = setTimeout(() => terminal.focus(), 150)
 
     return () => {
+      clearTimeout(focusTimer)
       unsubData()
       resizeObserver.disconnect()
       terminal.dispose()
       termRef.current = null
       fitRef.current = null
     }
-  }, [sessionId])
+  }, [terminalId, mode])
 
   return (
     <div

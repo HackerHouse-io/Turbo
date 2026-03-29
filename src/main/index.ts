@@ -10,6 +10,7 @@ import { GitPresetManager } from './git/GitPresetManager'
 import { RoutineManager } from './routines/RoutineManager'
 import { RoutineExecutor } from './routines/RoutineExecutor'
 import { PlanFileManager } from './plan/PlanFileManager'
+import { PlainTerminalManager } from './terminal/PlainTerminalManager'
 import { registerIpcHandlers } from './ipc/channels'
 
 let mainWindow: BrowserWindow | null = null
@@ -22,6 +23,7 @@ let gitPresetManager: GitPresetManager
 let routineManager: RoutineManager
 let routineExecutor: RoutineExecutor
 let planFileManager: PlanFileManager
+let plainTerminalManager: PlainTerminalManager
 
 const isDev = !app.isPackaged
 
@@ -86,6 +88,7 @@ app.whenReady().then(() => {
   routineManager = new RoutineManager(app.getPath('userData'))
   routineExecutor = new RoutineExecutor(sessionManager, routineManager)
   planFileManager = new PlanFileManager()
+  plainTerminalManager = new PlainTerminalManager()
 
   // Register IPC handlers
   registerIpcHandlers({
@@ -99,6 +102,7 @@ app.whenReady().then(() => {
     routineManager,
     routineExecutor,
     planFileManager,
+    plainTerminalManager,
     getMainWindow: () => mainWindow
   })
 
@@ -119,6 +123,7 @@ app.on('window-all-closed', () => {
 })
 
 app.on('before-quit', () => {
+  plainTerminalManager?.dispose()
   planFileManager?.dispose()
   routineExecutor?.dispose()
   sessionManager?.dispose()

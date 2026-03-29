@@ -90,7 +90,15 @@ export const IPC = {
   // Plan
   PLAN_READ: 'plan:read',
   PLAN_SAVE: 'plan:save',
-  PLAN_FILE_CHANGED: 'plan:file-changed'
+  PLAN_FILE_CHANGED: 'plan:file-changed',
+
+  // Plain Terminal
+  PLAIN_TERMINAL_CREATE: 'plain-terminal:create',
+  PLAIN_TERMINAL_KILL: 'plain-terminal:kill',
+  PLAIN_TERMINAL_INPUT: 'plain-terminal:input',
+  PLAIN_TERMINAL_RESIZE: 'plain-terminal:resize',
+  PLAIN_TERMINAL_DATA: 'plain-terminal:data',
+  PLAIN_TERMINAL_EXIT: 'plain-terminal:exit'
 } as const
 
 export const PROMPT_HISTORY_MAX = 50

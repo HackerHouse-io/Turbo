@@ -274,8 +274,24 @@ export function CommandPalette() {
       })
     }
 
+    // Actions
+    items.push({
+      id: 'action-open-terminal',
+      label: 'Open Terminal',
+      description: 'Open a shell in the current project',
+      icon: 'terminal',
+      section: 'actions',
+      action: async () => {
+        if (!selectedProjectPath) return
+        const terminal = await window.api.createPlainTerminal(selectedProjectPath)
+        closeCommandPalette()
+        useUIStore.getState().openPlainTerminalDrawer(terminal.id)
+      },
+      keywords: ['terminal', 'shell', 'bash', 'zsh', 'console']
+    })
+
     return items
-  }, [projects, selectedProjectId, templates, routines, gitPresets, sessions, createSession, handleGitAction, handleStartRoutine, closeCommandPalette, selectSession, setViewMode])
+  }, [projects, selectedProjectId, templates, routines, gitPresets, sessions, selectedProjectPath, createSession, handleGitAction, handleStartRoutine, closeCommandPalette, selectSession, setViewMode])
 
   // ─── Filtering ─────────────────────────────────────────────
 

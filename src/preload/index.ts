@@ -25,7 +25,8 @@ import type {
   StartRoutinePayload,
   PlanReadResult,
   PlanSavePayload,
-  PlanSaveResult
+  PlanSaveResult,
+  PlainTerminal
 } from '../shared/types'
 
 /**
@@ -205,6 +206,34 @@ const api = {
     const handler = (_: Electron.IpcRendererEvent, result: PlanReadResult) => callback(result)
     ipcRenderer.on(IPC.PLAN_FILE_CHANGED, handler)
     return () => ipcRenderer.removeListener(IPC.PLAN_FILE_CHANGED, handler)
+  },
+
+  // ─── Plain Terminal ────────────────────────────────────────
+
+  createPlainTerminal: (projectPath: string): Promise<PlainTerminal> =>
+    ipcRenderer.invoke(IPC.PLAIN_TERMINAL_CREATE, { projectPath }),
+
+  killPlainTerminal: (terminalId: string): Promise<void> =>
+    ipcRenderer.invoke(IPC.PLAIN_TERMINAL_KILL, terminalId),
+
+  sendPlainTerminalInput: (terminalId: string, data: string): void =>
+    ipcRenderer.send(IPC.PLAIN_TERMINAL_INPUT, terminalId, data),
+
+  resizePlainTerminal: (terminalId: string, cols: number, rows: number): void =>
+    ipcRenderer.send(IPC.PLAIN_TERMINAL_RESIZE, { terminalId, cols, rows }),
+
+  onPlainTerminalData: (callback: (terminalId: string, data: string) => void) => {
+    const handler = (_: Electron.IpcRendererEvent, terminalId: string, data: string) =>
+      callback(terminalId, data)
+    ipcRenderer.on(IPC.PLAIN_TERMINAL_DATA, handler)
+    return () => ipcRenderer.removeListener(IPC.PLAIN_TERMINAL_DATA, handler)
+  },
+
+  onPlainTerminalExit: (callback: (terminalId: string, code: number) => void) => {
+    const handler = (_: Electron.IpcRendererEvent, terminalId: string, code: number) =>
+      callback(terminalId, code)
+    ipcRenderer.on(IPC.PLAIN_TERMINAL_EXIT, handler)
+    return () => ipcRenderer.removeListener(IPC.PLAIN_TERMINAL_EXIT, handler)
   },
 
   // ─── Event Subscriptions ──────────────────────────────────

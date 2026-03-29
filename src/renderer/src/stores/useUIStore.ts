@@ -1,6 +1,10 @@
 import { create } from 'zustand'
 import type { PromptTemplate, Routine } from '../../../shared/types'
 
+type TerminalDrawerTarget =
+  | { type: 'session'; sessionId: string }
+  | { type: 'plain'; terminalId: string }
+
 interface UIState {
   // Command palette
   commandPaletteOpen: boolean
@@ -20,8 +24,9 @@ interface UIState {
 
   // Terminal drawer
   terminalDrawerOpen: boolean
-  terminalDrawerSessionId: string | null
+  terminalDrawerTarget: TerminalDrawerTarget | null
   openTerminalDrawer: (sessionId: string) => void
+  openPlainTerminalDrawer: (terminalId: string) => void
   closeTerminalDrawer: () => void
 
   // View mode
@@ -60,11 +65,13 @@ export const useUIStore = create<UIState>((set) => ({
   toggleProjectSelector: () => set(s => ({ projectSelectorOpen: !s.projectSelectorOpen })),
 
   terminalDrawerOpen: false,
-  terminalDrawerSessionId: null,
+  terminalDrawerTarget: null,
   openTerminalDrawer: (sessionId) =>
-    set({ terminalDrawerOpen: true, terminalDrawerSessionId: sessionId }),
+    set({ terminalDrawerOpen: true, terminalDrawerTarget: { type: 'session', sessionId } }),
+  openPlainTerminalDrawer: (terminalId) =>
+    set({ terminalDrawerOpen: true, terminalDrawerTarget: { type: 'plain', terminalId } }),
   closeTerminalDrawer: () =>
-    set({ terminalDrawerOpen: false, terminalDrawerSessionId: null }),
+    set({ terminalDrawerOpen: false, terminalDrawerTarget: null }),
 
   viewMode: 'dashboard',
   setViewMode: (mode) => set({ viewMode: mode }),

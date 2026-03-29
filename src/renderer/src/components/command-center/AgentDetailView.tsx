@@ -80,7 +80,7 @@ export function AgentDetailView({ sessionId }: AgentDetailViewProps) {
       <div className="flex-1 flex overflow-hidden">
         {/* Live terminal (main area) */}
         <div className="flex-1 overflow-hidden">
-          <XTermRenderer sessionId={sessionId} />
+          <XTermRenderer terminalId={sessionId} />
         </div>
 
         {/* Context sidebar */}
