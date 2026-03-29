@@ -162,13 +162,13 @@ export function RoutineEditorOverlay() {
             onClick={() => setDraft(d => ({ ...d, endsWithCommit: !d.endsWithCommit }))}
           >
             <div
-              className={`w-8 h-4.5 rounded-full transition-colors relative ${
+              className={`w-9 h-5 rounded-full transition-colors relative flex-shrink-0 ${
                 draft.endsWithCommit ? 'bg-turbo-accent' : 'bg-turbo-surface border border-turbo-border'
               }`}
             >
               <div
-                className={`absolute top-0.5 w-3.5 h-3.5 rounded-full bg-white transition-transform ${
-                  draft.endsWithCommit ? 'translate-x-4' : 'translate-x-0.5'
+                className={`absolute top-[3px] w-3.5 h-3.5 rounded-full bg-white transition-transform ${
+                  draft.endsWithCommit ? 'translate-x-[18px]' : 'translate-x-[3px]'
                 }`}
               />
             </div>
