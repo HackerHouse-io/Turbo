@@ -15,20 +15,10 @@ interface QuickAction {
 
 function getQuickActions(item: AttentionItem): QuickAction[] {
   switch (item.type) {
-    case 'decision': {
-      const msg = item.message
-      if (/allow/i.test(msg) || /\(y\/n\)/i.test(msg)) {
-        return [
-          { label: 'Allow', variant: 'primary', action: 'pty-input', ptyInput: 'yes\r' },
-          { label: 'Deny', variant: 'danger', action: 'pty-input', ptyInput: 'no\r' }
-        ]
-      }
+    case 'decision':
       return [
-        { label: 'Yes', variant: 'primary', action: 'pty-input', ptyInput: 'yes\r' },
-        { label: 'No', variant: 'danger', action: 'pty-input', ptyInput: 'no\r' },
-        { label: 'Open Terminal', variant: 'ghost', action: 'open-terminal' }
+        { label: 'Open Terminal', variant: 'primary', action: 'open-terminal' }
       ]
-    }
     case 'stuck':
       return [
         { label: 'Nudge', variant: 'primary', action: 'pty-input', ptyInput: '\r' },
