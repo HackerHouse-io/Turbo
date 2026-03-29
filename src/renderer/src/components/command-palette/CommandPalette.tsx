@@ -19,14 +19,15 @@ interface CommandItem {
   label: string
   description?: string
   icon: string
-  section: 'recent' | 'templates' | 'routines' | 'git' | 'tasks' | 'actions'
+  section: 'recent' | 'projects' | 'templates' | 'routines' | 'git' | 'tasks' | 'actions'
   action: () => void
   keywords?: string[]
 }
 
-const SECTION_ORDER: CommandItem['section'][] = ['recent', 'templates', 'routines', 'git', 'tasks', 'actions']
+const SECTION_ORDER: CommandItem['section'][] = ['recent', 'projects', 'templates', 'routines', 'git', 'tasks', 'actions']
 const SECTION_LABELS: Record<CommandItem['section'], string> = {
   recent: 'Recent Prompts',
+  projects: 'Switch Project',
   templates: 'Templates',
   routines: 'Routines',
   git: 'Git Actions',
@@ -81,6 +82,8 @@ export function CommandPalette() {
     const proj = id ? s.projects.find(p => p.id === id) : s.projects[0]
     return proj?.path
   })
+  const projects = useProjectStore(s => s.projects)
+  const selectedProjectId = useProjectStore(s => s.selectedProjectId)
   const { templates, gitPresets, routines, models, loading } = useCommandPaletteData()
 
   useEffect(() => {
@@ -183,6 +186,23 @@ export function CommandPalette() {
   const commands: CommandItem[] = useMemo(() => {
     const items: CommandItem[] = []
 
+    // Projects
+    for (const p of projects) {
+      const isCurrent = p.id === selectedProjectId
+      items.push({
+        id: `project-${p.id}`,
+        label: p.name,
+        description: isCurrent ? 'current project' : p.path,
+        icon: 'task',
+        section: 'projects',
+        action: () => {
+          useProjectStore.getState().selectProject(p.id)
+          closeCommandPalette()
+        },
+        keywords: [p.path, p.name, 'project', 'switch']
+      })
+    }
+
     // Templates
     for (const t of templates) {
       items.push({
@@ -255,7 +275,7 @@ export function CommandPalette() {
     }
 
     return items
-  }, [templates, routines, gitPresets, sessions, createSession, handleGitAction, handleStartRoutine, closeCommandPalette, selectSession, setViewMode])
+  }, [projects, selectedProjectId, templates, routines, gitPresets, sessions, createSession, handleGitAction, handleStartRoutine, closeCommandPalette, selectSession, setViewMode])
 
   // ─── Filtering ─────────────────────────────────────────────
 
@@ -387,7 +407,7 @@ export function CommandPalette() {
           value={query}
           onChange={e => { setQuery(e.target.value); setSelectedIndex(0) }}
           onKeyDown={handleKeyDown}
-          placeholder="Search prompts, templates, git actions..."
+          placeholder="Search commands, projects, templates..."
           className="flex-1 bg-transparent text-sm text-turbo-text placeholder:text-turbo-text-muted
                      focus:outline-none"
         />
