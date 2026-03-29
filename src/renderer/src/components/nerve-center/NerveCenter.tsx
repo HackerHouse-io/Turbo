@@ -56,7 +56,7 @@ export function NerveCenter() {
         <motion.div variants={fadeUp} className="w-full grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
           <GitOverviewCard git={git} loading={loading} error={error} onRefresh={refresh} />
           <SessionSummaryCard projectPath={projectPath} />
-          <QuickActionsCard projectPath={projectPath ?? ''} />
+          <QuickActionsCard projectPath={projectPath ?? ''} branch={git?.branch ?? null} onGitRefresh={refresh} />
         </motion.div>
 
         {/* Row 2: Recent Commits + Routines */}
