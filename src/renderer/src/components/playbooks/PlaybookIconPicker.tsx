@@ -1,13 +1,13 @@
-import { PaletteIcon } from '../command-palette/PaletteIcon'
+import { PaletteIcon, type PaletteIconName } from '../command-palette/PaletteIcon'
 
-const ICONS = ['bug', 'bolt', 'test', 'eye', 'refresh', 'search', 'routine', 'task'] as const
+const ICONS: PaletteIconName[] = ['bug', 'bolt', 'test', 'eye', 'refresh', 'search', 'playbook', 'task']
 
-interface RoutineIconPickerProps {
+interface PlaybookIconPickerProps {
   selected: string
   onSelect: (icon: string) => void
 }
 
-export function RoutineIconPicker({ selected, onSelect }: RoutineIconPickerProps) {
+export function PlaybookIconPicker({ selected, onSelect }: PlaybookIconPickerProps) {
   return (
     <div className="flex flex-wrap gap-1.5">
       {ICONS.map(icon => (

@@ -1,53 +1,54 @@
 import { EventEmitter } from 'events'
 import { v4 as uuid } from 'uuid'
 import type { ClaudeSessionManager } from '../claude/ClaudeSessionManager'
-import type { RoutineManager } from './RoutineManager'
+import type { PlaybookManager } from './PlaybookManager'
 import type {
-  RoutineExecution,
-  RoutineStepState,
-  StartRoutinePayload,
+  PlaybookExecution,
+  PlaybookStepState,
+  StartPlaybookPayload,
   AgentSession
 } from '../../shared/types'
+import { substituteTemplateVariables } from '../../shared/templateVars'
 
 /**
- * RoutineExecutor: Orchestrates multi-step routine execution.
+ * PlaybookExecutor: Orchestrates multi-step playbook execution.
  *
  * Events:
- * - 'routine-updated' (execution: RoutineExecution)
+ * - 'playbook-updated' (execution: PlaybookExecution)
  */
-export class RoutineExecutor extends EventEmitter {
-  private executions = new Map<string, RoutineExecution>()
+export class PlaybookExecutor extends EventEmitter {
+  private executions = new Map<string, PlaybookExecution>()
   private sessionToExecution = new Map<string, string>()
   private sessionManager: ClaudeSessionManager
-  private routineManager: RoutineManager
+  private playbookManager: PlaybookManager
   private boundHandleSessionUpdate: (session: AgentSession) => void
 
-  constructor(sessionManager: ClaudeSessionManager, routineManager: RoutineManager) {
+  constructor(sessionManager: ClaudeSessionManager, playbookManager: PlaybookManager) {
     super()
     this.sessionManager = sessionManager
-    this.routineManager = routineManager
+    this.playbookManager = playbookManager
 
-    // Monitor session completions to advance routine steps
+    // Monitor session completions to advance playbook steps
     this.boundHandleSessionUpdate = (session: AgentSession) => this.handleSessionUpdate(session)
     this.sessionManager.on('session-updated', this.boundHandleSessionUpdate)
   }
 
   // ─── Public API ──────────────────────────────────────────────
 
-  async startRoutine(payload: StartRoutinePayload): Promise<RoutineExecution> {
-    const routine = this.routineManager.getRoutine(payload.routineId)
-    if (!routine) throw new Error(`Routine not found: ${payload.routineId}`)
+  async startPlaybook(payload: StartPlaybookPayload): Promise<PlaybookExecution> {
+    const playbook = this.playbookManager.getPlaybook(payload.playbookId)
+    if (!playbook) throw new Error(`Playbook not found: ${payload.playbookId}`)
 
-    const steps: RoutineStepState[] = routine.steps.map((step, index) => ({
+    const steps: PlaybookStepState[] = playbook.steps.map((step, index) => ({
       index,
       name: step.name,
       status: 'pending'
     }))
 
-    const execution: RoutineExecution = {
+    const execution: PlaybookExecution = {
       id: uuid(),
-      routineId: routine.id,
-      routineName: routine.name,
+      playbookId: playbook.id,
+      playbookName: playbook.name,
       projectPath: payload.projectPath,
       status: 'running',
       steps,
@@ -64,7 +65,7 @@ export class RoutineExecutor extends EventEmitter {
     return execution
   }
 
-  pauseRoutine(executionId: string): void {
+  pausePlaybook(executionId: string): void {
     const exec = this.executions.get(executionId)
     if (!exec || exec.status !== 'running') return
 
@@ -72,7 +73,7 @@ export class RoutineExecutor extends EventEmitter {
     this.emitUpdate(exec)
   }
 
-  resumeRoutine(executionId: string): void {
+  resumePlaybook(executionId: string): void {
     const exec = this.executions.get(executionId)
     if (!exec || exec.status !== 'paused') return
 
@@ -89,7 +90,7 @@ export class RoutineExecutor extends EventEmitter {
     }
   }
 
-  stopRoutine(executionId: string): void {
+  stopPlaybook(executionId: string): void {
     const exec = this.executions.get(executionId)
     if (!exec || exec.status === 'completed' || exec.status === 'stopped') return
 
@@ -110,9 +111,10 @@ export class RoutineExecutor extends EventEmitter {
     exec.status = 'stopped'
     exec.completedAt = Date.now()
     this.emitUpdate(exec)
+    this.cleanupExecution(executionId)
   }
 
-  dismissRoutine(executionId: string): void {
+  dismissPlaybook(executionId: string): void {
     const exec = this.executions.get(executionId)
     if (!exec || exec.status !== 'awaiting_commit') return
 
@@ -130,13 +132,13 @@ export class RoutineExecutor extends EventEmitter {
 
     // Stop if still running
     if (exec.status === 'running' || exec.status === 'paused') {
-      this.stopRoutine(executionId)
+      this.stopPlaybook(executionId)
     }
 
     this.cleanupExecution(executionId)
   }
 
-  listExecutions(): RoutineExecution[] {
+  listExecutions(): PlaybookExecution[] {
     return Array.from(this.executions.values())
   }
 
@@ -144,7 +146,7 @@ export class RoutineExecutor extends EventEmitter {
     // Stop all running executions
     for (const [id, exec] of this.executions) {
       if (exec.status === 'running' || exec.status === 'paused') {
-        this.stopRoutine(id)
+        this.stopPlaybook(id)
       }
     }
     this.sessionManager.removeListener('session-updated', this.boundHandleSessionUpdate)
@@ -171,18 +173,15 @@ export class RoutineExecutor extends EventEmitter {
 
     if (exec.status !== 'running') return
 
-    const routine = this.routineManager.getRoutine(exec.routineId)
-    if (!routine) return
+    const playbook = this.playbookManager.getPlaybook(exec.playbookId)
+    if (!playbook) return
 
-    const stepDef = routine.steps[stepIndex]
+    const stepDef = playbook.steps[stepIndex]
     const step = exec.steps[stepIndex]
     if (!stepDef || !step) return
 
     // Substitute variables in prompt
-    let prompt = stepDef.prompt
-    for (const [key, val] of Object.entries(exec.variables)) {
-      prompt = prompt.replaceAll(`{{${key}}}`, val)
-    }
+    const prompt = substituteTemplateVariables(stepDef.prompt, exec.variables)
 
     // Mark step as running and update index synchronously before async work
     step.status = 'running'
@@ -195,7 +194,7 @@ export class RoutineExecutor extends EventEmitter {
       const session = await this.sessionManager.createSession({
         projectPath: exec.projectPath,
         prompt,
-        name: `[Routine] ${exec.routineName} — ${step.name}`,
+        name: `[Playbook] ${exec.playbookName} — ${step.name}`,
         permissionMode: stepDef.permissionMode,
         effort: stepDef.effort
       })
@@ -209,6 +208,7 @@ export class RoutineExecutor extends EventEmitter {
       exec.status = 'failed'
       exec.completedAt = Date.now()
       this.emitUpdate(exec)
+      this.cleanupExecution(executionId)
     }
   }
 
@@ -230,7 +230,7 @@ export class RoutineExecutor extends EventEmitter {
       currentStep.status = 'completed'
       currentStep.completedAt = Date.now()
 
-      const routine = this.routineManager.getRoutine(exec.routineId)
+      const playbook = this.playbookManager.getPlaybook(exec.playbookId)
       const nextIndex = exec.currentStepIndex + 1
 
       if (nextIndex < exec.steps.length) {
@@ -245,13 +245,15 @@ export class RoutineExecutor extends EventEmitter {
         }
       } else {
         // Last step completed
-        if (routine?.endsWithCommit) {
+        if (playbook?.endsWithCommit) {
           exec.status = 'awaiting_commit'
+          this.emitUpdate(exec)
         } else {
           exec.status = 'completed'
           exec.completedAt = Date.now()
+          this.emitUpdate(exec)
+          this.cleanupExecution(exec.id)
         }
-        this.emitUpdate(exec)
       }
     } else if (session.status === 'error' || session.status === 'stopped') {
       currentStep.status = 'failed'
@@ -260,13 +262,11 @@ export class RoutineExecutor extends EventEmitter {
       exec.status = 'failed'
       exec.completedAt = Date.now()
       this.emitUpdate(exec)
+      this.cleanupExecution(exec.id)
     }
   }
 
-  private emitUpdate(execution: RoutineExecution): void {
-    this.emit('routine-updated', {
-      ...execution,
-      steps: execution.steps.map(s => ({ ...s }))
-    })
+  private emitUpdate(execution: PlaybookExecution): void {
+    this.emit('playbook-updated', execution)
   }
 }

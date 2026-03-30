@@ -1,29 +1,29 @@
 import { v4 as uuid } from 'uuid'
-import { readFileSync, writeFileSync } from 'fs'
+import { readFileSync, writeFileSync, renameSync } from 'fs'
 import { join } from 'path'
-import type { Routine, RoutineStepDefinition } from '../../shared/types'
+import type { Playbook, PlaybookStepDefinition } from '../../shared/types'
 import { extractTemplateVariables } from '../../shared/templateVars'
 
 // ─── Shared Steps ────────────────────────────────────────────
 
-const REVIEW_STEP: RoutineStepDefinition = {
+const REVIEW_STEP: PlaybookStepDefinition = {
   name: 'Simplify & review',
   prompt: 'Review all changed code for reuse, quality, and efficiency. Fix any issues found. Check for duplicated logic, unnecessary complexity, and missed existing utilities.',
   permissionMode: 'default',
   effort: 'high'
 }
 
-const TEST_STEP: RoutineStepDefinition = {
+const TEST_STEP: PlaybookStepDefinition = {
   name: 'Test & verify',
   prompt: 'Run the full test suite. Fix any test failures caused by recent changes. Do not fix pre-existing failures.',
   permissionMode: 'default',
   effort: 'medium'
 }
 
-// ─── Built-in Routines ───────────────────────────────────────
+// ─── Built-in Playbooks ───────────────────────────────────────
 
-const BUILT_IN_ROUTINES: Omit<Routine, 'id' | 'variables'>[] = [
-  // ─── Development Routines ────────────────────────────────
+const BUILT_IN_PLAYBOOKS: Omit<Playbook, 'id' | 'variables'>[] = [
+  // ─── Development Playbooks ────────────────────────────────
   {
     name: 'Fix Issue',
     description: 'Branch, plan, fix, review, test — then commit',
@@ -164,7 +164,7 @@ const BUILT_IN_ROUTINES: Omit<Routine, 'id' | 'variables'>[] = [
     ]
   },
 
-  // ─── Documentation Routines ──────────────────────────────
+  // ─── Documentation Playbooks ──────────────────────────────
   {
     name: 'System Architecture Doc',
     description: 'Analyze codebase and write architecture documentation',
@@ -252,56 +252,60 @@ const BUILT_IN_ROUTINES: Omit<Routine, 'id' | 'variables'>[] = [
 ]
 
 /**
- * RoutineManager: Built-in routine definitions + persistence.
- * Follows PromptVaultManager pattern — JSON file in userData.
+ * PlaybookManager: Built-in playbook definitions + persistence.
+ * On startup: migrates routines.json → playbooks.json if needed.
  */
-export class RoutineManager {
-  private routines: Routine[] = []
+export class PlaybookManager {
+  private playbooks: Playbook[] = []
   private filePath: string
 
   constructor(userDataPath: string) {
-    this.filePath = join(userDataPath, 'routines.json')
+    this.filePath = join(userDataPath, 'playbooks.json')
+
+    // Migrate from routines.json if needed
+    try { renameSync(join(userDataPath, 'routines.json'), this.filePath) } catch { /* No migration needed */ }
+
     this.load()
   }
 
-  listRoutines(): Routine[] {
-    return [...this.routines]
+  listPlaybooks(): Playbook[] {
+    return this.playbooks
   }
 
-  getRoutine(id: string): Routine | undefined {
-    return this.routines.find(r => r.id === id)
+  getPlaybook(id: string): Playbook | undefined {
+    return this.playbooks.find(r => r.id === id)
   }
 
-  saveRoutine(routine: Routine): Routine {
-    const existing = routine.id ? this.routines.findIndex(r => r.id === routine.id) : -1
-    const saved: Routine = {
-      ...routine,
-      id: existing >= 0 ? routine.id : uuid(),
-      builtIn: existing >= 0 ? this.routines[existing].builtIn : false,
-      variables: extractTemplateVariables(routine.steps.map(s => s.prompt))
+  savePlaybook(playbook: Playbook): Playbook {
+    const existing = playbook.id ? this.playbooks.findIndex(r => r.id === playbook.id) : -1
+    const saved: Playbook = {
+      ...playbook,
+      id: existing >= 0 ? playbook.id : uuid(),
+      builtIn: existing >= 0 ? this.playbooks[existing].builtIn : false,
+      variables: extractTemplateVariables(playbook.steps.map(s => s.prompt))
     }
     if (existing >= 0) {
-      // Don't allow editing built-in routines
-      if (this.routines[existing].builtIn) return this.routines[existing]
-      this.routines[existing] = saved
+      // Don't allow editing built-in playbooks
+      if (this.playbooks[existing].builtIn) return this.playbooks[existing]
+      this.playbooks[existing] = saved
     } else {
-      this.routines.push(saved)
+      this.playbooks.push(saved)
     }
     this.save()
     return saved
   }
 
-  deleteRoutine(id: string): void {
-    const filtered = this.routines.filter(r => r.id !== id || r.builtIn)
-    if (filtered.length === this.routines.length) return // nothing removed
-    this.routines = filtered
+  deletePlaybook(id: string): void {
+    const filtered = this.playbooks.filter(r => r.id !== id || r.builtIn)
+    if (filtered.length === this.playbooks.length) return // nothing removed
+    this.playbooks = filtered
     this.save()
   }
 
-  duplicateRoutine(id: string): Routine {
-    const source = this.routines.find(r => r.id === id)
-    if (!source) throw new Error(`Routine ${id} not found`)
-    const clone: Routine = {
+  duplicatePlaybook(id: string): Playbook {
+    const source = this.playbooks.find(r => r.id === id)
+    if (!source) throw new Error(`Playbook ${id} not found`)
+    const clone: Playbook = {
       ...source,
       id: uuid(),
       name: source.name + ' (Copy)',
@@ -309,7 +313,7 @@ export class RoutineManager {
       variables: [...source.variables],
       steps: source.steps.map(s => ({ ...s }))
     }
-    this.routines.push(clone)
+    this.playbooks.push(clone)
     this.save()
     return clone
   }
@@ -319,13 +323,13 @@ export class RoutineManager {
   private load(): void {
     try {
       const raw = readFileSync(this.filePath, 'utf-8')
-      this.routines = JSON.parse(raw)
+      this.playbooks = JSON.parse(raw)
     } catch {
       // File missing or corrupt — seed below
     }
 
-    if (this.routines.length === 0) {
-      this.routines = BUILT_IN_ROUTINES.map(r => ({
+    if (this.playbooks.length === 0) {
+      this.playbooks = BUILT_IN_PLAYBOOKS.map(r => ({
         ...r,
         id: uuid(),
         variables: extractTemplateVariables(r.steps.map(s => s.prompt))
@@ -336,7 +340,7 @@ export class RoutineManager {
 
   private save(): void {
     try {
-      writeFileSync(this.filePath, JSON.stringify(this.routines, null, 2), 'utf-8')
+      writeFileSync(this.filePath, JSON.stringify(this.playbooks, null, 2), 'utf-8')
     } catch {
       // Save failed — non-fatal
     }

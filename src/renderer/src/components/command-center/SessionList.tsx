@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import type { AgentSession, AttentionItem, AttentionType, RoutineExecution } from '../../../../shared/types'
+import type { AgentSession, AttentionItem, AttentionType, PlaybookExecution } from '../../../../shared/types'
 import { useSessionStore } from '../../stores/useSessionStore'
 import { useUIStore } from '../../stores/useUIStore'
 import { SessionRow } from './SessionRow'
@@ -8,7 +8,7 @@ import { PaletteIcon } from '../command-palette/PaletteIcon'
 
 interface SessionListProps {
   sessions: AgentSession[]
-  routines: RoutineExecution[]
+  activePlaybooks: PlaybookExecution[]
 }
 
 const ATTENTION_PRIORITY: Record<AttentionType, number> = {
@@ -19,7 +19,7 @@ const ATTENTION_PRIORITY: Record<AttentionType, number> = {
   completed: 4,
 }
 
-export function SessionList({ sessions, routines }: SessionListProps) {
+export function SessionList({ sessions, activePlaybooks }: SessionListProps) {
   const [focusedIndex, setFocusedIndex] = useState(-1)
   const listRef = useRef<HTMLDivElement>(null)
   const selectSession = useSessionStore(s => s.selectSession)

@@ -1,17 +1,17 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import type { RoutineExecution, RoutineStepStatus } from '../../../../shared/types'
+import type { PlaybookExecution, PlaybookStepStatus } from '../../../../shared/types'
 import { useSessionStore } from '../../stores/useSessionStore'
 import { useUIStore } from '../../stores/useUIStore'
 import { useGitStore } from '../../stores/useGitStore'
-import { useRoutineStore } from '../../stores/useRoutineStore'
+import { usePlaybookStore } from '../../stores/usePlaybookStore'
 import { PaletteIcon } from '../command-palette/PaletteIcon'
 
-interface RoutineProgressBannerProps {
-  executions: RoutineExecution[]
+interface PlaybookProgressBannerProps {
+  executions: PlaybookExecution[]
 }
 
-export function RoutineProgressBanner({ executions }: RoutineProgressBannerProps) {
+export function PlaybookProgressBanner({ executions }: PlaybookProgressBannerProps) {
   return (
     <div className="space-y-3">
       <AnimatePresence>
@@ -23,7 +23,7 @@ export function RoutineProgressBanner({ executions }: RoutineProgressBannerProps
             exit={{ opacity: 0, y: -10 }}
             transition={{ duration: 0.2 }}
           >
-            <RoutineBannerCard execution={exec} />
+            <PlaybookBannerCard execution={exec} />
           </motion.div>
         ))}
       </AnimatePresence>
@@ -31,10 +31,10 @@ export function RoutineProgressBanner({ executions }: RoutineProgressBannerProps
   )
 }
 
-function RoutineBannerCard({ execution }: { execution: RoutineExecution }) {
+function PlaybookBannerCard({ execution }: { execution: PlaybookExecution }) {
   const selectSession = useSessionStore(s => s.selectSession)
   const setViewMode = useUIStore(s => s.setViewMode)
-  const removeExecution = useRoutineStore(s => s.removeExecution)
+  const removeExecution = usePlaybookStore(s => s.removeExecution)
   const gitLoading = useGitStore(s => s.gitLoading)
 
   const [commitMessage, setCommitMessage] = useState<string | null>(null)
@@ -69,24 +69,24 @@ function RoutineBannerCard({ execution }: { execution: RoutineExecution }) {
   }, [execution.projectPath])
 
   const handleDismiss = useCallback(async () => {
-    await window.api.dismissRoutine(execution.id)
+    await window.api.dismissPlaybook(execution.id)
   }, [execution.id])
 
   const handleRemove = useCallback(async () => {
-    await window.api.removeRoutineExecution(execution.id)
+    await window.api.removePlaybookExecution(execution.id)
     removeExecution(execution.id)
   }, [execution.id, removeExecution])
 
   const handlePause = useCallback(() => {
-    window.api.pauseRoutine(execution.id)
+    window.api.pausePlaybook(execution.id)
   }, [execution.id])
 
   const handleResume = useCallback(() => {
-    window.api.resumeRoutine(execution.id)
+    window.api.resumePlaybook(execution.id)
   }, [execution.id])
 
   const handleStop = useCallback(() => {
-    window.api.stopRoutine(execution.id)
+    window.api.stopPlaybook(execution.id)
   }, [execution.id])
 
   const handleStepClick = useCallback((sessionId?: string) => {
@@ -101,8 +101,8 @@ function RoutineBannerCard({ execution }: { execution: RoutineExecution }) {
     <div className="card">
       {/* Header */}
       <div className="flex items-center gap-2 px-4 py-3 border-b border-turbo-border">
-        <PaletteIcon icon="routine" className="w-4 h-4 text-turbo-accent" />
-        <span className="text-sm font-medium text-turbo-text flex-1">{execution.routineName}</span>
+        <PaletteIcon icon="playbook" className="w-4 h-4 text-turbo-accent" />
+        <span className="text-sm font-medium text-turbo-text flex-1">{execution.playbookName}</span>
         {!isTerminal && (
           <span className="text-xs text-turbo-text-muted">
             step {execution.currentStepIndex + 1} of {totalSteps}
@@ -195,14 +195,14 @@ function RoutineBannerCard({ execution }: { execution: RoutineExecution }) {
             <span className="text-xs font-medium text-turbo-success">Ready to commit</span>
           </div>
 
-          {!committed ? (
-            <div className="space-y-2">
-              {commitMessage && (
-                <div className="text-xs text-turbo-text-dim bg-turbo-bg rounded px-2 py-1.5 border border-turbo-border">
-                  {commitMessage}
-                </div>
-              )}
-              <div className="flex items-center gap-2">
+          <div className="space-y-2">
+            {!committed && commitMessage && (
+              <div className="text-xs text-turbo-text-dim bg-turbo-bg rounded px-2 py-1.5 border border-turbo-border">
+                {commitMessage}
+              </div>
+            )}
+            <div className="flex items-center gap-2">
+              {!committed ? (
                 <button
                   onClick={handleCommit}
                   disabled={!commitMessage || gitLoading}
@@ -211,26 +211,21 @@ function RoutineBannerCard({ execution }: { execution: RoutineExecution }) {
                 >
                   {gitLoading ? 'Committing...' : 'Commit'}
                 </button>
-                <button
-                  onClick={handleDismiss}
-                  className="h-7 text-[11px] px-3 rounded-md bg-turbo-surface border border-turbo-border
-                             text-turbo-text-dim hover:bg-turbo-surface-hover transition-colors"
-                >
-                  Done
-                </button>
-              </div>
-            </div>
-          ) : !pushed ? (
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-turbo-success">Committed</span>
-              <button
-                onClick={handlePush}
-                disabled={gitLoading}
-                className="h-7 text-[11px] px-3 rounded-md bg-turbo-accent text-white font-medium
-                           hover:bg-turbo-accent/90 transition-colors disabled:opacity-50"
-              >
-                {gitLoading ? 'Pushing...' : 'Push'}
-              </button>
+              ) : !pushed ? (
+                <>
+                  <span className="text-xs text-turbo-success">Committed</span>
+                  <button
+                    onClick={handlePush}
+                    disabled={gitLoading}
+                    className="h-7 text-[11px] px-3 rounded-md bg-turbo-accent text-white font-medium
+                               hover:bg-turbo-accent/90 transition-colors disabled:opacity-50"
+                  >
+                    {gitLoading ? 'Pushing...' : 'Push'}
+                  </button>
+                </>
+              ) : (
+                <span className="text-xs text-turbo-success">Pushed to remote</span>
+              )}
               <button
                 onClick={handleDismiss}
                 className="h-7 text-[11px] px-3 rounded-md bg-turbo-surface border border-turbo-border
@@ -239,18 +234,7 @@ function RoutineBannerCard({ execution }: { execution: RoutineExecution }) {
                 Done
               </button>
             </div>
-          ) : (
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-turbo-success">Pushed to remote</span>
-              <button
-                onClick={handleDismiss}
-                className="h-7 text-[11px] px-3 rounded-md bg-turbo-surface border border-turbo-border
-                           text-turbo-text-dim hover:bg-turbo-surface-hover transition-colors"
-              >
-                Done
-              </button>
-            </div>
-          )}
+          </div>
         </div>
       )}
     </div>
@@ -259,7 +243,7 @@ function RoutineBannerCard({ execution }: { execution: RoutineExecution }) {
 
 // ─── Step Status Icon ──────────────────────────────────────────
 
-function StepStatusIcon({ status }: { status: RoutineStepStatus }) {
+function StepStatusIcon({ status }: { status: PlaybookStepStatus }) {
   switch (status) {
     case 'pending':
       return (

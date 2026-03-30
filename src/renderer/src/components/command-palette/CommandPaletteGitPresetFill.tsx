@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect } from 'react'
 import type { GitPreset } from '../../../../shared/types'
+import { substituteTemplateVariables } from '../../../../shared/templateVars'
 import { PaletteIcon } from './PaletteIcon'
-import { camelToTitle } from '../../lib/format'
+import { camelToTitle, CMD_ENTER_LABEL } from '../../lib/format'
 
 interface GitPresetFillProps {
   preset: GitPreset
@@ -36,13 +37,9 @@ export function CommandPaletteGitPresetFill({ preset, loading, onSubmit, onBack 
   }
 
   const handleSubmit = () => {
-    const commands = preset.commands.map(cmd => {
-      let result = cmd
-      for (const [key, val] of Object.entries(values)) {
-        result = result.replaceAll(`{{${key}}}`, val || `[${camelToTitle(key)}]`)
-      }
-      return result
-    })
+    const commands = preset.commands.map(cmd =>
+      substituteTemplateVariables(cmd, values, key => `[${camelToTitle(key)}]`)
+    )
     onSubmit(commands)
   }
 
@@ -88,7 +85,7 @@ export function CommandPaletteGitPresetFill({ preset, loading, onSubmit, onBack 
       <div className="flex items-center justify-between px-4 py-3 border-t border-turbo-border">
         <p className="text-xs text-turbo-text-muted">{preset.description}</p>
         <div className="flex items-center gap-2">
-          <kbd className="kbd text-[10px] h-7 flex items-center px-1.5">{(navigator.platform.includes('Mac') ? '\u2318' : 'Ctrl') + '+\u21B5'}</kbd>
+          <kbd className="kbd text-[10px] h-7 flex items-center px-1.5">{CMD_ENTER_LABEL}</kbd>
           <button
             onClick={handleSubmit}
             disabled={loading}

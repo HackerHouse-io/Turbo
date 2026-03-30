@@ -6,8 +6,8 @@ import { ProjectOverview } from '../overview/ProjectOverview'
 import { CommandPalette } from '../command-palette/CommandPalette'
 import { TerminalDrawer } from '../terminal/TerminalDrawer'
 import { TerminalWorkspace } from '../terminal/TerminalWorkspace'
-import { RoutineDetailOverlay } from '../routines/RoutineDetailOverlay'
-import { RoutineEditorOverlay } from '../routines/RoutineEditorOverlay'
+import { PlaybookDetailOverlay } from '../playbooks/PlaybookDetailOverlay'
+import { PlaybookEditorOverlay } from '../playbooks/PlaybookEditorOverlay'
 import { PlanOverlay } from '../plan/PlanOverlay'
 import { SessionTimeline } from '../timeline/SessionTimeline'
 import { SettingsOverlay } from '../settings/SettingsOverlay'
@@ -21,8 +21,8 @@ export function AppShell() {
   const commandPaletteOpen = useUIStore(s => s.commandPaletteOpen)
   const terminalDrawerOpen = useUIStore(s => s.terminalDrawerOpen)
   const projectSelectorOpen = useUIStore(s => s.projectSelectorOpen)
-  const routineDetailRoutine = useUIStore(s => s.routineDetailRoutine)
-  const routineEditorState = useUIStore(s => s.routineEditorState)
+  const playbookDetail = useUIStore(s => s.playbookDetail)
+  const playbookEditorState = useUIStore(s => s.playbookEditorState)
   const planOverlayOpen = useUIStore(s => s.planOverlayOpen)
   const terminalWorkspaceOpen = useUIStore(s => s.terminalWorkspaceOpen)
   const timelineOpen = useUIStore(s => s.timelineOpen)
@@ -79,16 +79,16 @@ export function AppShell() {
         const session = useSessionStore.getState()
         if (ui.settingsOpen) {
           ui.closeSettings()
-        } else if (ui.routineEditorState) {
-          ui.closeRoutineEditor()
+        } else if (ui.playbookEditorState) {
+          ui.closePlaybookEditor()
         } else if (ui.planOverlayOpen) {
           ui.closePlanOverlay()
         } else if (ui.terminalWorkspaceOpen) {
           ui.closeTerminalWorkspace()
         } else if (ui.timelineOpen) {
           ui.closeTimeline()
-        } else if (ui.routineDetailRoutine) {
-          ui.closeRoutineDetail()
+        } else if (ui.playbookDetail) {
+          ui.closePlaybookDetail()
         } else if (ui.projectSelectorOpen) {
           ui.closeProjectSelector()
         } else if (ui.commandPaletteOpen) {
@@ -128,8 +128,8 @@ export function AppShell() {
       </main>
 
       {/* Overlays */}
-      {routineDetailRoutine && <RoutineDetailOverlay routine={routineDetailRoutine} />}
-      {routineEditorState && <RoutineEditorOverlay />}
+      {playbookDetail && <PlaybookDetailOverlay playbook={playbookDetail} />}
+      {playbookEditorState && <PlaybookEditorOverlay />}
       {planOverlayOpen && <PlanOverlay />}
       {terminalWorkspaceOpen && <TerminalWorkspace />}
       {timelineOpen && <SessionTimeline />}

@@ -121,21 +121,7 @@ export interface ClaudeModelInfo {
   label: string
 }
 
-// ─── Prompt Vault ──────────────────────────────────────────────
-
-export type TemplateIconName = 'bug' | 'bolt' | 'test' | 'eye' | 'refresh' | 'search'
-
-export interface PromptTemplate {
-  id: string
-  name: string
-  description: string
-  template: string
-  variables: string[]
-  builtIn: boolean
-  icon: TemplateIconName
-  permissionMode?: PermissionMode
-  effort?: EffortLevel
-}
+// ─── Prompt History ────────────────────────────────────────────
 
 export interface PromptHistoryItem {
   id: string
@@ -238,55 +224,55 @@ export interface GitCommitEntry {
   relativeTime: string  // e.g. "2 hours ago"
 }
 
-// ─── Routines ────────────────────────────────────────────────
+// ─── Playbooks ──────────────────────────────────────────────
 
-export interface RoutineStepDefinition {
+export interface PlaybookStepDefinition {
   name: string
   prompt: string                  // Supports {{variable}} syntax
   permissionMode?: PermissionMode
   effort?: EffortLevel
 }
 
-export interface Routine {
+export interface Playbook {
   id: string
   name: string
   description: string
   icon: string
-  steps: RoutineStepDefinition[]
+  steps: PlaybookStepDefinition[]
   variables: string[]             // Auto-extracted from step prompts
   builtIn: boolean
-  endsWithCommit: boolean         // If true, routine enters awaiting_commit after last step
+  endsWithCommit: boolean         // If true, playbook enters awaiting_commit after last step
 }
 
-export type RoutineStepStatus = 'pending' | 'running' | 'completed' | 'failed' | 'skipped'
+export type PlaybookStepStatus = 'pending' | 'running' | 'completed' | 'failed' | 'skipped'
 
-export interface RoutineStepState {
+export interface PlaybookStepState {
   index: number
   name: string
-  status: RoutineStepStatus
+  status: PlaybookStepStatus
   sessionId?: string
   startedAt?: number
   completedAt?: number
   error?: string
 }
 
-export type RoutineExecutionStatus = 'running' | 'paused' | 'awaiting_commit' | 'completed' | 'failed' | 'stopped'
+export type PlaybookExecutionStatus = 'running' | 'paused' | 'awaiting_commit' | 'completed' | 'failed' | 'stopped'
 
-export interface RoutineExecution {
+export interface PlaybookExecution {
   id: string
-  routineId: string
-  routineName: string
+  playbookId: string
+  playbookName: string
   projectPath: string
-  status: RoutineExecutionStatus
-  steps: RoutineStepState[]
+  status: PlaybookExecutionStatus
+  steps: PlaybookStepState[]
   currentStepIndex: number
   startedAt: number
   completedAt?: number
   variables: Record<string, string>
 }
 
-export interface StartRoutinePayload {
-  routineId: string
+export interface StartPlaybookPayload {
+  playbookId: string
   projectPath: string
   variables: Record<string, string>
 }

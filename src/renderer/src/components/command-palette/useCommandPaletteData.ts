@@ -1,35 +1,30 @@
 import { useState, useEffect } from 'react'
-import type { PromptTemplate, PromptHistoryItem, GitPreset, ClaudeModelInfo, Routine } from '../../../../shared/types'
+import type { PromptHistoryItem, GitPreset, ClaudeModelInfo, Playbook } from '../../../../shared/types'
+import { usePlaybookStore } from '../../stores/usePlaybookStore'
 
 interface CommandPaletteData {
-  templates: PromptTemplate[]
   history: PromptHistoryItem[]
   gitPresets: GitPreset[]
-  routines: Routine[]
+  playbooks: Playbook[]
   models: ClaudeModelInfo[]
   loading: boolean
 }
 
 export function useCommandPaletteData(): CommandPaletteData {
-  const [templates, setTemplates] = useState<PromptTemplate[]>([])
   const [history, setHistory] = useState<PromptHistoryItem[]>([])
   const [gitPresets, setGitPresets] = useState<GitPreset[]>([])
-  const [routines, setRoutines] = useState<Routine[]>([])
   const [models, setModels] = useState<ClaudeModelInfo[]>([])
   const [loading, setLoading] = useState(true)
+  const playbooks = usePlaybookStore(s => s.playbooks)
 
   useEffect(() => {
     Promise.all([
-      window.api.listPromptTemplates(),
       window.api.listPromptHistory(),
       window.api.listGitPresets(),
-      window.api.listRoutines(),
       window.api.detectModels()
-    ]).then(([t, h, g, r, m]) => {
-      setTemplates(t)
+    ]).then(([h, g, m]) => {
       setHistory(h)
       setGitPresets(g)
-      setRoutines(r)
       setModels(m)
       setLoading(false)
     }).catch(() => {
@@ -37,5 +32,5 @@ export function useCommandPaletteData(): CommandPaletteData {
     })
   }, [])
 
-  return { templates, history, gitPresets, routines, models, loading }
+  return { history, gitPresets, playbooks, models, loading }
 }

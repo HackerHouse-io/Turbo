@@ -5,18 +5,18 @@ import { QuickActions } from './QuickActions'
 import { SessionList } from './SessionList'
 import { WorkspacesSection } from './WorkspacesSection'
 import { InlinePrompt } from './InlinePrompt'
-import { RoutineProgressBanner } from './RoutineProgressBanner'
+import { PlaybookProgressBanner } from './PlaybookProgressBanner'
 import { PlanCard } from '../nerve-center/PlanCard'
 import { useSessionStore } from '../../stores/useSessionStore'
 import { useProjectStore } from '../../stores/useProjectStore'
-import { useRoutineStore } from '../../stores/useRoutineStore'
+import { usePlaybookStore } from '../../stores/usePlaybookStore'
 
 export function CommandCenter() {
   const sessionsRecord = useSessionStore(s => s.sessions)
   const projects = useProjectStore(s => s.projects)
   const selectedProjectId = useProjectStore(s => s.selectedProjectId)
   const addProjectFromPath = useProjectStore(s => s.addProjectFromPath)
-  const routineExecutions = useRoutineStore(s => s.executions)
+  const playbookExecutions = usePlaybookStore(s => s.executions)
   const selectedProject = projects.find(p => p.id === selectedProjectId)
 
   // Filter sessions by selected project
@@ -26,14 +26,14 @@ export function CommandCenter() {
     return all.filter(s => s.projectPath === selectedProject.path)
   }, [sessionsRecord, selectedProject])
 
-  // Filter active routine executions
-  const activeRoutines = useMemo(() => {
-    const all = Object.values(routineExecutions)
+  // Filter active playbook executions
+  const activePlaybooks = useMemo(() => {
+    const all = Object.values(playbookExecutions)
     const projectFiltered = selectedProject
       ? all.filter(r => r.projectPath === selectedProject.path)
       : all
     return projectFiltered.filter(r => r.status !== 'completed')
-  }, [routineExecutions, selectedProject])
+  }, [playbookExecutions, selectedProject])
 
   const noProjects = projects.length === 0
 
@@ -64,15 +64,15 @@ export function CommandCenter() {
             <PlanCard projectPath={selectedProject?.path} />
           </div>
 
-          {/* Routine Banners */}
-          {activeRoutines.length > 0 && (
+          {/* Playbook Banners */}
+          {activePlaybooks.length > 0 && (
             <div className="px-4 py-2">
-              <RoutineProgressBanner executions={activeRoutines} />
+              <PlaybookProgressBanner executions={activePlaybooks} />
             </div>
           )}
 
           {/* Session List (always rendered) */}
-          <SessionList sessions={sessions} routines={activeRoutines} />
+          <SessionList sessions={sessions} activePlaybooks={activePlaybooks} />
 
           {/* Workspaces Section */}
           <WorkspacesSection />

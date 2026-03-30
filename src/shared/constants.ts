@@ -43,10 +43,7 @@ export const IPC = {
   // Claude CLI
   CLAUDE_DETECT_MODELS: 'claude:detect-models',
 
-  // Prompt Vault
-  PROMPT_TEMPLATES_LIST: 'prompt:templates:list',
-  PROMPT_TEMPLATES_SAVE: 'prompt:templates:save',
-  PROMPT_TEMPLATES_DELETE: 'prompt:templates:delete',
+  // Prompt History
   PROMPT_HISTORY_LIST: 'prompt:history:list',
   PROMPT_HISTORY_CLEAR: 'prompt:history:clear',
 
@@ -71,21 +68,21 @@ export const IPC = {
   GIT_PRESETS_SAVE: 'git:presets:save',
   GIT_PRESETS_DELETE: 'git:presets:delete',
 
-  // Routines
-  ROUTINE_LIST: 'routine:list',
-  ROUTINE_START: 'routine:start',
-  ROUTINE_PAUSE: 'routine:pause',
-  ROUTINE_RESUME: 'routine:resume',
-  ROUTINE_STOP: 'routine:stop',
-  ROUTINE_DISMISS: 'routine:dismiss',
-  ROUTINE_EXECUTIONS: 'routine:executions',
-  ROUTINE_REMOVE: 'routine:remove',
-  ROUTINE_SAVE: 'routine:save',
-  ROUTINE_DELETE: 'routine:delete',
-  ROUTINE_DUPLICATE: 'routine:duplicate',
+  // Playbooks
+  PLAYBOOK_LIST: 'playbook:list',
+  PLAYBOOK_START: 'playbook:start',
+  PLAYBOOK_PAUSE: 'playbook:pause',
+  PLAYBOOK_RESUME: 'playbook:resume',
+  PLAYBOOK_STOP: 'playbook:stop',
+  PLAYBOOK_DISMISS: 'playbook:dismiss',
+  PLAYBOOK_EXECUTIONS: 'playbook:executions',
+  PLAYBOOK_REMOVE: 'playbook:remove',
+  PLAYBOOK_SAVE: 'playbook:save',
+  PLAYBOOK_DELETE: 'playbook:delete',
+  PLAYBOOK_DUPLICATE: 'playbook:duplicate',
 
   // Events (main → renderer)
-  ROUTINE_UPDATED: 'routine:updated',
+  PLAYBOOK_UPDATED: 'playbook:updated',
 
   // Plan
   PLAN_READ: 'plan:read',

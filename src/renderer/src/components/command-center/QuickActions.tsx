@@ -4,36 +4,21 @@ import { useProjectStore, selectProjectPath } from '../../stores/useProjectStore
 import { useGitStore } from '../../stores/useGitStore'
 import { useCommandPaletteData } from '../command-palette/useCommandPaletteData'
 import { PaletteIcon } from '../command-palette/PaletteIcon'
-import type { PromptTemplate, GitPreset, Routine } from '../../../../shared/types'
+import type { GitPreset, Playbook } from '../../../../shared/types'
 
 export function QuickActions() {
-  const { templates, gitPresets, routines } = useCommandPaletteData()
+  const { gitPresets, playbooks } = useCommandPaletteData()
   const openCommandPalette = useUIStore(s => s.openCommandPalette)
-  const openCommandPaletteWithTemplate = useUIStore(s => s.openCommandPaletteWithTemplate)
-  const openCommandPaletteWithRoutine = useUIStore(s => s.openCommandPaletteWithRoutine)
+  const openCommandPaletteWithPlaybook = useUIStore(s => s.openCommandPaletteWithPlaybook)
   const selectedProjectPath = useProjectStore(selectProjectPath)
 
-  const handleTemplate = useCallback((t: PromptTemplate) => {
-    if (t.variables.length === 0 && selectedProjectPath) {
-      window.api.createSession({
-        projectPath: selectedProjectPath,
-        prompt: t.template,
-        name: t.name,
-        permissionMode: t.permissionMode,
-        effort: t.effort
-      })
-    } else {
-      openCommandPaletteWithTemplate(t)
-    }
-  }, [selectedProjectPath, openCommandPaletteWithTemplate])
-
-  const handleRoutine = useCallback((r: Routine) => {
+  const handlePlaybook = useCallback((r: Playbook) => {
     if (r.variables.length === 0 && selectedProjectPath) {
-      window.api.startRoutine({ routineId: r.id, projectPath: selectedProjectPath, variables: {} })
+      window.api.startPlaybook({ playbookId: r.id, projectPath: selectedProjectPath, variables: {} })
     } else {
-      openCommandPaletteWithRoutine(r)
+      openCommandPaletteWithPlaybook(r)
     }
-  }, [selectedProjectPath, openCommandPaletteWithRoutine])
+  }, [selectedProjectPath, openCommandPaletteWithPlaybook])
 
   const handleGitPreset = useCallback(async (g: GitPreset) => {
     if (!selectedProjectPath) return
@@ -60,36 +45,23 @@ export function QuickActions() {
     await useGitStore.getState().execCommands(selectedProjectPath, g.commands)
   }, [selectedProjectPath, openCommandPalette])
 
-  const hasTemplates = templates.length > 0
-  const hasRoutines = routines.length > 0
+  const hasPlaybooks = playbooks.length > 0
   const hasGit = gitPresets.length > 0
 
   return (
     <div className="px-4 py-3">
       <div className="flex flex-wrap items-center gap-2">
-        {/* Templates */}
-        {templates.map(t => (
-          <Chip
-            key={`t-${t.id}`}
-            icon={t.icon}
-            label={t.name}
-            onClick={() => handleTemplate(t)}
-          />
-        ))}
-
-        {hasTemplates && hasRoutines && <Divider />}
-
-        {/* Routines */}
-        {routines.map(r => (
+        {/* Playbooks */}
+        {playbooks.map(r => (
           <Chip
             key={`r-${r.id}`}
-            icon="routine"
+            icon={r.icon}
             label={r.name}
-            onClick={() => handleRoutine(r)}
+            onClick={() => handlePlaybook(r)}
           />
         ))}
 
-        {(hasTemplates || hasRoutines) && hasGit && <Divider />}
+        {hasPlaybooks && hasGit && <Divider />}
 
         {/* Git presets */}
         {gitPresets.map(g => (

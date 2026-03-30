@@ -1,20 +1,21 @@
 import { useState, useCallback, useEffect, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import type { Routine, RoutineStepDefinition } from '../../../../shared/types'
+import type { Playbook, PlaybookStepDefinition } from '../../../../shared/types'
 import { extractTemplateVariables } from '../../../../shared/templateVars'
-import { RoutineIconPicker } from './RoutineIconPicker'
-import { RoutineStepEditor } from './RoutineStepEditor'
+import { CMD_ENTER_LABEL } from '../../lib/format'
+import { PlaybookIconPicker } from './PlaybookIconPicker'
+import { PlaybookStepEditor } from './PlaybookStepEditor'
 import { ToggleSwitch } from '../shared/ToggleSwitch'
 import { useUIStore } from '../../stores/useUIStore'
-import { useRoutineStore } from '../../stores/useRoutineStore'
+import { usePlaybookStore } from '../../stores/usePlaybookStore'
 
-function makeEmptyStep(): RoutineStepDefinition {
+function makeEmptyStep(): PlaybookStepDefinition {
   return { name: '', prompt: '', permissionMode: 'default', effort: 'medium' }
 }
 
 let nextStepKey = 1
 
-function makeDraft(source: Routine | null, mode: 'create' | 'edit' | 'duplicate') {
+function makeDraft(source: Playbook | null, mode: 'create' | 'edit' | 'duplicate') {
   if (!source) {
     return {
       name: '',
@@ -35,19 +36,19 @@ function makeDraft(source: Routine | null, mode: 'create' | 'edit' | 'duplicate'
   }
 }
 
-export function RoutineEditorOverlay() {
-  const editorState = useUIStore(s => s.routineEditorState)
-  const closeRoutineEditor = useUIStore(s => s.closeRoutineEditor)
-  const saveRoutine = useRoutineStore(s => s.saveRoutine)
+export function PlaybookEditorOverlay() {
+  const editorState = useUIStore(s => s.playbookEditorState)
+  const closePlaybookEditor = useUIStore(s => s.closePlaybookEditor)
+  const savePlaybook = usePlaybookStore(s => s.savePlaybook)
 
-  const source = editorState?.routine ?? null
+  const source = editorState?.playbook ?? null
   const mode = editorState?.mode ?? 'create'
 
   const [draft, setDraft] = useState(() => makeDraft(source, mode))
 
   // Reset draft when editorState changes
   useEffect(() => {
-    setDraft(makeDraft(editorState?.routine ?? null, editorState?.mode ?? 'create'))
+    setDraft(makeDraft(editorState?.playbook ?? null, editorState?.mode ?? 'create'))
   }, [editorState])
 
   const detectedVars = useMemo(
@@ -61,16 +62,16 @@ export function RoutineEditorOverlay() {
 
   const handleSave = useCallback(async () => {
     if (!isValid) return
-    const routine: Routine = {
+    const playbook: Playbook = {
       id: mode === 'edit' && source ? source.id : '',
       ...draft,
       variables: detectedVars
     }
-    await saveRoutine(routine)
-    closeRoutineEditor()
-  }, [isValid, mode, source, draft, detectedVars, saveRoutine, closeRoutineEditor])
+    await savePlaybook(playbook)
+    closePlaybookEditor()
+  }, [isValid, mode, source, draft, detectedVars, savePlaybook, closePlaybookEditor])
 
-  const updateStep = useCallback((index: number, step: RoutineStepDefinition) => {
+  const updateStep = useCallback((index: number, step: PlaybookStepDefinition) => {
     setDraft(d => {
       const steps = [...d.steps]
       steps[index] = step
@@ -99,7 +100,7 @@ export function RoutineEditorOverlay() {
     setDraft(d => ({ ...d, steps: [...d.steps, { ...makeEmptyStep(), _key: nextStepKey++ }] }))
   }, [])
 
-  // Keyboard: Cmd+Enter to save, Escape to close, Alt+Up/Down to reorder
+  // Keyboard: Cmd+Enter to save, Escape to close
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
       e.preventDefault()
@@ -110,14 +111,14 @@ export function RoutineEditorOverlay() {
   return (
     <div className="fixed inset-0 z-[45] flex items-center justify-center" onKeyDown={handleKeyDown}>
       {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/50" onClick={closeRoutineEditor} />
+      <div className="absolute inset-0 bg-black/50" onClick={closePlaybookEditor} />
 
       {/* Modal */}
       <div className="relative w-full max-w-2xl mx-4 bg-turbo-surface rounded-xl border border-turbo-border shadow-2xl overflow-hidden max-h-[85vh] flex flex-col">
         {/* Header */}
         <div className="px-5 py-4 border-b border-turbo-border flex-shrink-0">
           <h2 className="text-sm font-semibold text-turbo-text">
-            {mode === 'create' ? 'New Routine' : mode === 'duplicate' ? 'Duplicate Routine' : 'Edit Routine'}
+            {mode === 'create' ? 'New Playbook' : mode === 'duplicate' ? 'Duplicate Playbook' : 'Edit Playbook'}
           </h2>
         </div>
 
@@ -130,7 +131,7 @@ export function RoutineEditorOverlay() {
               type="text"
               value={draft.name}
               onChange={e => setDraft(d => ({ ...d, name: e.target.value }))}
-              placeholder="Routine name..."
+              placeholder="Playbook name..."
               className="w-full bg-turbo-bg border border-turbo-border rounded-lg px-3 py-2 text-sm
                          text-turbo-text placeholder:text-turbo-text-muted focus:outline-none
                          focus:border-turbo-accent/50 transition-colors"
@@ -154,7 +155,7 @@ export function RoutineEditorOverlay() {
           {/* Icon picker */}
           <div>
             <label className="block text-[11px] font-medium text-turbo-text-muted mb-1">Icon</label>
-            <RoutineIconPicker selected={draft.icon} onSelect={icon => setDraft(d => ({ ...d, icon }))} />
+            <PlaybookIconPicker selected={draft.icon} onSelect={icon => setDraft(d => ({ ...d, icon }))} />
           </div>
 
           {/* Ends with commit toggle */}
@@ -171,7 +172,7 @@ export function RoutineEditorOverlay() {
               <AnimatePresence initial={false}>
                 {draft.steps.map((step, i) => (
                   <motion.div key={(step as any)._key ?? i} layout>
-                    <RoutineStepEditor
+                    <PlaybookStepEditor
                       step={step}
                       index={i}
                       isFirst={i === 0}
@@ -220,13 +221,13 @@ export function RoutineEditorOverlay() {
         {/* Footer */}
         <div className="flex items-center justify-end gap-2 px-5 py-3 border-t border-turbo-border flex-shrink-0">
           <button
-            onClick={closeRoutineEditor}
+            onClick={closePlaybookEditor}
             className="text-[11px] px-3 py-1.5 rounded-md text-turbo-text-dim hover:text-turbo-text transition-colors"
           >
             Cancel
           </button>
           <kbd className="kbd text-[10px] h-7 flex items-center px-1.5">
-            {(navigator.platform.includes('Mac') ? '\u2318' : 'Ctrl') + '+\u21B5'}
+            {CMD_ENTER_LABEL}
           </kbd>
           <button
             onClick={handleSave}

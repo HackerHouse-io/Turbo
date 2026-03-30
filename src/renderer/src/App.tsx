@@ -3,7 +3,7 @@ import { AppShell } from './components/layout/AppShell'
 import { useSessionStore } from './stores/useSessionStore'
 import { useProjectStore } from './stores/useProjectStore'
 import { useGitIdentityStore } from './stores/useGitIdentityStore'
-import { useRoutineStore } from './stores/useRoutineStore'
+import { usePlaybookStore } from './stores/usePlaybookStore'
 import { useTerminalStore } from './stores/useTerminalStore'
 import { useUIStore } from './stores/useUIStore'
 import { appendTerminalData, clearTerminalBuffer } from './lib/terminalBuffer'
@@ -59,8 +59,8 @@ export default function App() {
       clearTerminalBuffer(sessionId)
     })
 
-    const unsubRoutine = window.api.onRoutineUpdated((execution) => {
-      useRoutineStore.getState().updateExecution(execution)
+    const unsubPlaybook = window.api.onPlaybookUpdated((execution) => {
+      usePlaybookStore.getState().updateExecution(execution)
     })
 
     const unsubNotifClick = window.api.onNotificationClick((sessionId) => {
@@ -76,11 +76,11 @@ export default function App() {
       useTerminalStore.getState().setTerminals(terminals)
     })
 
-    window.api.listRoutineExecutions().then((executions) => {
-      useRoutineStore.getState().setExecutions(executions)
+    window.api.listPlaybookExecutions().then((executions) => {
+      usePlaybookStore.getState().setExecutions(executions)
     })
 
-    useRoutineStore.getState().loadRoutines()
+    usePlaybookStore.getState().loadPlaybooks()
 
     return () => {
       unsubTerminal()
@@ -91,7 +91,7 @@ export default function App() {
       unsubSession()
       unsubAttention()
       unsubRemoved()
-      unsubRoutine()
+      unsubPlaybook()
       unsubNotifClick()
     }
   }, [updateSession, addAttentionItem, removeSession])

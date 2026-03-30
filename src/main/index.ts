@@ -2,13 +2,13 @@ import { app, BrowserWindow, shell } from 'electron'
 import { join } from 'path'
 import { ClaudeSessionManager } from './claude/ClaudeSessionManager'
 import { ProjectManager } from './ProjectManager'
-import { PromptVaultManager } from './PromptVaultManager'
+import { PromptHistoryManager } from './PromptHistoryManager'
 import { SettingsManager } from './SettingsManager'
 import { GitIdentityManager } from './git/GitIdentityManager'
 import { GitOpsManager } from './git/GitOpsManager'
 import { GitPresetManager } from './git/GitPresetManager'
-import { RoutineManager } from './routines/RoutineManager'
-import { RoutineExecutor } from './routines/RoutineExecutor'
+import { PlaybookManager } from './playbooks/PlaybookManager'
+import { PlaybookExecutor } from './playbooks/PlaybookExecutor'
 import { PlanFileManager } from './plan/PlanFileManager'
 import { PlainTerminalManager } from './terminal/PlainTerminalManager'
 import { NotificationManager } from './NotificationManager'
@@ -18,11 +18,11 @@ let mainWindow: BrowserWindow | null = null
 let settingsManager: SettingsManager
 let projectManager: ProjectManager
 let sessionManager: ClaudeSessionManager
-let promptVaultManager: PromptVaultManager
+let promptHistoryManager: PromptHistoryManager
 let gitOpsManager: GitOpsManager
 let gitPresetManager: GitPresetManager
-let routineManager: RoutineManager
-let routineExecutor: RoutineExecutor
+let playbookManager: PlaybookManager
+let playbookExecutor: PlaybookExecutor
 let planFileManager: PlanFileManager
 let plainTerminalManager: PlainTerminalManager
 let notificationManager: NotificationManager
@@ -89,10 +89,10 @@ app.whenReady().then(() => {
   gitOpsManager = new GitOpsManager(gitIdentityManager)
 
   sessionManager = new ClaudeSessionManager(settingsManager, projectManager, gitOpsManager)
-  promptVaultManager = new PromptVaultManager(app.getPath('userData'))
+  promptHistoryManager = new PromptHistoryManager(app.getPath('userData'))
   gitPresetManager = new GitPresetManager(app.getPath('userData'))
-  routineManager = new RoutineManager(app.getPath('userData'))
-  routineExecutor = new RoutineExecutor(sessionManager, routineManager)
+  playbookManager = new PlaybookManager(app.getPath('userData'))
+  playbookExecutor = new PlaybookExecutor(sessionManager, playbookManager)
   planFileManager = new PlanFileManager()
   plainTerminalManager = new PlainTerminalManager()
 
@@ -100,13 +100,13 @@ app.whenReady().then(() => {
   registerIpcHandlers({
     sessionManager,
     projectManager,
-    promptVaultManager,
+    promptHistoryManager,
     settingsManager,
     gitIdentityManager,
     gitOpsManager,
     gitPresetManager,
-    routineManager,
-    routineExecutor,
+    playbookManager,
+    playbookExecutor,
     planFileManager,
     plainTerminalManager,
     getMainWindow: () => mainWindow
@@ -141,6 +141,6 @@ app.on('window-all-closed', () => {
 app.on('before-quit', () => {
   plainTerminalManager?.dispose()
   planFileManager?.dispose()
-  routineExecutor?.dispose()
+  playbookExecutor?.dispose()
   sessionManager?.dispose()
 })

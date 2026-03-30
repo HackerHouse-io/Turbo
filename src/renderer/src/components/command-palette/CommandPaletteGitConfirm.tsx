@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { PaletteIcon } from './PaletteIcon'
+import { CMD_ENTER_LABEL } from '../../lib/format'
 
 interface GitConfirmProps {
   message: string
@@ -86,7 +87,7 @@ export function CommandPaletteGitConfirm({
       <div className="flex items-center justify-between px-4 py-3 border-t border-turbo-border">
         <p className="text-xs text-turbo-text-muted">AI-generated message — edit as needed</p>
         <div className="flex items-center gap-2">
-          <kbd className="kbd text-[10px] h-7 flex items-center px-1.5">{(navigator.platform.includes('Mac') ? '\u2318' : 'Ctrl') + '+\u21B5'}</kbd>
+          <kbd className="kbd text-[10px] h-7 flex items-center px-1.5">{CMD_ENTER_LABEL}</kbd>
           <button
             onClick={() => editedMessage.trim() && onConfirm(editedMessage.trim())}
             disabled={!editedMessage.trim() || loading}

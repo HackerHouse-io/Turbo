@@ -51,7 +51,7 @@ const BUILT_IN_PRESETS: Omit<GitPreset, 'id'>[] = [
 
 /**
  * GitPresetManager: Preset persistence with built-in defaults.
- * Follows PromptVaultManager pattern — JSON file in userData.
+ * JSON file in userData.
  */
 export class GitPresetManager {
   private presets: GitPreset[] = []

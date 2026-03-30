@@ -9,7 +9,6 @@ import type {
   AttentionItem,
   Project,
   ScannedProject,
-  PromptTemplate,
   PromptHistoryItem,
   GitIdentity,
   ResolvedGitIdentity,
@@ -20,9 +19,9 @@ import type {
   GitExecPayload,
   ClaudeModelInfo,
   GitPreset,
-  Routine,
-  RoutineExecution,
-  StartRoutinePayload,
+  Playbook,
+  PlaybookExecution,
+  StartPlaybookPayload,
   PlanReadResult,
   PlanSavePayload,
   PlanSaveResult,
@@ -95,16 +94,7 @@ const api = {
   getAppPath: (name: string): Promise<string> =>
     ipcRenderer.invoke(IPC.APP_GET_PATH, name),
 
-  // ─── Prompt Vault ───────────────────────────────────────────
-
-  listPromptTemplates: (): Promise<PromptTemplate[]> =>
-    ipcRenderer.invoke(IPC.PROMPT_TEMPLATES_LIST),
-
-  savePromptTemplate: (template: PromptTemplate): Promise<PromptTemplate> =>
-    ipcRenderer.invoke(IPC.PROMPT_TEMPLATES_SAVE, template),
-
-  deletePromptTemplate: (templateId: string): Promise<void> =>
-    ipcRenderer.invoke(IPC.PROMPT_TEMPLATES_DELETE, templateId),
+  // ─── Prompt History ───────────────────────────────────────
 
   listPromptHistory: (): Promise<PromptHistoryItem[]> =>
     ipcRenderer.invoke(IPC.PROMPT_HISTORY_LIST),
@@ -163,40 +153,40 @@ const api = {
   deleteGitPreset: (presetId: string): Promise<void> =>
     ipcRenderer.invoke(IPC.GIT_PRESETS_DELETE, presetId),
 
-  // ─── Routines ────────────────────────────────────────────
+  // ─── Playbooks ────────────────────────────────────────────
 
-  listRoutines: (): Promise<Routine[]> =>
-    ipcRenderer.invoke(IPC.ROUTINE_LIST),
+  listPlaybooks: (): Promise<Playbook[]> =>
+    ipcRenderer.invoke(IPC.PLAYBOOK_LIST),
 
-  saveRoutine: (routine: Routine): Promise<Routine> =>
-    ipcRenderer.invoke(IPC.ROUTINE_SAVE, routine),
+  savePlaybook: (playbook: Playbook): Promise<Playbook> =>
+    ipcRenderer.invoke(IPC.PLAYBOOK_SAVE, playbook),
 
-  deleteRoutine: (routineId: string): Promise<void> =>
-    ipcRenderer.invoke(IPC.ROUTINE_DELETE, routineId),
+  deletePlaybook: (playbookId: string): Promise<void> =>
+    ipcRenderer.invoke(IPC.PLAYBOOK_DELETE, playbookId),
 
-  duplicateRoutine: (routineId: string): Promise<Routine> =>
-    ipcRenderer.invoke(IPC.ROUTINE_DUPLICATE, routineId),
+  duplicatePlaybook: (playbookId: string): Promise<Playbook> =>
+    ipcRenderer.invoke(IPC.PLAYBOOK_DUPLICATE, playbookId),
 
-  startRoutine: (payload: StartRoutinePayload): Promise<RoutineExecution> =>
-    ipcRenderer.invoke(IPC.ROUTINE_START, payload),
+  startPlaybook: (payload: StartPlaybookPayload): Promise<PlaybookExecution> =>
+    ipcRenderer.invoke(IPC.PLAYBOOK_START, payload),
 
-  pauseRoutine: (executionId: string): Promise<void> =>
-    ipcRenderer.invoke(IPC.ROUTINE_PAUSE, executionId),
+  pausePlaybook: (executionId: string): Promise<void> =>
+    ipcRenderer.invoke(IPC.PLAYBOOK_PAUSE, executionId),
 
-  resumeRoutine: (executionId: string): Promise<void> =>
-    ipcRenderer.invoke(IPC.ROUTINE_RESUME, executionId),
+  resumePlaybook: (executionId: string): Promise<void> =>
+    ipcRenderer.invoke(IPC.PLAYBOOK_RESUME, executionId),
 
-  stopRoutine: (executionId: string): Promise<void> =>
-    ipcRenderer.invoke(IPC.ROUTINE_STOP, executionId),
+  stopPlaybook: (executionId: string): Promise<void> =>
+    ipcRenderer.invoke(IPC.PLAYBOOK_STOP, executionId),
 
-  dismissRoutine: (executionId: string): Promise<void> =>
-    ipcRenderer.invoke(IPC.ROUTINE_DISMISS, executionId),
+  dismissPlaybook: (executionId: string): Promise<void> =>
+    ipcRenderer.invoke(IPC.PLAYBOOK_DISMISS, executionId),
 
-  listRoutineExecutions: (): Promise<RoutineExecution[]> =>
-    ipcRenderer.invoke(IPC.ROUTINE_EXECUTIONS),
+  listPlaybookExecutions: (): Promise<PlaybookExecution[]> =>
+    ipcRenderer.invoke(IPC.PLAYBOOK_EXECUTIONS),
 
-  removeRoutineExecution: (executionId: string): Promise<void> =>
-    ipcRenderer.invoke(IPC.ROUTINE_REMOVE, executionId),
+  removePlaybookExecution: (executionId: string): Promise<void> =>
+    ipcRenderer.invoke(IPC.PLAYBOOK_REMOVE, executionId),
 
   // ─── Plan ──────────────────────────────────────────────────
 
@@ -284,10 +274,10 @@ const api = {
     return () => ipcRenderer.removeListener(IPC.SESSION_REMOVED, handler)
   },
 
-  onRoutineUpdated: (callback: (execution: RoutineExecution) => void) => {
-    const handler = (_: Electron.IpcRendererEvent, execution: RoutineExecution) => callback(execution)
-    ipcRenderer.on(IPC.ROUTINE_UPDATED, handler)
-    return () => ipcRenderer.removeListener(IPC.ROUTINE_UPDATED, handler)
+  onPlaybookUpdated: (callback: (execution: PlaybookExecution) => void) => {
+    const handler = (_: Electron.IpcRendererEvent, execution: PlaybookExecution) => callback(execution)
+    ipcRenderer.on(IPC.PLAYBOOK_UPDATED, handler)
+    return () => ipcRenderer.removeListener(IPC.PLAYBOOK_UPDATED, handler)
   },
 
   onNotificationClick: (callback: (sessionId: string) => void) => {

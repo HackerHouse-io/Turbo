@@ -6,12 +6,11 @@ import { useProjectStore, selectProjectPath } from '../../stores/useProjectStore
 import { useGitStore } from '../../stores/useGitStore'
 import { useTerminalStore } from '../../stores/useTerminalStore'
 import { useCommandPaletteData } from './useCommandPaletteData'
-import { CommandPaletteTemplateFill, type SessionFlags } from './CommandPaletteTemplateFill'
 import { CommandPaletteGitConfirm } from './CommandPaletteGitConfirm'
 import { CommandPaletteGitPresetFill } from './CommandPaletteGitPresetFill'
-import { CommandPaletteRoutineFill } from './CommandPaletteRoutineFill'
+import { CommandPalettePlaybookFill } from './CommandPalettePlaybookFill'
 import { PaletteIcon } from './PaletteIcon'
-import type { PromptTemplate, GitPreset, Routine } from '../../../../shared/types'
+import type { GitPreset, Playbook } from '../../../../shared/types'
 
 // ─── Types ───────────────────────────────────────────────────
 
@@ -20,17 +19,16 @@ interface CommandItem {
   label: string
   description?: string
   icon: string
-  section: 'recent' | 'projects' | 'templates' | 'routines' | 'git' | 'tasks' | 'actions'
+  section: 'recent' | 'projects' | 'playbooks' | 'git' | 'tasks' | 'actions'
   action: () => void
   keywords?: string[]
 }
 
-const SECTION_ORDER: CommandItem['section'][] = ['recent', 'projects', 'templates', 'routines', 'git', 'tasks', 'actions']
+const SECTION_ORDER: CommandItem['section'][] = ['recent', 'projects', 'playbooks', 'git', 'tasks', 'actions']
 const SECTION_LABELS: Record<CommandItem['section'], string> = {
   recent: 'Recent Prompts',
   projects: 'Switch Project',
-  templates: 'Templates',
-  routines: 'Routines',
+  playbooks: 'Playbooks',
   git: 'Git Actions',
   tasks: 'Active Tasks',
   actions: 'Actions'
@@ -67,9 +65,8 @@ function PaletteShell({ onClose, children }: { onClose: () => void; children: Re
 export function CommandPalette() {
   const [query, setQuery] = useState('')
   const [selectedIndex, setSelectedIndex] = useState(0)
-  const [fillTemplate, setFillTemplate] = useState<PromptTemplate | null>(null)
   const [fillGitPreset, setFillGitPreset] = useState<GitPreset | null>(null)
-  const [fillRoutine, setFillRoutine] = useState<Routine | null>(null)
+  const [fillPlaybook, setFillPlaybook] = useState<Playbook | null>(null)
   const [gitConfirm, setGitConfirm] = useState<{ message: string; diffStat: string; pushAfter: boolean } | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const closeCommandPalette = useUIStore(s => s.closeCommandPalette)
@@ -81,7 +78,7 @@ export function CommandPalette() {
   const selectedProjectPath = useProjectStore(selectProjectPath)
   const projects = useProjectStore(s => s.projects)
   const selectedProjectId = useProjectStore(s => s.selectedProjectId)
-  const { templates, gitPresets, routines, models, loading } = useCommandPaletteData()
+  const { gitPresets, playbooks, models, loading } = useCommandPaletteData()
 
   useEffect(() => {
     inputRef.current?.focus()
@@ -93,34 +90,13 @@ export function CommandPalette() {
       useGitStore.getState().setPendingCommit(null)
     }
 
-    // Hydrate template fill from pending template (set by quick actions)
-    const pendingTemplate = useUIStore.getState().pendingTemplateFill
-    if (pendingTemplate) {
-      setFillTemplate(pendingTemplate)
-      useUIStore.setState({ pendingTemplateFill: null })
-    }
-
-    // Hydrate routine fill from pending routine (set by detail overlay Run)
-    const pendingRoutine = useUIStore.getState().pendingRoutineFill
-    if (pendingRoutine) {
-      setFillRoutine(pendingRoutine)
-      useUIStore.setState({ pendingRoutineFill: null })
+    // Hydrate playbook fill from pending playbook (set by detail overlay Run)
+    const pendingPlaybook = useUIStore.getState().pendingPlaybookFill
+    if (pendingPlaybook) {
+      setFillPlaybook(pendingPlaybook)
+      useUIStore.setState({ pendingPlaybookFill: null })
     }
   }, [])
-
-  // ─── Create session helper ─────────────────────────────────
-
-  const createSession = useCallback((prompt: string, flags?: SessionFlags) => {
-    if (!selectedProjectPath) return
-    window.api.createSession({
-      projectPath: selectedProjectPath,
-      prompt,
-      permissionMode: flags?.permissionMode,
-      effort: flags?.effort,
-      model: flags?.model
-    })
-    closeCommandPalette()
-  }, [selectedProjectPath, closeCommandPalette])
 
   // ─── Git action handler ────────────────────────────────────
 
@@ -170,11 +146,11 @@ export function CommandPalette() {
     closeCommandPalette()
   }, [selectedProjectPath, closeCommandPalette])
 
-  // ─── Routine handler ───────────────────────────────────────
+  // ─── Playbook handler ───────────────────────────────────────
 
-  const handleStartRoutine = useCallback(async (routineId: string, variables: Record<string, string>) => {
+  const handleStartPlaybook = useCallback(async (playbookId: string, variables: Record<string, string>) => {
     if (!selectedProjectPath) return
-    await window.api.startRoutine({ routineId, projectPath: selectedProjectPath, variables })
+    await window.api.startPlaybook({ playbookId, projectPath: selectedProjectPath, variables })
     closeCommandPalette()
   }, [selectedProjectPath, closeCommandPalette])
 
@@ -215,41 +191,19 @@ export function CommandPalette() {
       })
     }
 
-    // Templates
-    for (const t of templates) {
+    // Playbooks
+    for (const r of playbooks) {
       items.push({
-        id: `template-${t.id}`,
-        label: t.name,
-        description: t.description,
-        icon: t.icon,
-        section: 'templates',
-        action: () => {
-          if (t.variables.length === 0) {
-            createSession(t.template, {
-              permissionMode: t.permissionMode,
-              effort: t.effort
-            })
-          } else {
-            setFillTemplate(t)
-          }
-        },
-        keywords: [t.description, t.template]
-      })
-    }
-
-    // Routines
-    for (const r of routines) {
-      items.push({
-        id: `routine-${r.id}`,
+        id: `playbook-${r.id}`,
         label: r.name,
         description: r.description,
-        icon: 'routine',
-        section: 'routines',
+        icon: r.icon,
+        section: 'playbooks',
         action: () => {
           if (r.variables.length === 0) {
-            handleStartRoutine(r.id, {})
+            handleStartPlaybook(r.id, {})
           } else {
-            setFillRoutine(r)
+            setFillPlaybook(r)
           }
         },
         keywords: [r.description, ...r.steps.map(s => s.name)]
@@ -373,7 +327,7 @@ export function CommandPalette() {
     })
 
     return items
-  }, [projects, selectedProjectId, templates, routines, gitPresets, sessions, selectedProjectPath, createSession, handleGitAction, handleStartRoutine, openTerminalAction, closeCommandPalette, selectSession, setViewMode])
+  }, [projects, selectedProjectId, playbooks, gitPresets, sessions, selectedProjectPath, handleGitAction, handleStartPlaybook, openTerminalAction, closeCommandPalette, selectSession, setViewMode])
 
   // ─── Filtering ─────────────────────────────────────────────
 
@@ -431,15 +385,15 @@ export function CommandPalette() {
     }
   }
 
-  // ─── Routine fill mode ──────────────────────────────────────
+  // ─── Playbook fill mode ──────────────────────────────────────
 
-  if (fillRoutine) {
+  if (fillPlaybook) {
     return (
       <PaletteShell onClose={closeCommandPalette}>
-        <CommandPaletteRoutineFill
-          routine={fillRoutine}
-          onSubmit={(variables) => handleStartRoutine(fillRoutine.id, variables)}
-          onBack={() => setFillRoutine(null)}
+        <CommandPalettePlaybookFill
+          playbook={fillPlaybook}
+          onSubmit={(variables) => handleStartPlaybook(fillPlaybook.id, variables)}
+          onBack={() => setFillPlaybook(null)}
         />
       </PaletteShell>
     )
@@ -477,21 +431,6 @@ export function CommandPalette() {
     )
   }
 
-  // ─── Template fill mode ────────────────────────────────────
-
-  if (fillTemplate) {
-    return (
-      <PaletteShell onClose={closeCommandPalette}>
-        <CommandPaletteTemplateFill
-          template={fillTemplate}
-          models={models}
-          onSubmit={(prompt, flags) => createSession(prompt, flags)}
-          onBack={() => setFillTemplate(null)}
-        />
-      </PaletteShell>
-    )
-  }
-
   // ─── Search mode ───────────────────────────────────────────
 
   return (
@@ -505,7 +444,7 @@ export function CommandPalette() {
           value={query}
           onChange={e => { setQuery(e.target.value); setSelectedIndex(0) }}
           onKeyDown={handleKeyDown}
-          placeholder="Search commands, projects, templates..."
+          placeholder="Search commands, projects, playbooks..."
           className="flex-1 bg-transparent text-sm text-turbo-text placeholder:text-turbo-text-muted
                      focus:outline-none"
         />

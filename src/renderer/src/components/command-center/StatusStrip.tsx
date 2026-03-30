@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import { useSessionStore } from '../../stores/useSessionStore'
-import { useRoutineStore } from '../../stores/useRoutineStore'
+import { usePlaybookStore } from '../../stores/usePlaybookStore'
 import { useUIStore } from '../../stores/useUIStore'
 import { useNerveCenterData } from '../../hooks/useNerveCenterData'
 import { usePlanData } from '../../hooks/usePlanData'
@@ -14,7 +14,7 @@ interface StatusStripProps {
 
 export function StatusStrip({ projectPath }: StatusStripProps) {
   const sessionsRecord = useSessionStore(s => s.sessions)
-  const routineExecutions = useRoutineStore(s => s.executions)
+  const playbookExecutions = usePlaybookStore(s => s.executions)
   const openPlanOverlay = useUIStore(s => s.openPlanOverlay)
 
   const { git, refresh } = useNerveCenterData(projectPath)
@@ -42,14 +42,14 @@ export function StatusStrip({ projectPath }: StatusStripProps) {
     return { active, waiting, error, done, tokens, cost }
   }, [sessionsRecord, projectPath])
 
-  // Active routine for this project
-  const activeRoutine = useMemo(() => {
-    const all = Object.values(routineExecutions)
+  // Active playbook for this project
+  const activePlaybook = useMemo(() => {
+    const all = Object.values(playbookExecutions)
     return all.find(r =>
       r.status !== 'completed' && r.status !== 'stopped' && r.status !== 'failed' &&
       (!projectPath || r.projectPath === projectPath)
     )
-  }, [routineExecutions, projectPath])
+  }, [playbookExecutions, projectPath])
 
   // Plan progress ring
   const planProgress = found && plan && plan.totalTasks > 0
@@ -90,16 +90,16 @@ export function StatusStrip({ projectPath }: StatusStripProps) {
           </span>
         )}
 
-        {/* Active routine pill */}
-        {activeRoutine && (
+        {/* Active playbook pill */}
+        {activePlaybook && (
           <button
-            onClick={() => {/* routine detail is opened from list */}}
+            onClick={() => {/* playbook detail is opened from list */}}
             className="inline-flex items-center gap-1.5 text-turbo-text-dim hover:text-turbo-text transition-colors"
           >
-            <PaletteIcon icon="routine" className="w-3 h-3 text-turbo-accent" />
-            <span className="truncate max-w-[120px]">{activeRoutine.routineName}</span>
+            <PaletteIcon icon="playbook" className="w-3 h-3 text-turbo-accent" />
+            <span className="truncate max-w-[120px]">{activePlaybook.playbookName}</span>
             <span className="text-turbo-text-muted">
-              {activeRoutine.currentStepIndex + 1}/{activeRoutine.steps.length}
+              {activePlaybook.currentStepIndex + 1}/{activePlaybook.steps.length}
             </span>
           </button>
         )}

@@ -1,5 +1,10 @@
+export type PaletteIconName =
+  | 'clock' | 'bug' | 'bolt' | 'test' | 'eye' | 'refresh' | 'search'
+  | 'trash' | 'git-branch' | 'git-commit' | 'git-push' | 'git-pull' | 'git-stage'
+  | 'playbook' | 'pencil' | 'copy' | 'plus' | 'chevron-right' | 'terminal' | 'grid' | 'gear' | 'task'
+
 interface PaletteIconProps {
-  icon: string
+  icon: PaletteIconName | (string & {})
   className?: string
 }
 
@@ -88,7 +93,7 @@ export function PaletteIcon({ icon, className = 'w-4 h-4 text-turbo-text-muted' 
           <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
         </svg>
       )
-    case 'routine':
+    case 'playbook':
       return (
         <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
           <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25H12" />

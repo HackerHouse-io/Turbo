@@ -1,23 +1,27 @@
-import type { RoutineStepDefinition, PermissionMode, EffortLevel } from '../../../../shared/types'
+import type { PlaybookStepDefinition } from '../../../../shared/types'
+import {
+  PERMISSION_MODES as PERMISSION_MODE_OPTIONS,
+  EFFORT_LEVELS as EFFORT_LEVEL_OPTIONS
+} from '../../../../shared/constants'
 
-const PERMISSION_MODES: PermissionMode[] = ['default', 'plan', 'auto']
-const EFFORT_LEVELS: EffortLevel[] = ['low', 'medium', 'high', 'max']
+const PERMISSION_MODES = PERMISSION_MODE_OPTIONS.map(m => m.value)
+const EFFORT_LEVELS = EFFORT_LEVEL_OPTIONS.map(e => e.value)
 
-interface RoutineStepEditorProps {
-  step: RoutineStepDefinition
+interface PlaybookStepEditorProps {
+  step: PlaybookStepDefinition
   index: number
   isFirst: boolean
   isLast: boolean
-  onChange: (step: RoutineStepDefinition) => void
+  onChange: (step: PlaybookStepDefinition) => void
   onMoveUp: () => void
   onMoveDown: () => void
   onDelete: () => void
 }
 
-export function RoutineStepEditor({
+export function PlaybookStepEditor({
   step, index, isFirst, isLast,
   onChange, onMoveUp, onMoveDown, onDelete
-}: RoutineStepEditorProps) {
+}: PlaybookStepEditorProps) {
   return (
     <div className="rounded-lg border border-turbo-border bg-turbo-bg p-3 space-y-2.5">
       {/* Header row */}

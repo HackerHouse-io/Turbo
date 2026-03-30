@@ -22,6 +22,8 @@ export function formatElapsed(start: number, end?: number): string {
   return formatDuration(ms)
 }
 
+export const CMD_ENTER_LABEL = (navigator.platform.includes('Mac') ? '\u2318' : 'Ctrl') + '+\u21B5'
+
 export function formatDuration(ms: number): string {
   if (ms <= 0) return '0s'
   const seconds = Math.floor(ms / 1000)

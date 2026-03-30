@@ -8,14 +8,13 @@ import type {
   AddProjectPayload,
   AgentSession,
   AttentionItem,
-  PromptTemplate,
   GitIdentity,
   GitCommitPayload,
   GitExecPayload,
   GitPreset,
-  StartRoutinePayload,
-  RoutineExecution,
-  Routine,
+  StartPlaybookPayload,
+  PlaybookExecution,
+  Playbook,
   PlanSavePayload,
   CreatePlainTerminalPayload,
   PlainTerminal
@@ -23,13 +22,13 @@ import type {
 import { IPC } from '../../shared/constants'
 import { ClaudeSessionManager } from '../claude/ClaudeSessionManager'
 import { ProjectManager } from '../ProjectManager'
-import { PromptVaultManager } from '../PromptVaultManager'
+import { PromptHistoryManager } from '../PromptHistoryManager'
 import { SettingsManager } from '../SettingsManager'
 import { GitIdentityManager } from '../git/GitIdentityManager'
 import { GitOpsManager } from '../git/GitOpsManager'
 import { GitPresetManager } from '../git/GitPresetManager'
-import { RoutineManager } from '../routines/RoutineManager'
-import { RoutineExecutor } from '../routines/RoutineExecutor'
+import { PlaybookManager } from '../playbooks/PlaybookManager'
+import { PlaybookExecutor } from '../playbooks/PlaybookExecutor'
 import { PlanFileManager } from '../plan/PlanFileManager'
 import { PlainTerminalManager } from '../terminal/PlainTerminalManager'
 import { detectModels } from '../claude/ClaudeModelDetector'
@@ -37,13 +36,13 @@ import { detectModels } from '../claude/ClaudeModelDetector'
 interface IpcHandlerOptions {
   sessionManager: ClaudeSessionManager
   projectManager: ProjectManager
-  promptVaultManager: PromptVaultManager
+  promptHistoryManager: PromptHistoryManager
   settingsManager: SettingsManager
   gitIdentityManager: GitIdentityManager
   gitOpsManager: GitOpsManager
   gitPresetManager: GitPresetManager
-  routineManager: RoutineManager
-  routineExecutor: RoutineExecutor
+  playbookManager: PlaybookManager
+  playbookExecutor: PlaybookExecutor
   planFileManager: PlanFileManager
   plainTerminalManager: PlainTerminalManager
   getMainWindow: () => BrowserWindow | null
@@ -56,13 +55,13 @@ export function registerIpcHandlers(opts: IpcHandlerOptions): void {
   const {
     sessionManager,
     projectManager,
-    promptVaultManager,
+    promptHistoryManager,
     settingsManager,
     gitIdentityManager,
     gitOpsManager,
     gitPresetManager,
-    routineManager,
-    routineExecutor,
+    playbookManager,
+    playbookExecutor,
     planFileManager,
     plainTerminalManager,
     getMainWindow
@@ -85,7 +84,7 @@ export function registerIpcHandlers(opts: IpcHandlerOptions): void {
     }
     // Auto-save prompt to history
     if (payload.prompt) {
-      promptVaultManager.addHistory(payload.prompt, payload.projectPath)
+      promptHistoryManager.addHistory(payload.prompt, payload.projectPath)
     }
 
     const session = await sessionManager.createSession(payload)
@@ -170,26 +169,14 @@ export function registerIpcHandlers(opts: IpcHandlerOptions): void {
     return app.getPath(name as any)
   })
 
-  // ─── Prompt Vault ──────────────────────────────────────────
-
-  ipcMain.handle(IPC.PROMPT_TEMPLATES_LIST, async () => {
-    return promptVaultManager.listTemplates()
-  })
-
-  ipcMain.handle(IPC.PROMPT_TEMPLATES_SAVE, async (_e, template: PromptTemplate) => {
-    return promptVaultManager.saveTemplate(template)
-  })
-
-  ipcMain.handle(IPC.PROMPT_TEMPLATES_DELETE, async (_e, templateId: string) => {
-    promptVaultManager.deleteTemplate(templateId)
-  })
+  // ─── Prompt History ─────────────────────────────────────────
 
   ipcMain.handle(IPC.PROMPT_HISTORY_LIST, async () => {
-    return promptVaultManager.listHistory()
+    return promptHistoryManager.listHistory()
   })
 
   ipcMain.handle(IPC.PROMPT_HISTORY_CLEAR, async () => {
-    promptVaultManager.clearHistory()
+    promptHistoryManager.clearHistory()
   })
 
   // ─── Git Identity ──────────────────────────────────────────
@@ -273,50 +260,50 @@ export function registerIpcHandlers(opts: IpcHandlerOptions): void {
     gitPresetManager.deletePreset(presetId)
   })
 
-  // ─── Routines ────────────────────────────────────────────────
+  // ─── Playbooks ────────────────────────────────────────────────
 
-  ipcMain.handle(IPC.ROUTINE_LIST, async () => {
-    return routineManager.listRoutines()
+  ipcMain.handle(IPC.PLAYBOOK_LIST, async () => {
+    return playbookManager.listPlaybooks()
   })
 
-  ipcMain.handle(IPC.ROUTINE_START, async (_e, payload: StartRoutinePayload) => {
-    return routineExecutor.startRoutine(payload)
+  ipcMain.handle(IPC.PLAYBOOK_START, async (_e, payload: StartPlaybookPayload) => {
+    return playbookExecutor.startPlaybook(payload)
   })
 
-  ipcMain.handle(IPC.ROUTINE_PAUSE, async (_e, executionId: string) => {
-    routineExecutor.pauseRoutine(executionId)
+  ipcMain.handle(IPC.PLAYBOOK_PAUSE, async (_e, executionId: string) => {
+    playbookExecutor.pausePlaybook(executionId)
   })
 
-  ipcMain.handle(IPC.ROUTINE_RESUME, async (_e, executionId: string) => {
-    routineExecutor.resumeRoutine(executionId)
+  ipcMain.handle(IPC.PLAYBOOK_RESUME, async (_e, executionId: string) => {
+    playbookExecutor.resumePlaybook(executionId)
   })
 
-  ipcMain.handle(IPC.ROUTINE_STOP, async (_e, executionId: string) => {
-    routineExecutor.stopRoutine(executionId)
+  ipcMain.handle(IPC.PLAYBOOK_STOP, async (_e, executionId: string) => {
+    playbookExecutor.stopPlaybook(executionId)
   })
 
-  ipcMain.handle(IPC.ROUTINE_DISMISS, async (_e, executionId: string) => {
-    routineExecutor.dismissRoutine(executionId)
+  ipcMain.handle(IPC.PLAYBOOK_DISMISS, async (_e, executionId: string) => {
+    playbookExecutor.dismissPlaybook(executionId)
   })
 
-  ipcMain.handle(IPC.ROUTINE_EXECUTIONS, async () => {
-    return routineExecutor.listExecutions()
+  ipcMain.handle(IPC.PLAYBOOK_EXECUTIONS, async () => {
+    return playbookExecutor.listExecutions()
   })
 
-  ipcMain.handle(IPC.ROUTINE_REMOVE, async (_e, executionId: string) => {
-    routineExecutor.removeExecution(executionId)
+  ipcMain.handle(IPC.PLAYBOOK_REMOVE, async (_e, executionId: string) => {
+    playbookExecutor.removeExecution(executionId)
   })
 
-  ipcMain.handle(IPC.ROUTINE_SAVE, async (_e, routine: Routine) => {
-    return routineManager.saveRoutine(routine)
+  ipcMain.handle(IPC.PLAYBOOK_SAVE, async (_e, playbook: Playbook) => {
+    return playbookManager.savePlaybook(playbook)
   })
 
-  ipcMain.handle(IPC.ROUTINE_DELETE, async (_e, id: string) => {
-    routineManager.deleteRoutine(id)
+  ipcMain.handle(IPC.PLAYBOOK_DELETE, async (_e, id: string) => {
+    playbookManager.deletePlaybook(id)
   })
 
-  ipcMain.handle(IPC.ROUTINE_DUPLICATE, async (_e, id: string) => {
-    return routineManager.duplicateRoutine(id)
+  ipcMain.handle(IPC.PLAYBOOK_DUPLICATE, async (_e, id: string) => {
+    return playbookManager.duplicatePlaybook(id)
   })
 
   // ─── Plan ─────────────────────────────────────────────────
@@ -389,7 +376,7 @@ export function registerIpcHandlers(opts: IpcHandlerOptions): void {
   forward(sessionManager, 'terminal-data', IPC.TERMINAL_DATA)
   forward(sessionManager, 'attention-needed', IPC.ATTENTION_NEW)
   forward(sessionManager, 'session-removed', IPC.SESSION_REMOVED)
-  forward(routineExecutor, 'routine-updated', IPC.ROUTINE_UPDATED)
+  forward(playbookExecutor, 'playbook-updated', IPC.PLAYBOOK_UPDATED)
   forward(plainTerminalManager, 'terminal-data', IPC.PLAIN_TERMINAL_DATA)
   forward(plainTerminalManager, 'terminal-exit', IPC.PLAIN_TERMINAL_EXIT)
   forward(plainTerminalManager, 'terminal-created', IPC.PLAIN_TERMINAL_CREATED)
