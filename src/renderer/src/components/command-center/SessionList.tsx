@@ -1,15 +1,10 @@
-import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import type { AgentSession, AttentionItem, AttentionType, PlaybookExecution } from '../../../../shared/types'
+import type { AgentSession, AttentionType } from '../../../../shared/types'
 import { useSessionStore } from '../../stores/useSessionStore'
 import { useUIStore } from '../../stores/useUIStore'
-import { SessionRow } from './SessionRow'
+import { AgentCard } from './AgentCard'
 import { PaletteIcon } from '../command-palette/PaletteIcon'
-
-interface SessionListProps {
-  sessions: AgentSession[]
-  activePlaybooks: PlaybookExecution[]
-}
 
 const ATTENTION_PRIORITY: Record<AttentionType, number> = {
   error: 0,
@@ -19,22 +14,11 @@ const ATTENTION_PRIORITY: Record<AttentionType, number> = {
   completed: 4,
 }
 
-export function SessionList({ sessions, activePlaybooks }: SessionListProps) {
+export function SessionList({ sessions }: { sessions: AgentSession[] }) {
   const [focusedIndex, setFocusedIndex] = useState(-1)
   const listRef = useRef<HTMLDivElement>(null)
   const selectSession = useSessionStore(s => s.selectSession)
   const setViewMode = useUIStore(s => s.setViewMode)
-  const rawAttention = useSessionStore(s => s.attentionItems)
-  const attentionItems = useMemo(() => rawAttention.filter(i => !i.dismissed), [rawAttention])
-
-  // Build attention map by sessionId
-  const attentionMap = useMemo(() => {
-    const map = new Map<string, AttentionItem>()
-    for (const item of attentionItems) {
-      map.set(item.sessionId, item)
-    }
-    return map
-  }, [attentionItems])
 
   // Sort sessions
   const sorted = useMemo(() => {
@@ -95,7 +79,7 @@ export function SessionList({ sessions, activePlaybooks }: SessionListProps) {
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [focusedIndex, totalItems, sorted, selectSession, setViewMode])
 
-  // Auto-scroll focused row into view
+  // Auto-scroll focused card into view
   useEffect(() => {
     if (focusedIndex < 0 || !listRef.current) return
     const rows = listRef.current.querySelectorAll('[data-session-row]')
@@ -103,30 +87,29 @@ export function SessionList({ sessions, activePlaybooks }: SessionListProps) {
   }, [focusedIndex])
 
   return (
-    <div ref={listRef}>
-      {/* Session rows */}
+    <div ref={listRef} className="px-4 py-3">
+      <h3 className="text-[10px] font-medium uppercase tracking-wider text-turbo-text-muted mb-2">
+        Tasks
+      </h3>
       {sorted.length > 0 ? (
-        <AnimatePresence initial={false}>
-          {sorted.map((session, i) => (
-            <motion.div
-              key={session.id}
-              data-session-row
-              initial={{ opacity: 0, y: -8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 8, height: 0, overflow: 'hidden' }}
-              transition={{ duration: 0.15 }}
-            >
-              <SessionRow
-                session={session}
-                attentionItem={attentionMap.get(session.id)}
-                focused={focusedIndex === i}
-              />
-            </motion.div>
-          ))}
-        </AnimatePresence>
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+          <AnimatePresence initial={false}>
+            {sorted.map((session, i) => (
+              <motion.div
+                key={session.id}
+                data-session-row
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                transition={{ duration: 0.15 }}
+              >
+                <AgentCard session={session} focused={focusedIndex === i} />
+              </motion.div>
+            ))}
+          </AnimatePresence>
+        </div>
       ) : (
-        /* Subtle empty row instead of big centered state */
-        <div className="flex items-center gap-3 px-4 h-10 text-xs text-turbo-text-muted">
+        <div className="flex items-center gap-3 h-10 text-xs text-turbo-text-muted">
           <PaletteIcon icon="terminal" className="w-3.5 h-3.5 text-turbo-text-muted/50" />
           No active sessions — type a task below
         </div>

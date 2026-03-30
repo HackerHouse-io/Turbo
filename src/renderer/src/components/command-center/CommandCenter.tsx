@@ -55,14 +55,14 @@ export function CommandCenter() {
 
       {/* Scrollable main content */}
       <div className="flex-1 overflow-y-auto">
-        <div className="max-w-5xl mx-auto space-y-1">
-          {/* Quick Actions */}
-          <QuickActions />
-
+        <div className="max-w-5xl mx-auto pt-4 space-y-2">
           {/* Plan Card */}
           <div className="px-4">
             <PlanCard projectPath={selectedProject?.path} />
           </div>
+
+          {/* Quick Actions */}
+          <QuickActions />
 
           {/* Playbook Banners */}
           {activePlaybooks.length > 0 && (
@@ -72,7 +72,7 @@ export function CommandCenter() {
           )}
 
           {/* Session List (always rendered) */}
-          <SessionList sessions={sessions} activePlaybooks={activePlaybooks} />
+          <SessionList sessions={sessions} />
 
           {/* Workspaces Section */}
           <WorkspacesSection />
@@ -80,8 +80,15 @@ export function CommandCenter() {
       </div>
 
       {/* Sticky bottom prompt */}
-      <div className="flex-shrink-0 border-t border-turbo-border px-4 py-3">
-        <InlinePrompt />
+      <div className="flex-shrink-0 border-t border-turbo-border/60 bg-turbo-bg/80 px-6 pt-8 pb-8">
+        <div className="max-w-5xl mx-auto">
+          <InlinePrompt />
+          <div className="flex items-center justify-center gap-5 mt-3 text-[10px] text-turbo-text-muted/60">
+            <span><kbd className="kbd text-[10px] px-1 py-0.5">⌘K</kbd> commands</span>
+            <span><kbd className="kbd text-[10px] px-1 py-0.5">⌃`</kbd> terminal</span>
+            <span><kbd className="kbd text-[10px] px-1 py-0.5">⌘⇧T</kbd> timeline</span>
+          </div>
+        </div>
       </div>
     </div>
   )

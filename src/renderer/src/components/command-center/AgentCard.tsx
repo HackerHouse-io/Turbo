@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, memo } from 'react'
 import { motion } from 'framer-motion'
 import type { AgentSession, AttentionType } from '../../../../shared/types'
 import { useSessionStore } from '../../stores/useSessionStore'
@@ -9,9 +9,10 @@ import { formatElapsed } from '../../lib/format'
 
 interface AgentCardProps {
   session: AgentSession
+  focused?: boolean
 }
 
-export function AgentCard({ session }: AgentCardProps) {
+export const AgentCard = memo(function AgentCard({ session, focused }: AgentCardProps) {
   const selectSession = useSessionStore(s => s.selectSession)
   const setViewMode = useUIStore(s => s.setViewMode)
   const openTerminalDrawer = useUIStore(s => s.openTerminalDrawer)
@@ -75,13 +76,9 @@ export function AgentCard({ session }: AgentCardProps) {
 
   return (
     <motion.div
-      layout
-      initial={{ opacity: 0, scale: 0.95 }}
-      animate={{ opacity: 1, scale: 1 }}
-      exit={{ opacity: 0, scale: 0.95 }}
       transition={{ duration: 0.2 }}
       onClick={handleClick}
-      className={`card p-4 cursor-pointer group relative overflow-hidden ${borderClass}`}
+      className={`card p-4 cursor-pointer group relative overflow-hidden ${borderClass}${focused ? ' ring-1 ring-inset ring-turbo-accent/20 bg-turbo-accent/5' : ''}`}
     >
       {/* Active shimmer effect */}
       {isActive && (
@@ -148,7 +145,7 @@ export function AgentCard({ session }: AgentCardProps) {
       {showStopConfirm && <StopConfirmDialog onConfirm={confirmStop} onCancel={cancelStop} />}
     </motion.div>
   )
-}
+})
 
 // ─── Hooks ─────────────────────────────────────────────────────
 

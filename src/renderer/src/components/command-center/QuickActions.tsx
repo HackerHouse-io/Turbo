@@ -45,68 +45,59 @@ export function QuickActions() {
     await useGitStore.getState().execCommands(selectedProjectPath, g.commands)
   }, [selectedProjectPath, openCommandPalette])
 
-  const hasPlaybooks = playbooks.length > 0
-  const hasGit = gitPresets.length > 0
-
   return (
     <div className="px-4 py-3">
-      <div className="flex flex-wrap items-center gap-2">
-        {/* Playbooks */}
-        {playbooks.map(r => (
-          <Chip
-            key={`r-${r.id}`}
-            icon={r.icon}
-            label={r.name}
-            onClick={() => handlePlaybook(r)}
-          />
-        ))}
+      <div className="grid grid-cols-2 gap-4">
+        {/* Playbooks column */}
+        <div>
+          <h3 className="text-[10px] font-medium uppercase tracking-wider text-turbo-text-muted mb-2">
+            Playbooks
+          </h3>
+          <div className="flex flex-wrap gap-1.5">
+            {playbooks.map(r => (
+              <Chip
+                key={`r-${r.id}`}
+                icon={r.icon}
+                label={r.name}
+                onClick={() => handlePlaybook(r)}
+              />
+            ))}
+          </div>
+        </div>
 
-        {hasPlaybooks && hasGit && <Divider />}
-
-        {/* Git presets */}
-        {gitPresets.map(g => (
-          <Chip
-            key={`g-${g.id}`}
-            icon={g.icon}
-            label={g.name}
-            onClick={() => handleGitPreset(g)}
-          />
-        ))}
-
-        {/* More via Cmd+K */}
-        <Chip
-          icon="search"
-          label="⌘K More"
-          onClick={openCommandPalette}
-          muted
-        />
+        {/* Git column */}
+        <div>
+          <h3 className="text-[10px] font-medium uppercase tracking-wider text-turbo-text-muted mb-2">
+            Git
+          </h3>
+          <div className="flex flex-wrap gap-1.5">
+            {gitPresets.map(g => (
+              <Chip
+                key={`g-${g.id}`}
+                icon={g.icon}
+                label={g.name}
+                onClick={() => handleGitPreset(g)}
+              />
+            ))}
+          </div>
+        </div>
       </div>
 
-      {/* Keyboard hints */}
-      <div className="mt-2 flex items-center gap-4 text-[10px] text-turbo-text-muted">
-        <span><kbd className="kbd text-[10px] px-1 py-0.5">⌘K</kbd> commands</span>
-        <span><kbd className="kbd text-[10px] px-1 py-0.5">⌃`</kbd> terminal</span>
-        <span><kbd className="kbd text-[10px] px-1 py-0.5">⌘⇧T</kbd> timeline</span>
-      </div>
     </div>
   )
 }
 
-function Chip({ icon, label, onClick, muted }: {
+function Chip({ icon, label, onClick }: {
   icon: string
   label: string
   onClick: () => void
-  muted?: boolean
 }) {
   return (
     <button
       onClick={onClick}
-      className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium
-                  transition-colors cursor-pointer ${
-        muted
-          ? 'bg-turbo-surface/50 text-turbo-text-muted hover:bg-turbo-surface-hover hover:text-turbo-text-dim'
-          : 'bg-turbo-surface border border-turbo-border text-turbo-text-dim hover:border-turbo-accent/30 hover:text-turbo-text'
-      }`}
+      className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium
+                 transition-colors cursor-pointer
+                 bg-turbo-surface border border-turbo-border text-turbo-text-dim hover:border-turbo-accent/30 hover:text-turbo-text"
     >
       <PaletteIcon icon={icon} className="w-3.5 h-3.5" />
       {label}
@@ -114,6 +105,3 @@ function Chip({ icon, label, onClick, muted }: {
   )
 }
 
-function Divider() {
-  return <div className="w-px h-5 bg-turbo-border mx-1" />
-}

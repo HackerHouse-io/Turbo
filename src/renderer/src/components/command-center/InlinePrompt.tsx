@@ -64,7 +64,7 @@ export function InlinePrompt() {
   if (!selectedProject) return null
 
   return (
-    <div className="max-w-2xl mx-auto w-full">
+    <div className="w-full">
       <div className="relative bg-turbo-surface border border-turbo-border rounded-xl
                       focus-within:border-turbo-accent/50 transition-colors overflow-visible">
         <textarea
@@ -73,13 +73,13 @@ export function InlinePrompt() {
           onChange={e => setPrompt(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder="What do you want to work on?"
-          rows={2}
+          rows={4}
           disabled={isSubmitting}
-          className="w-full px-4 pt-3 pb-3 bg-transparent text-sm text-turbo-text
+          className="w-full px-5 pt-4 pb-3 bg-transparent text-sm text-turbo-text
                      placeholder:text-turbo-text-muted resize-none
                      focus:outline-none disabled:opacity-50"
         />
-        <div className="flex items-center justify-between px-3 pb-2.5">
+        <div className="flex items-center justify-between px-5 pb-4">
           {models.length > 0 ? (
             <ModelEffortSelector
               models={models}
