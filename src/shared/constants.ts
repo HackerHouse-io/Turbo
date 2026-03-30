@@ -109,6 +109,22 @@ export const IPC = {
 
 export const PROMPT_HISTORY_MAX = 50
 
+// ─── Session option labels ───────────────────────────────────
+import type { EffortLevel, PermissionMode } from './types'
+
+export const EFFORT_LEVELS: { value: EffortLevel; label: string }[] = [
+  { value: 'low', label: 'Low' },
+  { value: 'medium', label: 'Med' },
+  { value: 'high', label: 'High' },
+  { value: 'max', label: 'Max' }
+]
+
+export const PERMISSION_MODES: { value: PermissionMode; label: string }[] = [
+  { value: 'default', label: 'Default' },
+  { value: 'plan', label: 'Plan' },
+  { value: 'auto', label: 'Auto' }
+]
+
 // Estimated cost per token (rough averages)
 export const COST_PER_INPUT_TOKEN = 0.000003
 export const COST_PER_OUTPUT_TOKEN = 0.000015

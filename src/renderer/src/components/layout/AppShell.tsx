@@ -10,6 +10,7 @@ import { RoutineDetailOverlay } from '../routines/RoutineDetailOverlay'
 import { RoutineEditorOverlay } from '../routines/RoutineEditorOverlay'
 import { PlanOverlay } from '../plan/PlanOverlay'
 import { SessionTimeline } from '../timeline/SessionTimeline'
+import { SettingsOverlay } from '../settings/SettingsOverlay'
 import { useUIStore } from '../../stores/useUIStore'
 import { useSessionStore } from '../../stores/useSessionStore'
 import { useProjectStore } from '../../stores/useProjectStore'
@@ -25,6 +26,7 @@ export function AppShell() {
   const planOverlayOpen = useUIStore(s => s.planOverlayOpen)
   const terminalWorkspaceOpen = useUIStore(s => s.terminalWorkspaceOpen)
   const timelineOpen = useUIStore(s => s.timelineOpen)
+  const settingsOpen = useUIStore(s => s.settingsOpen)
   const selectedSessionId = useSessionStore(s => s.selectedSessionId)
 
   // Global keyboard shortcuts — reads fresh state via getState() so no reactive deps needed
@@ -54,6 +56,14 @@ export function AppShell() {
         }
         return
       }
+      // Cmd+, -> Toggle settings
+      if ((e.metaKey || e.ctrlKey) && e.key === ',') {
+        e.preventDefault()
+        const ui = useUIStore.getState()
+        if (ui.settingsOpen) ui.closeSettings()
+        else ui.openSettings()
+        return
+      }
       // Cmd+Shift+O -> Toggle project overview
       if ((e.metaKey || e.ctrlKey) && e.shiftKey && (e.key === 'O' || e.key === 'o' || e.code === 'KeyO')) {
         e.preventDefault()
@@ -75,7 +85,9 @@ export function AppShell() {
       if (e.key === 'Escape') {
         const ui = useUIStore.getState()
         const session = useSessionStore.getState()
-        if (ui.routineEditorState) {
+        if (ui.settingsOpen) {
+          ui.closeSettings()
+        } else if (ui.routineEditorState) {
           ui.closeRoutineEditor()
         } else if (ui.planOverlayOpen) {
           ui.closePlanOverlay()
@@ -129,6 +141,7 @@ export function AppShell() {
       {planOverlayOpen && <PlanOverlay />}
       {terminalWorkspaceOpen && <TerminalWorkspace />}
       {timelineOpen && <SessionTimeline />}
+      {settingsOpen && <SettingsOverlay />}
       {commandPaletteOpen && <CommandPalette />}
       {terminalDrawerOpen && <TerminalDrawer />}
     </div>

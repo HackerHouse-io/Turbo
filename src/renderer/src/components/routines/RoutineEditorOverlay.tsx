@@ -4,6 +4,7 @@ import type { Routine, RoutineStepDefinition } from '../../../../shared/types'
 import { extractTemplateVariables } from '../../../../shared/templateVars'
 import { RoutineIconPicker } from './RoutineIconPicker'
 import { RoutineStepEditor } from './RoutineStepEditor'
+import { ToggleSwitch } from '../shared/ToggleSwitch'
 import { useUIStore } from '../../stores/useUIStore'
 import { useRoutineStore } from '../../stores/useRoutineStore'
 
@@ -157,23 +158,11 @@ export function RoutineEditorOverlay() {
           </div>
 
           {/* Ends with commit toggle */}
-          <div
-            className="flex items-center gap-2 cursor-pointer"
-            onClick={() => setDraft(d => ({ ...d, endsWithCommit: !d.endsWithCommit }))}
-          >
-            <div
-              className={`w-9 h-5 rounded-full transition-colors relative flex-shrink-0 ${
-                draft.endsWithCommit ? 'bg-turbo-accent' : 'bg-turbo-surface border border-turbo-border'
-              }`}
-            >
-              <div
-                className={`absolute top-[3px] w-3.5 h-3.5 rounded-full bg-white transition-transform ${
-                  draft.endsWithCommit ? 'translate-x-[18px]' : 'translate-x-[3px]'
-                }`}
-              />
-            </div>
-            <span className="text-xs text-turbo-text-dim">Ends with commit</span>
-          </div>
+          <ToggleSwitch
+            checked={draft.endsWithCommit}
+            onChange={(v) => setDraft(d => ({ ...d, endsWithCommit: v }))}
+            label="Ends with commit"
+          />
 
           {/* Steps */}
           <div>

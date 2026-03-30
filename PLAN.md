@@ -28,10 +28,9 @@
 - [x] Interactive PLAN.md viewer with inline editing
 - [ ] Session timeline / Gantt view
 - [ ] Multi-project dashboard overview
-- [ ] File change heatmap across sessions
+- [x] Settings screen
 
 ## Phase 5: Collaboration & Polish
-- [ ] Export session transcripts
 - [ ] Shareable routine templates
 - [ ] Keyboard shortcut customization
 - [ ] Performance profiling and optimization

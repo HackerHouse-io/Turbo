@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react'
 import { AnimatePresence } from 'framer-motion'
 import { useUIStore } from '../../stores/useUIStore'
+import { PaletteIcon } from '../command-palette/PaletteIcon'
 import { useSessionStore } from '../../stores/useSessionStore'
 import { useProjectStore } from '../../stores/useProjectStore'
 import { useGitIdentityStore } from '../../stores/useGitIdentityStore'
@@ -9,6 +10,7 @@ import { GitIdentitySelector } from '../git/GitIdentitySelector'
 
 export function TopBar() {
   const openCommandPalette = useUIStore(s => s.openCommandPalette)
+  const openSettings = useUIStore(s => s.openSettings)
   const projectSelectorOpen = useUIStore(s => s.projectSelectorOpen)
   const toggleProjectSelector = useUIStore(s => s.toggleProjectSelector)
   const rawItems = useSessionStore(s => s.attentionItems)
@@ -115,6 +117,16 @@ export function TopBar() {
 
       {/* Action buttons */}
       <div className="flex items-center gap-2 ml-auto">
+        {/* Settings */}
+        <button
+          onClick={openSettings}
+          className="p-1.5 rounded-lg hover:bg-turbo-surface-active text-turbo-text-muted
+                     hover:text-turbo-text transition-colors"
+          title="Settings"
+        >
+          <PaletteIcon icon="gear" className="w-4 h-4" />
+        </button>
+
         {/* Queue count */}
         {queueCount > 0 && (
           <span className="text-xs text-turbo-text-muted px-2 py-1 rounded-md bg-turbo-surface border border-turbo-border">

@@ -1,4 +1,4 @@
-import { ipcMain, BrowserWindow, dialog } from 'electron'
+import { ipcMain, BrowserWindow, dialog, app } from 'electron'
 import { EventEmitter } from 'events'
 import { basename } from 'path'
 import type {
@@ -162,6 +162,12 @@ export function registerIpcHandlers(opts: IpcHandlerOptions): void {
 
   ipcMain.handle(IPC.SETTINGS_SET, async (_e, key: string, value: unknown) => {
     settingsManager.set(key as keyof import('../../shared/types').TurboSettings, value as any)
+  })
+
+  // ─── App ────────────────────────────────────────────────────
+
+  ipcMain.handle(IPC.APP_GET_PATH, async (_e, name: string) => {
+    return app.getPath(name as any)
   })
 
   // ─── Prompt Vault ──────────────────────────────────────────

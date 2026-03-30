@@ -1,12 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import type { ClaudeModelInfo, EffortLevel } from '../../../../shared/types'
-
-const EFFORT_LEVELS: { value: EffortLevel; label: string }[] = [
-  { value: 'low', label: 'Low' },
-  { value: 'medium', label: 'Med' },
-  { value: 'high', label: 'High' },
-  { value: 'max', label: 'Max' }
-]
+import { EFFORT_LEVELS } from '../../../../shared/constants'
 
 interface ModelEffortSelectorProps {
   models: ClaudeModelInfo[]

@@ -289,6 +289,19 @@ export function CommandPalette() {
     })
 
     items.push({
+      id: 'action-settings',
+      label: 'Settings',
+      description: 'Configure Turbo preferences',
+      icon: 'gear',
+      section: 'actions',
+      action: () => {
+        closeCommandPalette()
+        useUIStore.getState().openSettings()
+      },
+      keywords: ['settings', 'preferences', 'config', 'options', 'defaults', 'notifications']
+    })
+
+    items.push({
       id: 'action-session-timeline',
       label: 'Session Timeline',
       description: 'View work history and session activity',

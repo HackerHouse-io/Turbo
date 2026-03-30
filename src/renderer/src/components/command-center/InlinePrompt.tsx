@@ -18,9 +18,19 @@ export function InlinePrompt({ hero = false }: { hero?: boolean }) {
   const currentResolved = useGitIdentityStore(s => s.currentResolved)
 
   useEffect(() => {
-    window.api.detectModels().then(m => {
+    // Load user defaults, then detect models
+    Promise.all([
+      window.api.getSetting('defaultModel'),
+      window.api.getSetting('defaultEffort'),
+      window.api.detectModels()
+    ]).then(([savedModel, savedEffort, m]) => {
       setModels(m)
-      if (m.length > 0) setModel(m[0].alias)
+      if (savedModel) {
+        setModel(savedModel as string)
+      } else if (m.length > 0) {
+        setModel(m[0].alias)
+      }
+      if (savedEffort) setEffort(savedEffort as EffortLevel)
     })
   }, [])
 

@@ -92,6 +92,9 @@ const api = {
   setSetting: (key: string, value: unknown): Promise<void> =>
     ipcRenderer.invoke(IPC.SETTINGS_SET, key, value),
 
+  getAppPath: (name: string): Promise<string> =>
+    ipcRenderer.invoke(IPC.APP_GET_PATH, name),
+
   // ─── Prompt Vault ───────────────────────────────────────────
 
   listPromptTemplates: (): Promise<PromptTemplate[]> =>

@@ -319,5 +319,8 @@ export interface TurboSettings {
   defaultProjectsDir: string
   gitIdentityGlobal?: GitIdentity
   notificationsEnabled?: boolean
+  defaultModel?: string
+  defaultEffort?: EffortLevel
+  defaultPermissionMode?: PermissionMode
   [key: string]: unknown
 }

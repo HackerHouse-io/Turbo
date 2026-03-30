@@ -58,6 +58,11 @@ interface UIState {
   timelineOpen: boolean
   openTimeline: () => void
   closeTimeline: () => void
+
+  // Settings overlay
+  settingsOpen: boolean
+  openSettings: () => void
+  closeSettings: () => void
 }
 
 export const useUIStore = create<UIState>((set) => ({
@@ -106,5 +111,9 @@ export const useUIStore = create<UIState>((set) => ({
 
   timelineOpen: false,
   openTimeline: () => set({ timelineOpen: true }),
-  closeTimeline: () => set({ timelineOpen: false })
+  closeTimeline: () => set({ timelineOpen: false }),
+
+  settingsOpen: false,
+  openSettings: () => set({ settingsOpen: true }),
+  closeSettings: () => set({ settingsOpen: false })
 }))

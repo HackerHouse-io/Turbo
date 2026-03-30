@@ -29,6 +29,17 @@ export function CommandPaletteTemplateFill({ template, models, onSubmit, onBack 
     firstInputRef.current?.focus()
   }, [])
 
+  // Load user defaults (template-specific overrides take precedence)
+  useEffect(() => {
+    Promise.all([
+      window.api.getSetting('defaultModel'),
+      template.effort ? null : window.api.getSetting('defaultEffort')
+    ]).then(([savedModel, savedEffort]) => {
+      if (savedModel) setModel(savedModel as string)
+      if (savedEffort) setEffort(savedEffort as EffortLevel)
+    })
+  }, [])
+
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Escape') {
       e.preventDefault()
