@@ -2,8 +2,9 @@ import { useState, useRef, useEffect, useMemo, useCallback, type ReactNode } fro
 import { motion } from 'framer-motion'
 import { useUIStore } from '../../stores/useUIStore'
 import { useSessionStore } from '../../stores/useSessionStore'
-import { useProjectStore } from '../../stores/useProjectStore'
+import { useProjectStore, selectProjectPath } from '../../stores/useProjectStore'
 import { useGitStore } from '../../stores/useGitStore'
+import { useTerminalStore } from '../../stores/useTerminalStore'
 import { useCommandPaletteData } from './useCommandPaletteData'
 import { CommandPaletteTemplateFill, type SessionFlags } from './CommandPaletteTemplateFill'
 import { CommandPaletteGitConfirm } from './CommandPaletteGitConfirm'
@@ -77,11 +78,7 @@ export function CommandPalette() {
   const sessionsRecord = useSessionStore(s => s.sessions)
   const sessions = useMemo(() => Object.values(sessionsRecord), [sessionsRecord])
   const gitLoading = useGitStore(s => s.gitLoading)
-  const selectedProjectPath = useProjectStore(s => {
-    const id = s.selectedProjectId
-    const proj = id ? s.projects.find(p => p.id === id) : s.projects[0]
-    return proj?.path
-  })
+  const selectedProjectPath = useProjectStore(selectProjectPath)
   const projects = useProjectStore(s => s.projects)
   const selectedProjectId = useProjectStore(s => s.selectedProjectId)
   const { templates, gitPresets, routines, models, loading } = useCommandPaletteData()
@@ -179,6 +176,21 @@ export function CommandPalette() {
     if (!selectedProjectPath) return
     await window.api.startRoutine({ routineId, projectPath: selectedProjectPath, variables })
     closeCommandPalette()
+  }, [selectedProjectPath, closeCommandPalette])
+
+  // ─── Open terminal helper ──────────────────────────────────
+
+  const openTerminalAction = useCallback(async (type: 'shell' | 'claude') => {
+    if (!selectedProjectPath) return
+    const termStore = useTerminalStore.getState()
+    const projectWs = Object.values(termStore.workspaces)
+      .filter(ws => ws.projectPath === selectedProjectPath)
+      .sort((a, b) => a.createdAt - b.createdAt)
+    const wsId = projectWs.length > 0 ? projectWs[0].id : termStore.createWorkspace(selectedProjectPath)
+    const terminal = await window.api.createPlainTerminal({ projectPath: selectedProjectPath, type })
+    if (terminal) termStore.addTerminalToWorkspace(wsId, terminal.id)
+    closeCommandPalette()
+    useUIStore.getState().openTerminalWorkspace(wsId)
   }, [selectedProjectPath, closeCommandPalette])
 
   // ─── Build command list ────────────────────────────────────
@@ -320,12 +332,7 @@ export function CommandPalette() {
       description: 'Open a shell in the current project',
       icon: 'terminal',
       section: 'actions',
-      action: async () => {
-        if (!selectedProjectPath) return
-        await window.api.createPlainTerminal({ projectPath: selectedProjectPath, type: 'shell' })
-        closeCommandPalette()
-        useUIStore.getState().openTerminalWorkspace()
-      },
+      action: () => openTerminalAction('shell'),
       keywords: ['terminal', 'shell', 'bash', 'zsh', 'console']
     })
 
@@ -335,12 +342,7 @@ export function CommandPalette() {
       description: 'Interactive Claude session in the current project',
       icon: 'bolt',
       section: 'actions',
-      action: async () => {
-        if (!selectedProjectPath) return
-        await window.api.createPlainTerminal({ projectPath: selectedProjectPath, type: 'claude' })
-        closeCommandPalette()
-        useUIStore.getState().openTerminalWorkspace()
-      },
+      action: () => openTerminalAction('claude'),
       keywords: ['claude', 'code', 'repl', 'interactive', 'ai', 'agent']
     })
 
@@ -357,8 +359,21 @@ export function CommandPalette() {
       keywords: ['workspace', 'terminals', 'panes', 'split']
     })
 
+    items.push({
+      id: 'action-recent-commits',
+      label: 'Recent Commits',
+      description: 'View recent git commits',
+      icon: 'git-commit',
+      section: 'actions',
+      action: () => {
+        closeCommandPalette()
+        useUIStore.getState().openTimeline()
+      },
+      keywords: ['commits', 'git', 'history', 'log']
+    })
+
     return items
-  }, [projects, selectedProjectId, templates, routines, gitPresets, sessions, selectedProjectPath, createSession, handleGitAction, handleStartRoutine, closeCommandPalette, selectSession, setViewMode])
+  }, [projects, selectedProjectId, templates, routines, gitPresets, sessions, selectedProjectPath, createSession, handleGitAction, handleStartRoutine, openTerminalAction, closeCommandPalette, selectSession, setViewMode])
 
   // ─── Filtering ─────────────────────────────────────────────
 

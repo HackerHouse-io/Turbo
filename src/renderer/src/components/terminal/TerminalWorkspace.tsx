@@ -1,27 +1,62 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useMemo } from 'react'
 import { motion } from 'framer-motion'
 import { useUIStore } from '../../stores/useUIStore'
-import { useTerminalStore } from '../../stores/useTerminalStore'
+import { useTerminalStore, MAX_PANES } from '../../stores/useTerminalStore'
 import { useProjectStore } from '../../stores/useProjectStore'
 import { WorkspacePane } from './WorkspacePane'
 import { PaletteIcon } from '../command-palette/PaletteIcon'
 import type { PlainTerminalType } from '../../../../shared/types'
 
-const MAX_PANES = 4
-
 export function TerminalWorkspace() {
   const closeTerminalWorkspace = useUIStore(s => s.closeTerminalWorkspace)
+  const openTerminalWorkspace = useUIStore(s => s.openTerminalWorkspace)
   const terminals = useTerminalStore(s => s.terminals)
-  const workspacePanes = useTerminalStore(s => s.workspacePanes)
+  const workspaces = useTerminalStore(s => s.workspaces)
+  const activeWorkspaceId = useTerminalStore(s => s.activeWorkspaceId)
+  const renameWorkspace = useTerminalStore(s => s.renameWorkspace)
+  const addTerminalToWorkspace = useTerminalStore(s => s.addTerminalToWorkspace)
 
   const selectedProjectId = useProjectStore(s => s.selectedProjectId)
   const projects = useProjectStore(s => s.projects)
   const selectedProject = projects.find(p => p.id === selectedProjectId)
   const projectPath = selectedProject?.path
 
-  const paneIds = projectPath ? (workspacePanes[projectPath] || []) : []
+  const activeWorkspace = activeWorkspaceId ? workspaces[activeWorkspaceId] : null
+
+  // Get all workspaces for this project (for tab bar)
+  const projectWorkspaces = useMemo(() =>
+    Object.values(workspaces)
+      .filter(ws => ws.projectPath === projectPath)
+      .sort((a, b) => a.createdAt - b.createdAt),
+    [workspaces, projectPath]
+  )
+
+  const paneIds = activeWorkspace?.terminalIds ?? []
   const panes = paneIds.map(id => terminals[id]).filter(Boolean)
   const canAdd = panes.length < MAX_PANES
+
+  // Editable name
+  const [editing, setEditing] = useState(false)
+  const [editName, setEditName] = useState('')
+  const nameInputRef = useRef<HTMLInputElement>(null)
+
+  // Reset editing state when switching workspaces
+  useEffect(() => {
+    setEditing(false)
+    setEditName('')
+  }, [activeWorkspaceId])
+
+  useEffect(() => {
+    if (editing) nameInputRef.current?.focus()
+  }, [editing])
+
+  const handleRename = () => {
+    const trimmed = editName.trim()
+    if (trimmed && activeWorkspaceId && trimmed !== activeWorkspace?.name) {
+      renameWorkspace(activeWorkspaceId, trimmed)
+    }
+    setEditing(false)
+  }
 
   // Dropdown state
   const [dropdownOpen, setDropdownOpen] = useState(false)
@@ -39,9 +74,12 @@ export function TerminalWorkspace() {
   }, [dropdownOpen])
 
   const handleAdd = async (type: PlainTerminalType) => {
-    if (!projectPath || !canAdd) return
+    if (!projectPath || !canAdd || !activeWorkspaceId) return
     setDropdownOpen(false)
-    await window.api.createPlainTerminal({ projectPath, type })
+    const terminal = await window.api.createPlainTerminal({ projectPath, type })
+    if (terminal) {
+      addTerminalToWorkspace(activeWorkspaceId, terminal.id)
+    }
   }
 
   // Grid class based on pane count
@@ -69,7 +107,49 @@ export function TerminalWorkspace() {
         {/* Header */}
         <div className="flex items-center gap-3 px-5 py-2 border-b border-turbo-border flex-shrink-0">
           <PaletteIcon icon="terminal" className="w-4 h-4 text-turbo-accent" />
-          <h2 className="text-sm font-medium text-turbo-text flex-1">Terminal Workspace</h2>
+
+          {/* Workspace tabs (if multiple) */}
+          {projectWorkspaces.length > 1 ? (
+            <div className="flex items-center gap-1 flex-1">
+              {projectWorkspaces.map(ws => (
+                <button
+                  key={ws.id}
+                  onClick={() => openTerminalWorkspace(ws.id)}
+                  className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${
+                    ws.id === activeWorkspaceId
+                      ? 'bg-turbo-accent/15 text-turbo-accent'
+                      : 'text-turbo-text-dim hover:bg-turbo-surface-hover'
+                  }`}
+                >
+                  {ws.name}
+                </button>
+              ))}
+            </div>
+          ) : (
+            /* Single workspace — editable name */
+            editing ? (
+              <input
+                ref={nameInputRef}
+                value={editName}
+                onChange={e => setEditName(e.target.value)}
+                onBlur={handleRename}
+                onKeyDown={e => { if (e.key === 'Enter') handleRename(); if (e.key === 'Escape') setEditing(false) }}
+                className="flex-1 text-sm font-medium text-turbo-text bg-transparent border-b border-turbo-accent focus:outline-none"
+              />
+            ) : (
+              <h2
+                className="text-sm font-medium text-turbo-text flex-1 cursor-pointer"
+                onDoubleClick={() => {
+                  if (activeWorkspace) {
+                    setEditName(activeWorkspace.name)
+                    setEditing(true)
+                  }
+                }}
+              >
+                {activeWorkspace?.name ?? 'Terminal Workspace'}
+              </h2>
+            )
+          )}
 
           {/* Add dropdown */}
           <div className="relative" ref={dropdownRef}>

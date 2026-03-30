@@ -44,14 +44,6 @@ export function AppShell() {
         if (ui.terminalWorkspaceOpen) {
           ui.closeTerminalWorkspace()
         } else {
-          const store = useProjectStore.getState()
-          const proj = store.projects.find(p => p.id === store.selectedProjectId) || store.projects[0]
-          if (proj?.path) {
-            const panes = useTerminalStore.getState().workspacePanes[proj.path]
-            if (!panes || panes.length === 0) {
-              window.api.createPlainTerminal({ projectPath: proj.path, type: 'shell' })
-            }
-          }
           ui.openTerminalWorkspace()
         }
         return

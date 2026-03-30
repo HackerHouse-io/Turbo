@@ -4,7 +4,7 @@ import { useGitIdentityStore } from '../../stores/useGitIdentityStore'
 import { ModelEffortSelector } from '../shared/ModelEffortSelector'
 import type { ClaudeModelInfo, EffortLevel } from '../../../../shared/types'
 
-export function InlinePrompt({ hero = false }: { hero?: boolean }) {
+export function InlinePrompt() {
   const [prompt, setPrompt] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [models, setModels] = useState<ClaudeModelInfo[]>([])
@@ -64,7 +64,7 @@ export function InlinePrompt({ hero = false }: { hero?: boolean }) {
   if (!selectedProject) return null
 
   return (
-    <div className={hero ? "max-w-3xl mx-auto w-full" : "max-w-2xl mx-auto w-full mt-4"}>
+    <div className="max-w-2xl mx-auto w-full">
       <div className="relative bg-turbo-surface border border-turbo-border rounded-xl
                       focus-within:border-turbo-accent/50 transition-colors overflow-visible">
         <textarea
@@ -72,8 +72,8 @@ export function InlinePrompt({ hero = false }: { hero?: boolean }) {
           value={prompt}
           onChange={e => setPrompt(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder={hero ? "Describe your task..." : "What do you want to work on?"}
-          rows={hero ? 3 : 2}
+          placeholder="What do you want to work on?"
+          rows={2}
           disabled={isSubmitting}
           className="w-full px-4 pt-3 pb-3 bg-transparent text-sm text-turbo-text
                      placeholder:text-turbo-text-muted resize-none

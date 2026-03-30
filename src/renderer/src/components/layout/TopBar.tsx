@@ -136,7 +136,15 @@ export function TopBar() {
 
         {/* Attention Queue Badge */}
         {attentionItems.length > 0 && (
-          <button className="relative btn-ghost flex items-center gap-1.5">
+          <button
+            className="relative btn-ghost flex items-center gap-1.5"
+            onClick={() => {
+              if (attentionItems.length > 0) {
+                useSessionStore.getState().selectSession(attentionItems[0].sessionId)
+                useUIStore.getState().setViewMode('detail')
+              }
+            }}
+          >
             <BellIcon />
             <span className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-turbo-warning
                            text-[10px] font-bold text-black flex items-center justify-center">

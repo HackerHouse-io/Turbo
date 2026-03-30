@@ -81,3 +81,11 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     set({ projects })
   }
 }))
+
+/** Reusable selector: returns the selected project's path (or first project's path). */
+export const selectProjectPath = (s: ProjectState): string | undefined => {
+  const proj = s.selectedProjectId
+    ? s.projects.find(p => p.id === s.selectedProjectId)
+    : s.projects[0]
+  return proj?.path
+}

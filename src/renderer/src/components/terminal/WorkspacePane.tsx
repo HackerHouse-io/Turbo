@@ -35,8 +35,7 @@ export function WorkspacePane({ terminal }: WorkspacePaneProps) {
         </span>
         <button
           onClick={handleKill}
-          className="p-0.5 rounded hover:bg-red-500/20 text-turbo-text-muted hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100"
-          style={{ opacity: undefined }} // Let CSS handle, but always show on hover of pane
+          className="p-0.5 rounded hover:bg-red-500/20 text-turbo-text-muted hover:text-red-400 transition-colors opacity-40 hover:opacity-100 focus:opacity-100"
           title="Kill terminal"
         >
           <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>

@@ -1,22 +1,18 @@
 import { useMemo } from 'react'
 import { motion } from 'framer-motion'
-import { AgentCard } from './AgentCard'
-import { AttentionQueue } from './AttentionQueue'
+import { StatusStrip } from './StatusStrip'
+import { QuickActions } from './QuickActions'
+import { SessionList } from './SessionList'
+import { WorkspacesSection } from './WorkspacesSection'
 import { InlinePrompt } from './InlinePrompt'
-import { NerveCenter } from '../nerve-center/NerveCenter'
-import { GitStatusBar } from '../nerve-center/GitStatusBar'
 import { RoutineProgressBanner } from './RoutineProgressBanner'
+import { PlanCard } from '../nerve-center/PlanCard'
 import { useSessionStore } from '../../stores/useSessionStore'
 import { useProjectStore } from '../../stores/useProjectStore'
 import { useRoutineStore } from '../../stores/useRoutineStore'
-import { useTerminalStore } from '../../stores/useTerminalStore'
-import { WorkspaceCard } from './TerminalCard'
 
 export function CommandCenter() {
   const sessionsRecord = useSessionStore(s => s.sessions)
-  const rawItems = useSessionStore(s => s.attentionItems)
-  const attentionItems = useMemo(() => rawItems.filter(i => !i.dismissed), [rawItems])
-
   const projects = useProjectStore(s => s.projects)
   const selectedProjectId = useProjectStore(s => s.selectedProjectId)
   const addProjectFromPath = useProjectStore(s => s.addProjectFromPath)
@@ -30,17 +26,6 @@ export function CommandCenter() {
     return all.filter(s => s.projectPath === selectedProject.path)
   }, [sessionsRecord, selectedProject])
 
-  // Categorize sessions — needsAttention sessions stay in inProgress (card shows yellow badge)
-  const inProgress = sessions.filter(
-    s => s.status === 'active' || s.status === 'starting'
-  )
-  const waitingForInput = sessions.filter(
-    s => s.status === 'waiting_for_input'
-  )
-  const completed = sessions.filter(
-    s => s.status === 'completed' || s.status === 'stopped'
-  )
-
   // Filter active routine executions
   const activeRoutines = useMemo(() => {
     const all = Object.values(routineExecutions)
@@ -50,15 +35,6 @@ export function CommandCenter() {
     return projectFiltered.filter(r => r.status !== 'completed')
   }, [routineExecutions, selectedProject])
 
-  // Filter terminals by selected project
-  const allTerminals = useTerminalStore(s => s.terminals)
-  const terminals = useMemo(() => {
-    const all = Object.values(allTerminals)
-    if (!selectedProject) return all
-    return all.filter(t => t.projectPath === selectedProject.path)
-  }, [allTerminals, selectedProject])
-
-  const isEmpty = sessions.length === 0 && activeRoutines.length === 0 && terminals.length === 0
   const noProjects = projects.length === 0
 
   // First launch — no projects added yet
@@ -73,122 +49,41 @@ export function CommandCenter() {
     )
   }
 
-  // Empty state — nerve center with git overview, templates, recent commits
-  if (isEmpty) {
-    return <NerveCenter />
-  }
-
-  // Tasks state — cards + sticky bottom prompt
   return (
-    <div className="h-full overflow-y-auto">
-      <div className="px-6 py-4">
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="max-w-6xl mx-auto space-y-6"
-        >
-          {/* Git Status Bar */}
-          <GitStatusBar projectPath={selectedProject?.path} />
+    <div className="h-full flex flex-col">
+      <StatusStrip projectPath={selectedProject?.path} />
 
-          {/* Routine Progress */}
+      {/* Scrollable main content */}
+      <div className="flex-1 overflow-y-auto">
+        <div className="max-w-5xl mx-auto space-y-1">
+          {/* Quick Actions */}
+          <QuickActions />
+
+          {/* Plan Card */}
+          <div className="px-4">
+            <PlanCard projectPath={selectedProject?.path} />
+          </div>
+
+          {/* Routine Banners */}
           {activeRoutines.length > 0 && (
-            <RoutineProgressBanner executions={activeRoutines} />
+            <div className="px-4 py-2">
+              <RoutineProgressBanner executions={activeRoutines} />
+            </div>
           )}
 
-          {/* Attention Queue */}
-          {attentionItems.length > 0 && (
-            <AttentionQueue items={attentionItems} />
-          )}
+          {/* Session List (always rendered) */}
+          <SessionList sessions={sessions} routines={activeRoutines} />
 
-          {/* Waiting for Input */}
-          {waitingForInput.length > 0 && (
-            <Section
-              title="Waiting for Input"
-              count={waitingForInput.length}
-              variant="info"
-            >
-              {waitingForInput.map(s => (
-                <AgentCard key={s.id} session={s} />
-              ))}
-            </Section>
-          )}
-
-          {/* In Progress */}
-          {inProgress.length > 0 && (
-            <Section
-              title="In Progress"
-              count={inProgress.length}
-              variant="default"
-            >
-              {inProgress.map(s => (
-                <AgentCard key={s.id} session={s} />
-              ))}
-            </Section>
-          )}
-
-          {/* Completed */}
-          {completed.length > 0 && (
-            <Section
-              title="Completed"
-              count={completed.length}
-              variant="success"
-            >
-              {completed.map(s => (
-                <AgentCard key={s.id} session={s} />
-              ))}
-            </Section>
-          )}
-
-          {/* Terminals */}
-          {terminals.length > 0 && (
-            <Section title="Terminals" count={terminals.length} variant="default">
-              <WorkspaceCard terminalCount={terminals.length} terminalIds={terminals.map(t => t.id)} />
-            </Section>
-          )}
-        </motion.div>
+          {/* Workspaces Section */}
+          <WorkspacesSection />
+        </div>
       </div>
 
-      {/* Sticky bottom prompt — flows after cards, sticks when scrolling */}
-      <div className="sticky bottom-0 px-6 pb-4 pt-2 bg-gradient-to-t from-turbo-bg from-60% to-transparent">
+      {/* Sticky bottom prompt */}
+      <div className="flex-shrink-0 border-t border-turbo-border px-4 py-3">
         <InlinePrompt />
       </div>
     </div>
-  )
-}
-
-// ─── Section wrapper ────────────────────────────────────────────
-
-function Section({
-  title,
-  count,
-  variant,
-  children
-}: {
-  title: string
-  count: number
-  variant: 'warning' | 'info' | 'success' | 'default'
-  children: React.ReactNode
-}) {
-  const dotColor = {
-    warning: 'bg-turbo-warning',
-    info: 'bg-turbo-info',
-    success: 'bg-turbo-success',
-    default: 'bg-turbo-accent'
-  }[variant]
-
-  return (
-    <section>
-      <div className="flex items-center gap-2 mb-3">
-        <div className={`w-2 h-2 rounded-full ${dotColor}`} />
-        <h2 className="text-sm font-medium text-turbo-text-dim uppercase tracking-wider">
-          {title}
-        </h2>
-        <span className="text-xs text-turbo-text-muted">{count}</span>
-      </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
-        {children}
-      </div>
-    </section>
   )
 }
 

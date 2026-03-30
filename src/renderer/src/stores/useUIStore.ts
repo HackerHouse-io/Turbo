@@ -1,5 +1,7 @@
 import { create } from 'zustand'
 import type { PromptTemplate, Routine } from '../../../shared/types'
+import { useTerminalStore } from './useTerminalStore'
+import { useProjectStore } from './useProjectStore'
 
 type TerminalDrawerTarget =
   | { type: 'session'; sessionId: string }
@@ -51,7 +53,7 @@ interface UIState {
 
   // Terminal workspace
   terminalWorkspaceOpen: boolean
-  openTerminalWorkspace: () => void
+  openTerminalWorkspace: (workspaceId?: string) => void
   closeTerminalWorkspace: () => void
 
   // Session timeline
@@ -106,8 +108,36 @@ export const useUIStore = create<UIState>((set) => ({
   closePlanOverlay: () => set({ planOverlayOpen: false }),
 
   terminalWorkspaceOpen: false,
-  openTerminalWorkspace: () => set({ terminalWorkspaceOpen: true }),
-  closeTerminalWorkspace: () => set({ terminalWorkspaceOpen: false }),
+  openTerminalWorkspace: (workspaceId?: string) => {
+    const termStore = useTerminalStore.getState()
+    if (workspaceId) {
+      termStore.setActiveWorkspace(workspaceId)
+    } else {
+      // Open first workspace for current project, or create one (seeded with a shell)
+      const projStore = useProjectStore.getState()
+      const proj = projStore.projects.find(p => p.id === projStore.selectedProjectId) || projStore.projects[0]
+      if (proj?.path) {
+        const projectWorkspaces = Object.values(termStore.workspaces)
+          .filter(ws => ws.projectPath === proj.path)
+          .sort((a, b) => a.createdAt - b.createdAt)
+        if (projectWorkspaces.length > 0) {
+          termStore.setActiveWorkspace(projectWorkspaces[0].id)
+        } else {
+          const newId = termStore.createWorkspace(proj.path)
+          termStore.setActiveWorkspace(newId)
+          // Seed the new workspace with a shell terminal
+          window.api.createPlainTerminal({ projectPath: proj.path, type: 'shell' }).then(terminal => {
+            if (terminal) termStore.addTerminalToWorkspace(newId, terminal.id)
+          })
+        }
+      }
+    }
+    set({ terminalWorkspaceOpen: true })
+  },
+  closeTerminalWorkspace: () => {
+    useTerminalStore.getState().setActiveWorkspace(null)
+    set({ terminalWorkspaceOpen: false })
+  },
 
   timelineOpen: false,
   openTimeline: () => set({ timelineOpen: true }),
