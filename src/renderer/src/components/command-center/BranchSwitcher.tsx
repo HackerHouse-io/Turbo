@@ -1,6 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
 import { PaletteIcon } from '../command-palette/PaletteIcon'
-import { useGitStore } from '../../stores/useGitStore'
 
 interface BranchSwitcherProps {
   projectPath: string
@@ -44,7 +43,7 @@ export function BranchSwitcher({ projectPath, branch, onRefresh }: BranchSwitche
     }
     setSwitching(true)
     try {
-      await useGitStore.getState().execCommands(projectPath, [`git checkout ${target}`])
+      await window.api.gitExec({ projectPath, commands: [`git checkout ${target}`] })
       onRefresh()
     } finally {
       setSwitching(false)

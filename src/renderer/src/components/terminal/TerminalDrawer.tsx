@@ -8,14 +8,18 @@ export function TerminalDrawer() {
   const target = useUIStore(s => s.terminalDrawerTarget)
   const closeTerminalDrawer = useUIStore(s => s.closeTerminalDrawer)
 
-  // Drawer only handles session terminals now (workspace handles plain terminals)
-  const terminalId = target?.type === 'session' ? target.sessionId : null
+  const isSession = target?.type === 'session'
+  const isPlain = target?.type === 'plain'
+  const terminalId = isSession ? target.sessionId : isPlain ? target.terminalId : null
 
   const session = useSessionStore(s =>
-    target?.type === 'session' ? s.sessions[target.sessionId] : undefined
+    isSession ? s.sessions[target.sessionId] : undefined
   )
 
   if (!terminalId) return null
+
+  const label = isSession ? (session?.name || 'Terminal') : 'Run'
+  const mode = isSession ? 'session' as const : 'plain' as const
 
   return (
     <div className="fixed inset-0 z-40 flex flex-col">
@@ -41,7 +45,7 @@ export function TerminalDrawer() {
           <div className="flex items-center gap-2">
             <PaletteIcon icon="terminal" className="w-4 h-4 text-turbo-accent" />
             <span className="text-xs font-medium text-turbo-text">
-              {session?.name || 'Terminal'}
+              {label}
             </span>
             <span className="text-[10px] text-turbo-text-muted font-mono">
               {terminalId.slice(0, 8)}
@@ -64,7 +68,7 @@ export function TerminalDrawer() {
 
         {/* Terminal content */}
         <div className="flex-1 overflow-hidden">
-          <XTermRenderer terminalId={terminalId} mode="session" />
+          <XTermRenderer terminalId={terminalId} mode={mode} />
         </div>
       </motion.div>
     </div>

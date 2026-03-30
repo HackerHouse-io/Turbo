@@ -1,49 +1,35 @@
 import { useCallback } from 'react'
-import { useUIStore } from '../../stores/useUIStore'
 import { useProjectStore, selectProjectPath } from '../../stores/useProjectStore'
-import { useGitStore } from '../../stores/useGitStore'
-import { useCommandPaletteData } from '../command-palette/useCommandPaletteData'
+import { useUIStore } from '../../stores/useUIStore'
+import { usePlaybookStore } from '../../stores/usePlaybookStore'
+import { useGitQuickActions } from '../../hooks/useGitQuickActions'
+import { runInTerminalDrawer, resolveGitCommand } from '../../lib/runInTerminalDrawer'
 import { PaletteIcon } from '../command-palette/PaletteIcon'
-import type { GitPreset, Playbook } from '../../../../shared/types'
+import type { Playbook } from '../../../../shared/types'
 
 export function QuickActions() {
-  const { gitPresets, playbooks } = useCommandPaletteData()
-  const openCommandPalette = useUIStore(s => s.openCommandPalette)
+  const playbooks = usePlaybookStore(s => s.playbooks)
   const openCommandPaletteWithPlaybook = useUIStore(s => s.openCommandPaletteWithPlaybook)
+  const openPlaybookEditor = useUIStore(s => s.openPlaybookEditor)
   const selectedProjectPath = useProjectStore(selectProjectPath)
+  const gitActions = useGitQuickActions()
 
-  const handlePlaybook = useCallback((r: Playbook) => {
+  const handlePlaybook = useCallback(async (r: Playbook) => {
     if (r.variables.length === 0 && selectedProjectPath) {
-      window.api.startPlaybook({ playbookId: r.id, projectPath: selectedProjectPath, variables: {} })
-    } else {
-      openCommandPaletteWithPlaybook(r)
+      const skip = await window.api.getSetting('playbookSkipConfirm') as Record<string, boolean> | undefined
+      if (skip?.[r.id]) {
+        window.api.startPlaybook({ playbookId: r.id, projectPath: selectedProjectPath, variables: {} })
+        return
+      }
     }
+    openCommandPaletteWithPlaybook(r)
   }, [selectedProjectPath, openCommandPaletteWithPlaybook])
 
-  const handleGitPreset = useCallback(async (g: GitPreset) => {
+  const handleGitAction = useCallback(async (action: { command: string; aiCommit?: boolean }) => {
     if (!selectedProjectPath) return
-
-    if (g.flow === 'quick-commit' || g.flow === 'full-commit-push') {
-      const pushAfter = g.flow === 'full-commit-push'
-      const result = await useGitStore.getState().generateAIMessage(selectedProjectPath)
-      if (result) {
-        useGitStore.getState().setPendingCommit({
-          message: result.message,
-          diffStat: result.diffStat,
-          pushAfter
-        })
-        openCommandPalette()
-      }
-      return
-    }
-
-    if (g.variables.length > 0) {
-      openCommandPalette()
-      return
-    }
-
-    await useGitStore.getState().execCommands(selectedProjectPath, g.commands)
-  }, [selectedProjectPath, openCommandPalette])
+    const resolved = await resolveGitCommand(selectedProjectPath, action.command, action.aiCommit)
+    await runInTerminalDrawer(selectedProjectPath, resolved)
+  }, [selectedProjectPath])
 
   return (
     <div className="px-4 py-3">
@@ -62,6 +48,11 @@ export function QuickActions() {
                 onClick={() => handlePlaybook(r)}
               />
             ))}
+            <Chip
+              icon="plus"
+              label="New"
+              onClick={() => openPlaybookEditor(null, 'create')}
+            />
           </div>
         </div>
 
@@ -71,12 +62,12 @@ export function QuickActions() {
             Git
           </h3>
           <div className="flex flex-wrap gap-1.5">
-            {gitPresets.map(g => (
+            {gitActions.map(g => (
               <Chip
                 key={`g-${g.id}`}
                 icon={g.icon}
-                label={g.name}
-                onClick={() => handleGitPreset(g)}
+                label={g.label}
+                onClick={() => handleGitAction(g)}
               />
             ))}
           </div>
@@ -104,4 +95,3 @@ function Chip({ icon, label, onClick }: {
     </button>
   )
 }
-

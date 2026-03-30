@@ -88,6 +88,14 @@ export interface CreatePlainTerminalPayload {
   type: PlainTerminalType
 }
 
+// ─── Run Command ────────────────────────────────────────────────
+
+export type RunCommandFileSource =
+  | 'package.json' | 'pubspec.yaml' | 'xcworkspace' | 'xcodeproj'
+  | 'Makefile' | 'Cargo.toml' | 'go.mod' | 'pyproject.toml'
+
+export type RunCommandSource = RunCommandFileSource | 'claude' | 'user'
+
 // ─── Projects ───────────────────────────────────────────────────
 
 export interface Project {
@@ -98,6 +106,9 @@ export interface Project {
   lastOpened: number
   activeAgents: number
   gitIdentityOverride?: GitIdentity
+  runCommand?: string
+  runCommandSource?: RunCommandSource
+  runCommandSourceMtime?: number // mtime of source file at detection time
 }
 
 // ─── CLI Flag Types ─────────────────────────────────────────────
@@ -299,6 +310,40 @@ export interface PlanSaveResult {
   lastModified: number
 }
 
+// ─── Git Quick Actions ───────────────────────────────────────
+
+export interface GitQuickAction {
+  id: string
+  label: string
+  icon: string
+  defaultCommand: string
+  aiCommit?: boolean
+  builtIn: boolean
+}
+
+export interface GitQuickActionOverride {
+  id: string
+  label: string
+  icon: string
+  command: string
+}
+
+// ─── Keybindings ──────────────────────────────────────────────
+
+export type KeybindingActionId =
+  | 'toggleCommandPalette' | 'toggleTerminalWorkspace' | 'toggleSettings'
+  | 'toggleOverview' | 'toggleTimeline' | 'togglePlanOverlay'
+  | 'toggleProjectSelector' | 'showShortcuts'
+
+export interface KeybindingDefinition {
+  id: KeybindingActionId
+  label: string
+  description: string
+  defaultShortcut: string | null  // "meta+k", "ctrl+`", "meta+shift+o"
+}
+
+export type KeybindingOverrides = Partial<Record<KeybindingActionId, string | null>>
+
 // ─── Settings ─────────────────────────────────────────────────
 
 export interface TurboSettings {
@@ -308,5 +353,9 @@ export interface TurboSettings {
   defaultModel?: string
   defaultEffort?: EffortLevel
   defaultPermissionMode?: PermissionMode
+  gitQuickActionOverrides?: Record<string, string>
+  gitCustomActions?: GitQuickActionOverride[]
+  keybindingOverrides?: KeybindingOverrides
+  playbookSkipConfirm?: Record<string, boolean>
   [key: string]: unknown
 }

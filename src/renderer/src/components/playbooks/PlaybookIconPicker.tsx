@@ -1,6 +1,6 @@
 import { PaletteIcon, type PaletteIconName } from '../command-palette/PaletteIcon'
 
-const ICONS: PaletteIconName[] = ['bug', 'bolt', 'test', 'eye', 'refresh', 'search', 'playbook', 'task']
+const ICONS: PaletteIconName[] = ['bug', 'bolt', 'test', 'eye', 'refresh', 'search', 'phone', 'playbook', 'task']
 
 interface PlaybookIconPickerProps {
   selected: string

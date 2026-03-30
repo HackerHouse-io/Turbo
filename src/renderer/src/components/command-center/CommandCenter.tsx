@@ -10,6 +10,8 @@ import { PlanCard } from '../nerve-center/PlanCard'
 import { useSessionStore } from '../../stores/useSessionStore'
 import { useProjectStore } from '../../stores/useProjectStore'
 import { usePlaybookStore } from '../../stores/usePlaybookStore'
+import { useKeybindingsStore } from '../../stores/useKeybindingsStore'
+import { formatShortcutLabel } from '../../lib/keybindings'
 
 export function CommandCenter() {
   const sessionsRecord = useSessionStore(s => s.sessions)
@@ -83,13 +85,35 @@ export function CommandCenter() {
       <div className="flex-shrink-0 border-t border-turbo-border/60 bg-turbo-bg/80 px-6 pt-8 pb-8">
         <div className="max-w-5xl mx-auto">
           <InlinePrompt />
-          <div className="flex items-center justify-center gap-5 mt-3 text-[10px] text-turbo-text-muted/60">
-            <span><kbd className="kbd text-[10px] px-1 py-0.5">⌘K</kbd> commands</span>
-            <span><kbd className="kbd text-[10px] px-1 py-0.5">⌃`</kbd> terminal</span>
-            <span><kbd className="kbd text-[10px] px-1 py-0.5">⌘⇧T</kbd> timeline</span>
-          </div>
+          <ShortcutHints />
         </div>
       </div>
+    </div>
+  )
+}
+
+// ─── Dynamic shortcut hints ─────────────────────────────────────
+
+const HINT_ACTIONS: { id: 'toggleCommandPalette' | 'toggleTerminalWorkspace' | 'toggleTimeline' | 'showShortcuts'; label: string }[] = [
+  { id: 'toggleCommandPalette', label: 'commands' },
+  { id: 'toggleTerminalWorkspace', label: 'terminal' },
+  { id: 'toggleTimeline', label: 'timeline' },
+  { id: 'showShortcuts', label: 'all shortcuts' },
+]
+
+function ShortcutHints() {
+  const getShortcut = useKeybindingsStore(s => s.getShortcut)
+  return (
+    <div className="flex items-center justify-center gap-5 mt-3 text-[10px] text-turbo-text-muted/60">
+      {HINT_ACTIONS.map(({ id, label }) => {
+        const shortcut = getShortcut(id)
+        if (!shortcut) return null
+        return (
+          <span key={id}>
+            <kbd className="kbd text-[10px] px-1 py-0.5">{formatShortcutLabel(shortcut)}</kbd> {label}
+          </span>
+        )
+      })}
     </div>
   )
 }

@@ -18,11 +18,27 @@ export function CommandPalettePlaybookFill({ playbook, onSubmit, onBack }: Playb
     }
     return init
   })
+  const [dontAskAgain, setDontAskAgain] = useState(false)
   const firstInputRef = useRef<HTMLInputElement>(null)
+  const runButtonRef = useRef<HTMLButtonElement>(null)
 
   useEffect(() => {
-    firstInputRef.current?.focus()
-  }, [])
+    if (playbook.variables.length > 0) {
+      firstInputRef.current?.focus()
+    } else {
+      runButtonRef.current?.focus()
+    }
+  }, [playbook.variables.length])
+
+  const handleRun = () => {
+    if (dontAskAgain) {
+      window.api.getSetting('playbookSkipConfirm').then((existing) => {
+        const current = (existing && typeof existing === 'object' ? existing : {}) as Record<string, boolean>
+        window.api.setSetting('playbookSkipConfirm', { ...current, [playbook.id]: true })
+      })
+    }
+    onSubmit(values)
+  }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Escape') {
@@ -31,7 +47,7 @@ export function CommandPalettePlaybookFill({ playbook, onSubmit, onBack }: Playb
     }
     if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
       e.preventDefault()
-      onSubmit(values)
+      handleRun()
     }
   }
 
@@ -84,17 +100,31 @@ export function CommandPalettePlaybookFill({ playbook, onSubmit, onBack }: Playb
       </div>
 
       {/* Footer */}
-      <div className="flex items-center justify-end px-4 py-3 border-t border-turbo-border gap-2">
-        <kbd className="kbd text-[10px] h-7 flex items-center px-1.5">
-          {CMD_ENTER_LABEL}
-        </kbd>
-        <button
-          onClick={() => onSubmit(values)}
-          className="h-7 text-[11px] px-3 rounded-md bg-turbo-accent text-white font-medium
-                     hover:bg-turbo-accent/90 transition-colors"
-        >
-          Run Playbook
-        </button>
+      <div className="flex items-center gap-2 px-4 py-3 border-t border-turbo-border">
+        {playbook.variables.length === 0 && (
+          <label className="flex items-center gap-1.5 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={dontAskAgain}
+              onChange={e => setDontAskAgain(e.target.checked)}
+              className="w-3.5 h-3.5 rounded border-turbo-border accent-turbo-accent"
+            />
+            <span className="text-[11px] text-turbo-text-muted">Don't show this again</span>
+          </label>
+        )}
+        <div className="flex items-center gap-2 ml-auto">
+          <kbd className="kbd text-[10px] h-7 flex items-center px-1.5">
+            {CMD_ENTER_LABEL}
+          </kbd>
+          <button
+            ref={runButtonRef}
+            onClick={handleRun}
+            className="h-7 text-[11px] px-3 rounded-md bg-turbo-accent text-white font-medium
+                       hover:bg-turbo-accent/90 transition-colors"
+          >
+            Run Playbook
+          </button>
+        </div>
       </div>
     </div>
   )

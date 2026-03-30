@@ -63,6 +63,12 @@ interface UIState {
   settingsOpen: boolean
   openSettings: () => void
   closeSettings: () => void
+
+  // Shortcuts overlay
+  shortcutsOverlayOpen: boolean
+  openShortcutsOverlay: () => void
+  closeShortcutsOverlay: () => void
+  toggleShortcutsOverlay: () => void
 }
 
 export const useUIStore = create<UIState>((set) => ({
@@ -141,5 +147,10 @@ export const useUIStore = create<UIState>((set) => ({
 
   settingsOpen: false,
   openSettings: () => set({ settingsOpen: true }),
-  closeSettings: () => set({ settingsOpen: false })
+  closeSettings: () => set({ settingsOpen: false }),
+
+  shortcutsOverlayOpen: false,
+  openShortcutsOverlay: () => set({ shortcutsOverlayOpen: true }),
+  closeShortcutsOverlay: () => set({ shortcutsOverlayOpen: false }),
+  toggleShortcutsOverlay: () => set(s => ({ shortcutsOverlayOpen: !s.shortcutsOverlayOpen }))
 }))

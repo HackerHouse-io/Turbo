@@ -20,6 +20,13 @@ const TEST_STEP: PlaybookStepDefinition = {
   effort: 'medium'
 }
 
+const IOS_BUILD_TEST_STEP: PlaybookStepDefinition = {
+  name: 'Build & test',
+  prompt: 'Build the project using xcodebuild (detect the scheme and destination from the project). Fix any build errors or warnings introduced by recent changes. Run the test suite with xcodebuild test and fix any test failures caused by the new code.',
+  permissionMode: 'default',
+  effort: 'medium'
+}
+
 // ─── Built-in Playbooks ───────────────────────────────────────
 
 const BUILT_IN_PLAYBOOKS: Omit<Playbook, 'id' | 'variables'>[] = [
@@ -39,13 +46,13 @@ const BUILT_IN_PLAYBOOKS: Omit<Playbook, 'id' | 'variables'>[] = [
       },
       {
         name: 'Plan approach',
-        prompt: 'Analyze the codebase and plan how to fix: {{issueDescription}}. Identify root cause, affected files, and approach.',
+        prompt: 'Analyze the codebase and plan how to fix: {{issueDescription}}. Identify the root cause, list every file that needs to change, and describe the fix approach step by step.',
         permissionMode: 'plan',
         effort: 'high'
       },
       {
         name: 'Implement fix',
-        prompt: 'Implement the fix for: {{issueDescription}}. Follow existing patterns in the codebase.',
+        prompt: 'Implement the fix for: {{issueDescription}}. Follow existing code patterns. Keep changes minimal — only modify what is necessary to resolve the issue.',
         permissionMode: 'default',
         effort: 'high'
       },
@@ -68,13 +75,13 @@ const BUILT_IN_PLAYBOOKS: Omit<Playbook, 'id' | 'variables'>[] = [
       },
       {
         name: 'Plan approach',
-        prompt: 'Analyze the codebase and design the implementation for: {{featureDescription}}. Consider existing patterns, affected files, and edge cases.',
+        prompt: 'Analyze the codebase and design the implementation for: {{featureDescription}}. List affected files, describe the architecture, identify edge cases, and note any existing utilities to reuse.',
         permissionMode: 'plan',
         effort: 'high'
       },
       {
         name: 'Implement feature',
-        prompt: 'Implement the feature: {{featureDescription}}. Follow existing patterns in the codebase.',
+        prompt: 'Implement the feature: {{featureDescription}}. Follow existing code patterns in the codebase. Reuse existing utilities and components where possible.',
         permissionMode: 'default',
         effort: 'high'
       },
@@ -91,19 +98,19 @@ const BUILT_IN_PLAYBOOKS: Omit<Playbook, 'id' | 'variables'>[] = [
     steps: [
       {
         name: 'Read changes',
-        prompt: 'Read all uncommitted changes (git diff) and recent commits. Summarize what changed and why.',
+        prompt: 'Read all uncommitted changes (git diff HEAD) and the last 5 commits. Summarize what changed, why, and which areas of the codebase are affected.',
         permissionMode: 'plan',
         effort: 'high'
       },
       {
         name: 'Identify issues',
-        prompt: 'Review for bugs, edge cases, security issues, race conditions, performance, pattern inconsistencies.',
+        prompt: 'Review for bugs, security vulnerabilities, race conditions, edge cases, performance issues, and violations of existing code patterns. Rank findings by severity (critical, warning, nit).',
         permissionMode: 'plan',
         effort: 'max'
       },
       {
         name: 'Suggest improvements',
-        prompt: 'For each issue, provide a specific code fix or improvement with file and line references.',
+        prompt: 'For each issue found, provide a specific code fix with exact file path and line reference. Group by severity.',
         permissionMode: 'plan',
         effort: 'high'
       }
@@ -174,13 +181,13 @@ const BUILT_IN_PLAYBOOKS: Omit<Playbook, 'id' | 'variables'>[] = [
     steps: [
       {
         name: 'Analyze codebase',
-        prompt: 'Analyze the entire project structure, architecture, data flow, and key design decisions.',
+        prompt: 'Analyze the entire project structure, architecture, data flow, and key design decisions. Map out all major components and how they communicate.',
         permissionMode: 'plan',
         effort: 'max'
       },
       {
         name: 'Write architecture doc',
-        prompt: 'Write a comprehensive system architecture document to {{outputPath}}. Cover: overview, architecture diagram (ASCII), component responsibilities, data flow, tech stack decisions, and key patterns.',
+        prompt: 'Write a comprehensive system architecture document to docs/architecture.md (create the docs/ directory if it doesn\'t exist). Cover: project overview, high-level architecture diagram (Mermaid), component responsibilities, data flow, tech stack decisions, and key patterns used.',
         permissionMode: 'default',
         effort: 'high'
       }
@@ -195,13 +202,13 @@ const BUILT_IN_PLAYBOOKS: Omit<Playbook, 'id' | 'variables'>[] = [
     steps: [
       {
         name: 'Analyze context',
-        prompt: 'Analyze the codebase to understand how {{feature}} should be designed. Study existing patterns and constraints.',
+        prompt: 'Analyze the codebase to understand how {{feature}} should be designed. Study existing patterns, data models, and architectural constraints.',
         permissionMode: 'plan',
         effort: 'high'
       },
       {
         name: 'Write tech design',
-        prompt: 'Write a technical design document for {{feature}} to {{outputPath}}. Cover: context, requirements, proposed design, alternatives considered, implementation plan, risks.',
+        prompt: 'Write a technical design document to docs/design-{{feature}}.md (create the docs/ directory if it doesn\'t exist). Cover: context & motivation, requirements, proposed design with diagrams (Mermaid), alternatives considered, implementation plan, and risks.',
         permissionMode: 'default',
         effort: 'high'
       }
@@ -216,13 +223,13 @@ const BUILT_IN_PLAYBOOKS: Omit<Playbook, 'id' | 'variables'>[] = [
     steps: [
       {
         name: 'Analyze feature',
-        prompt: 'Analyze {{feature}} in the codebase. Identify all testable behaviors, edge cases, and integration points.',
+        prompt: 'Analyze {{feature}} in the codebase. Identify all testable behaviors, integration points, edge cases, and failure modes.',
         permissionMode: 'plan',
         effort: 'high'
       },
       {
         name: 'Write test plan',
-        prompt: 'Write a comprehensive test plan for {{feature}} to {{outputPath}}. Cover: scope, test cases (unit, integration, e2e), edge cases, acceptance criteria.',
+        prompt: 'Write a comprehensive test plan to docs/test-plan-{{feature}}.md (create the docs/ directory if it doesn\'t exist). Cover: scope, test strategy, test cases (unit, integration, e2e), edge cases, performance criteria, and acceptance criteria.',
         permissionMode: 'default',
         effort: 'high'
       }
@@ -237,15 +244,100 @@ const BUILT_IN_PLAYBOOKS: Omit<Playbook, 'id' | 'variables'>[] = [
     steps: [
       {
         name: 'Research context',
-        prompt: 'Analyze the current codebase and understand how {{feature}} fits. Identify existing capabilities, gaps, and user-facing implications.',
+        prompt: 'Analyze the current codebase and understand how {{feature}} fits into the product. Identify existing capabilities, gaps, and user-facing implications.',
         permissionMode: 'plan',
         effort: 'high'
       },
       {
         name: 'Write PRD',
-        prompt: 'Write a product requirements document for {{feature}} to {{outputPath}}. Cover: problem statement, goals, user stories, requirements (functional + non-functional), success metrics, out of scope.',
+        prompt: 'Write a product requirements document to docs/prd-{{feature}}.md (create the docs/ directory if it doesn\'t exist). Cover: problem statement, goals & non-goals, user stories, functional requirements, non-functional requirements, success metrics, and out of scope.',
         permissionMode: 'default',
         effort: 'high'
+      }
+    ]
+  },
+
+  // ─── iOS Development Playbooks ────────────────────────────
+  {
+    name: 'iOS Feature',
+    description: 'Branch, plan, implement, build & test — then commit',
+    icon: 'phone',
+    builtIn: true,
+    endsWithCommit: true,
+    steps: [
+      {
+        name: 'Create branch',
+        prompt: 'Create and switch to a new git branch named feat/{{featureSlug}}. Do not make any other changes.',
+        permissionMode: 'auto',
+        effort: 'low'
+      },
+      {
+        name: 'Plan approach',
+        prompt: 'Analyze the iOS project structure (Xcode project, targets, Swift packages). Design the implementation for: {{featureDescription}}. Identify which views, view models, models, and services need to change. Note any Info.plist or entitlement changes required.',
+        permissionMode: 'plan',
+        effort: 'high'
+      },
+      {
+        name: 'Implement feature',
+        prompt: 'Implement the iOS feature: {{featureDescription}}. Use SwiftUI for new views unless the project uses UIKit. Follow existing project patterns for architecture (MVVM, coordinators, etc.), naming conventions, and dependency injection. Reuse existing components and services.',
+        permissionMode: 'default',
+        effort: 'high'
+      },
+      IOS_BUILD_TEST_STEP
+    ]
+  },
+  {
+    name: 'iOS Bug Fix',
+    description: 'Branch, diagnose, fix, build & test — then commit',
+    icon: 'phone',
+    builtIn: true,
+    endsWithCommit: true,
+    steps: [
+      {
+        name: 'Create branch',
+        prompt: 'Create and switch to a new git branch named fix/{{issueSlug}}. Do not make any other changes.',
+        permissionMode: 'auto',
+        effort: 'low'
+      },
+      {
+        name: 'Diagnose',
+        prompt: 'Analyze the iOS codebase to diagnose: {{issueDescription}}. Check relevant view controllers/SwiftUI views, view models, services, and any platform-specific code (lifecycle, threading, memory). Identify the root cause and list files that need to change.',
+        permissionMode: 'plan',
+        effort: 'high'
+      },
+      {
+        name: 'Implement fix',
+        prompt: 'Fix the iOS issue: {{issueDescription}}. Follow existing project patterns. Keep changes minimal — only modify what is necessary to resolve the issue.',
+        permissionMode: 'default',
+        effort: 'high'
+      },
+      IOS_BUILD_TEST_STEP
+    ]
+  },
+  {
+    name: 'SwiftUI View',
+    description: 'Plan UI, implement view, build & verify — then commit',
+    icon: 'phone',
+    builtIn: true,
+    endsWithCommit: true,
+    steps: [
+      {
+        name: 'Plan UI',
+        prompt: 'Design the SwiftUI view "{{viewName}}": {{viewDescription}}. Define the view hierarchy, state management (@State, @Binding, @ObservedObject, @EnvironmentObject as appropriate), and any subviews needed. Follow existing project patterns for theming, spacing, and component structure.',
+        permissionMode: 'plan',
+        effort: 'medium'
+      },
+      {
+        name: 'Implement view',
+        prompt: 'Implement the SwiftUI view "{{viewName}}" as designed. Create the view file and any supporting subviews, view models, or model types needed. Follow existing project naming conventions and file organization. Include a PreviewProvider with representative sample data.',
+        permissionMode: 'default',
+        effort: 'high'
+      },
+      {
+        name: 'Build & verify',
+        prompt: 'Build the project using xcodebuild to verify the new view compiles without errors. Fix any build issues. If the project has snapshot or UI tests, run them and fix any failures.',
+        permissionMode: 'default',
+        effort: 'medium'
       }
     ]
   }
@@ -321,21 +413,27 @@ export class PlaybookManager {
   // ─── Private ───────────────────────────────────────────────
 
   private load(): void {
+    // Read saved playbooks — only user-created ones survive reload
+    let raw = ''
+    let userPlaybooks: Playbook[] = []
     try {
-      const raw = readFileSync(this.filePath, 'utf-8')
-      this.playbooks = JSON.parse(raw)
-    } catch {
-      // File missing or corrupt — seed below
-    }
+      raw = readFileSync(this.filePath, 'utf-8')
+      const all: Playbook[] = JSON.parse(raw)
+      userPlaybooks = all.filter(p => !p.builtIn)
+    } catch { /* File missing or corrupt */ }
 
-    if (this.playbooks.length === 0) {
-      this.playbooks = BUILT_IN_PLAYBOOKS.map(r => ({
-        ...r,
-        id: uuid(),
-        variables: extractTemplateVariables(r.steps.map(s => s.prompt))
-      }))
-      this.save()
-    }
+    // Always generate built-ins from code
+    const builtIns: Playbook[] = BUILT_IN_PLAYBOOKS.map(r => ({
+      ...r,
+      id: `builtin-${r.name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`,
+      variables: extractTemplateVariables(r.steps.map(s => s.prompt))
+    }))
+
+    this.playbooks = [...builtIns, ...userPlaybooks]
+
+    // Only write if content actually changed
+    const updated = JSON.stringify(this.playbooks, null, 2)
+    if (updated !== raw) this.save()
   }
 
   private save(): void {

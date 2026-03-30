@@ -21,6 +21,9 @@ interface TerminalState {
   activeWorkspaceId: string | null            // which workspace overlay shows
   focusedPaneId: string | null
 
+  // Run terminal tracking: projectPath → terminalId
+  runTerminals: Record<string, string>
+
   // Data actions
   setTerminals: (terminals: PlainTerminal[]) => void
   addTerminal: (terminal: PlainTerminal) => void
@@ -33,6 +36,10 @@ interface TerminalState {
   addTerminalToWorkspace: (workspaceId: string, terminalId: string) => void
   removeTerminalFromWorkspace: (workspaceId: string, terminalId: string) => void
   setActiveWorkspace: (id: string | null) => void
+
+  // Run terminal
+  setRunTerminal: (projectPath: string, terminalId: string) => void
+  clearRunTerminal: (projectPath: string) => void
 
   // Pane focus
   setFocusedPane: (terminalId: string | null) => void
@@ -65,6 +72,7 @@ export const useTerminalStore = create<TerminalState>((set, get) => ({
   workspaces: loadWorkspaces(),
   activeWorkspaceId: null,
   focusedPaneId: null,
+  runTerminals: {},
 
   setTerminals: (terminals) => {
     const record: Record<string, PlainTerminal> = {}
@@ -135,9 +143,20 @@ export const useTerminalStore = create<TerminalState>((set, get) => ({
 
       if (wsChanged) saveWorkspaces(newWorkspaces)
 
+      // Clear run terminal entry if this terminal was a run terminal
+      const newRunTerminals = { ...s.runTerminals }
+      let runChanged = false
+      for (const [path, tid] of Object.entries(newRunTerminals)) {
+        if (tid === terminalId) {
+          delete newRunTerminals[path]
+          runChanged = true
+        }
+      }
+
       return {
         terminals: rest,
         workspaces: newWorkspaces,
+        runTerminals: runChanged ? newRunTerminals : s.runTerminals,
         focusedPaneId: s.focusedPaneId === terminalId ? null : s.focusedPaneId
       }
     })
@@ -224,6 +243,15 @@ export const useTerminalStore = create<TerminalState>((set, get) => ({
   },
 
   setActiveWorkspace: (id) => set({ activeWorkspaceId: id }),
+
+  setRunTerminal: (projectPath, terminalId) =>
+    set(s => ({ runTerminals: { ...s.runTerminals, [projectPath]: terminalId } })),
+
+  clearRunTerminal: (projectPath) =>
+    set(s => {
+      const { [projectPath]: _, ...rest } = s.runTerminals
+      return { runTerminals: rest }
+    }),
 
   setFocusedPane: (terminalId) => set({ focusedPaneId: terminalId })
 }))

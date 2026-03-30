@@ -6,7 +6,9 @@ import { useGitIdentityStore } from './stores/useGitIdentityStore'
 import { usePlaybookStore } from './stores/usePlaybookStore'
 import { useTerminalStore } from './stores/useTerminalStore'
 import { useUIStore } from './stores/useUIStore'
+import { useKeybindingsStore } from './stores/useKeybindingsStore'
 import { appendTerminalData, clearTerminalBuffer } from './lib/terminalBuffer'
+import { clearDrawerTerminal } from './lib/runInTerminalDrawer'
 
 export default function App() {
   const updateSession = useSessionStore(s => s.updateSession)
@@ -19,9 +21,10 @@ export default function App() {
       return
     }
 
-    // Initialize project store + git identity
+    // Initialize project store + git identity + keybindings
     useProjectStore.getState().initialize()
     useGitIdentityStore.getState().initialize()
+    useKeybindingsStore.getState().initialize()
 
     // Buffer all terminal data globally so XTermRenderer can replay on mount
     const unsubTerminal = window.api.onTerminalData((sessionId, data) => {
@@ -42,6 +45,7 @@ export default function App() {
 
     const unsubPlainTerminalRemoved = window.api.onPlainTerminalRemoved((terminalId) => {
       useTerminalStore.getState().removeTerminal(terminalId)
+      clearDrawerTerminal(terminalId)
     })
 
     const unsubSession = window.api.onSessionUpdated((session) => {

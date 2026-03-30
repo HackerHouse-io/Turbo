@@ -1,12 +1,21 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
 import { useUIStore } from '../../stores/useUIStore'
-import { ToggleSwitch } from '../shared/ToggleSwitch'
-import { EFFORT_LEVELS, PERMISSION_MODES } from '../../../../shared/constants'
-import type { ClaudeModelInfo, EffortLevel, PermissionMode } from '../../../../shared/types'
+import { SettingsSidebar, type SettingsSection } from './SettingsSidebar'
+import { SectionGeneral } from './sections/SectionGeneral'
+import { SectionNotifications } from './sections/SectionNotifications'
+import { SectionQuickActions } from './sections/SectionQuickActions'
+import { SectionGit } from './sections/SectionGit'
+import { SectionProjects } from './sections/SectionProjects'
+import { SectionAbout } from './sections/SectionAbout'
+import { SectionKeybindings } from './sections/SectionKeybindings'
+import type { ClaudeModelInfo, EffortLevel, PermissionMode, GitQuickActionOverride } from '../../../../shared/types'
 
 export function SettingsOverlay() {
   const closeSettings = useUIStore(s => s.closeSettings)
+  const [activeSection, setActiveSection] = useState<SettingsSection>('general')
 
+  // ─── State (unchanged from original) ─────────────────────
   const [models, setModels] = useState<ClaudeModelInfo[]>([])
   const [defaultModel, setDefaultModel] = useState<string>('')
   const [defaultEffort, setDefaultEffort] = useState<EffortLevel>('medium')
@@ -14,6 +23,8 @@ export function SettingsOverlay() {
   const [notificationsEnabled, setNotificationsEnabled] = useState(true)
   const [projectsDir, setProjectsDir] = useState('')
   const [dataDir, setDataDir] = useState('')
+  const [gitOverrides, setGitOverrides] = useState<Record<string, string>>({})
+  const [gitCustomActions, setGitCustomActions] = useState<GitQuickActionOverride[]>([])
 
   useEffect(() => {
     Promise.all([
@@ -23,8 +34,10 @@ export function SettingsOverlay() {
       window.api.getSetting('notificationsEnabled'),
       window.api.getSetting('defaultProjectsDir'),
       window.api.getAppPath('userData'),
-      window.api.detectModels()
-    ]).then(([model, effort, perm, notif, dir, userData, detectedModels]) => {
+      window.api.detectModels(),
+      window.api.getSetting('gitQuickActionOverrides'),
+      window.api.getSetting('gitCustomActions')
+    ]).then(([model, effort, perm, notif, dir, userData, detectedModels, gitOvr, gitCust]) => {
       if (model) setDefaultModel(model as string)
       if (effort) setDefaultEffort(effort as EffortLevel)
       if (perm) setDefaultPermissionMode(perm as PermissionMode)
@@ -32,189 +45,124 @@ export function SettingsOverlay() {
       if (dir) setProjectsDir(dir as string)
       setDataDir(userData as string)
       setModels(detectedModels as ClaudeModelInfo[])
+      if (gitOvr) setGitOverrides(gitOvr as Record<string, string>)
+      if (gitCust) setGitCustomActions(gitCust as GitQuickActionOverride[])
     })
   }, [])
 
-  const save = (key: string, value: unknown) => {
+  const save = useCallback((key: string, value: unknown) => {
     window.api.setSetting(key, value)
-  }
+  }, [])
 
-  const handleBrowseDir = async () => {
+  const handleBrowseDir = useCallback(async () => {
     const path = await window.api.openFolderDialog()
     if (path) {
       setProjectsDir(path)
       save('defaultProjectsDir', path)
     }
+  }, [save])
+
+  // ─── Section router ──────────────────────────────────────
+  const renderSection = () => {
+    switch (activeSection) {
+      case 'general':
+        return (
+          <SectionGeneral
+            models={models}
+            defaultModel={defaultModel}
+            defaultEffort={defaultEffort}
+            defaultPermissionMode={defaultPermissionMode}
+            onModelChange={v => { setDefaultModel(v); save('defaultModel', v) }}
+            onEffortChange={v => { setDefaultEffort(v); save('defaultEffort', v) }}
+            onPermissionChange={v => { setDefaultPermissionMode(v); save('defaultPermissionMode', v) }}
+          />
+        )
+      case 'notifications':
+        return (
+          <SectionNotifications
+            notificationsEnabled={notificationsEnabled}
+            onToggle={v => { setNotificationsEnabled(v); save('notificationsEnabled', v) }}
+          />
+        )
+      case 'quickActions':
+        return (
+          <SectionQuickActions
+            gitOverrides={gitOverrides}
+            gitCustomActions={gitCustomActions}
+            onOverridesChange={next => { setGitOverrides(next); save('gitQuickActionOverrides', next) }}
+            onCustomActionsChange={next => { setGitCustomActions(next); save('gitCustomActions', next) }}
+          />
+        )
+      case 'keybindings':
+        return <SectionKeybindings />
+      case 'git':
+        return <SectionGit />
+      case 'projects':
+        return (
+          <SectionProjects
+            projectsDir={projectsDir}
+            onDirChange={setProjectsDir}
+            onBrowse={handleBrowseDir}
+            onBlurSave={() => save('defaultProjectsDir', projectsDir)}
+          />
+        )
+      case 'about':
+        return <SectionAbout dataDir={dataDir} />
+    }
   }
 
-
   return (
-    <div className="fixed inset-0 z-[45] flex items-center justify-center">
-      {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/50" onClick={closeSettings} />
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.15 }}
+      className="fixed inset-0 z-[45] flex flex-col bg-turbo-bg"
+    >
+      {/* Header bar */}
+      <div className="drag-region h-12 flex-shrink-0 flex items-center pl-[80px] pr-4 border-b border-turbo-border">
+        <button
+          onClick={closeSettings}
+          className="no-drag flex items-center gap-2 text-turbo-text-muted hover:text-turbo-text transition-colors text-sm"
+        >
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
+          </svg>
+          Back
+        </button>
+        <span className="ml-4 text-sm font-medium text-turbo-text">Settings</span>
+        <div className="flex-1" />
+        <button
+          onClick={closeSettings}
+          className="no-drag p-1.5 rounded-lg hover:bg-turbo-surface-hover text-turbo-text-muted hover:text-turbo-text transition-colors"
+        >
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
 
-      {/* Modal */}
-      <div className="relative w-full max-w-xl mx-4 bg-turbo-surface rounded-xl border border-turbo-border shadow-2xl overflow-hidden max-h-[85vh] flex flex-col">
-        {/* Header */}
-        <div className="px-5 py-4 border-b border-turbo-border flex-shrink-0 flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-turbo-text">Settings</h2>
-          <button
-            onClick={closeSettings}
-            className="p-1 rounded-lg hover:bg-turbo-surface-hover text-turbo-text-muted transition-colors"
-          >
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
+      {/* Body: sidebar + content */}
+      <div className="flex flex-1 overflow-hidden">
+        <SettingsSidebar active={activeSection} onChange={setActiveSection} />
 
-        {/* Scrollable content */}
-        <div className="flex-1 overflow-y-auto px-5 py-5 space-y-6">
-
-          {/* ─── Session Defaults ─────────────────────────────── */}
-          <div>
-            <h3 className="text-xs font-medium text-turbo-text-muted uppercase tracking-wider mb-3">
-              Session Defaults
-            </h3>
-            <div className="space-y-3">
-              {/* Default model */}
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-turbo-text-dim">Model</span>
-                <div className="relative">
-                  <select
-                    value={defaultModel}
-                    onChange={e => { setDefaultModel(e.target.value); save('defaultModel', e.target.value) }}
-                    className="h-8 px-3 pr-7 rounded-lg border border-turbo-border bg-turbo-bg text-sm
-                               text-turbo-text appearance-none cursor-pointer
-                               hover:border-turbo-border-bright focus:outline-none focus:border-turbo-accent/50
-                               transition-colors"
-                  >
-                    <option value="">Auto-detect</option>
-                    {models.map(m => (
-                      <option key={m.alias} value={m.alias}>{m.label}</option>
-                    ))}
-                  </select>
-                  <svg className="w-3 h-3 absolute right-2.5 top-1/2 -translate-y-1/2 text-turbo-text-muted pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
-                  </svg>
-                </div>
-              </div>
-
-              {/* Default effort */}
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-turbo-text-dim">Effort</span>
-                <div className="h-8 flex items-center rounded-lg border border-turbo-border overflow-hidden">
-                  {EFFORT_LEVELS.map(e => (
-                    <button
-                      key={e.value}
-                      onClick={() => { setDefaultEffort(e.value); save('defaultEffort', e.value) }}
-                      className={`h-full px-3 text-xs font-medium transition-colors ${
-                        defaultEffort === e.value
-                          ? 'bg-turbo-accent/20 text-turbo-accent'
-                          : 'text-turbo-text-muted hover:bg-turbo-surface-hover'
-                      }`}
-                    >
-                      {e.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Default permission mode */}
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-turbo-text-dim">Permission mode</span>
-                <div className="h-8 flex items-center rounded-lg border border-turbo-border overflow-hidden">
-                  {PERMISSION_MODES.map(p => (
-                    <button
-                      key={p.value}
-                      onClick={() => { setDefaultPermissionMode(p.value); save('defaultPermissionMode', p.value) }}
-                      className={`h-full px-3 text-xs font-medium transition-colors ${
-                        defaultPermissionMode === p.value
-                          ? 'bg-turbo-accent/20 text-turbo-accent'
-                          : 'text-turbo-text-muted hover:bg-turbo-surface-hover'
-                      }`}
-                    >
-                      {p.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="border-t border-turbo-border" />
-
-          {/* ─── Notifications ────────────────────────────────── */}
-          <div>
-            <h3 className="text-xs font-medium text-turbo-text-muted uppercase tracking-wider mb-3">
-              Notifications
-            </h3>
-            <ToggleSwitch
-              checked={notificationsEnabled}
-              onChange={(v) => { setNotificationsEnabled(v); save('notificationsEnabled', v) }}
-              label="Enable OS notifications"
-            />
-          </div>
-
-          <div className="border-t border-turbo-border" />
-
-          {/* ─── Projects ─────────────────────────────────────── */}
-          <div>
-            <h3 className="text-xs font-medium text-turbo-text-muted uppercase tracking-wider mb-3">
-              Projects
-            </h3>
-            <div>
-              <label className="block text-[11px] font-medium text-turbo-text-muted mb-1">
-                Default projects directory
-              </label>
-              <div className="flex items-center gap-2">
-                <input
-                  type="text"
-                  value={projectsDir}
-                  onChange={e => setProjectsDir(e.target.value)}
-                  onBlur={() => save('defaultProjectsDir', projectsDir)}
-                  placeholder="/Users/you/projects"
-                  className="flex-1 bg-turbo-bg border border-turbo-border rounded-lg px-3 py-2 text-sm
-                             text-turbo-text placeholder:text-turbo-text-muted focus:outline-none
-                             focus:border-turbo-accent/50 transition-colors"
-                />
-                <button
-                  onClick={handleBrowseDir}
-                  className="h-[38px] px-3 rounded-lg border border-turbo-border text-xs font-medium
-                             text-turbo-text-dim hover:border-turbo-border-bright hover:text-turbo-text
-                             transition-colors"
-                >
-                  Browse
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <div className="border-t border-turbo-border" />
-
-          {/* ─── About ────────────────────────────────────────── */}
-          <div>
-            <h3 className="text-xs font-medium text-turbo-text-muted uppercase tracking-wider mb-3">
-              About
-            </h3>
-            <div className="space-y-2 text-sm">
-              <div className="flex items-center justify-between">
-                <span className="text-turbo-text-muted">Version</span>
-                <span className="text-turbo-text-dim">0.1.0</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-turbo-text-muted">Data directory</span>
-                <span className="text-turbo-text-dim text-xs truncate max-w-[280px]" title={dataDir}>
-                  {dataDir}
-                </span>
-              </div>
-              <p className="text-[11px] text-turbo-text-muted pt-1">
-                Settings are stored in settings.json
-              </p>
-            </div>
+        {/* Content panel — fixed position, only inner content animates */}
+        <div className="flex-1 overflow-y-auto">
+          <div className="max-w-2xl mx-auto p-8">
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={activeSection}
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -6 }}
+                transition={{ duration: 0.15, ease: 'easeOut' }}
+              >
+                {renderSection()}
+              </motion.div>
+            </AnimatePresence>
           </div>
         </div>
       </div>
-    </div>
+    </motion.div>
   )
 }

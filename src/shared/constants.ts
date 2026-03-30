@@ -26,6 +26,8 @@ export const IPC = {
   PROJECT_ADD: 'project:add',
   PROJECT_REMOVE: 'project:remove',
   PROJECT_SELECT: 'project:select',
+  PROJECT_SET_RUN_COMMAND: 'project:set-run-command',
+  PROJECT_DETECT_RUN_COMMAND: 'project:detect-run-command',
 
   // Dialog
   DIALOG_OPEN_FOLDER: 'dialog:open-folder',
@@ -145,4 +147,34 @@ export const PROJECT_COLORS = [
   '#06b6d4', // cyan
   '#3b82f6', // blue
   '#a855f7', // purple
+]
+
+// ─── Default Keybindings ─────────────────────────────────────
+
+import type { KeybindingDefinition } from './types'
+
+export const DEFAULT_KEYBINDINGS: KeybindingDefinition[] = [
+  { id: 'toggleCommandPalette',    label: 'Command Palette',   description: 'Open / close command palette',     defaultShortcut: 'meta+k' },
+  { id: 'toggleTerminalWorkspace', label: 'Terminal',           description: 'Toggle terminal workspace',        defaultShortcut: 'ctrl+`' },
+  { id: 'toggleSettings',          label: 'Settings',           description: 'Open / close settings',            defaultShortcut: 'meta+,' },
+  { id: 'toggleOverview',          label: 'Project Overview',   description: 'Toggle project overview',          defaultShortcut: 'meta+shift+o' },
+  { id: 'toggleTimeline',          label: 'Timeline',           description: 'Toggle session timeline',          defaultShortcut: 'meta+shift+t' },
+  { id: 'togglePlanOverlay',       label: 'Plan',               description: 'Toggle plan overlay',              defaultShortcut: null },
+  { id: 'toggleProjectSelector',   label: 'Switch Project',     description: 'Open project selector',            defaultShortcut: null },
+  { id: 'showShortcuts',           label: 'Keyboard Shortcuts', description: 'Show keyboard shortcuts overlay',  defaultShortcut: 'meta+/' },
+]
+
+// ─── Git Quick Actions ─────────────────────────────────────────
+
+import type { GitQuickAction } from './types'
+
+export const GIT_AI_MESSAGE_PLACEHOLDER = '{{message}}'
+
+export const GIT_QUICK_ACTIONS: GitQuickAction[] = [
+  { id: 'status', label: 'Status',              icon: 'git-branch', defaultCommand: 'git status',         builtIn: true },
+  { id: 'stage',  label: 'Stage All',           icon: 'git-stage',  defaultCommand: 'git add -A',         builtIn: true },
+  { id: 'commit', label: 'Commit',              icon: 'git-commit', defaultCommand: 'git add -A && git commit -m "{{message}}"', aiCommit: true, builtIn: true },
+  { id: 'push',   label: 'Push',                icon: 'git-push',   defaultCommand: 'git push',           builtIn: true },
+  { id: 'pull',   label: 'Pull & Rebase',       icon: 'git-pull',   defaultCommand: 'git pull --rebase',  builtIn: true },
+  { id: 'full',   label: 'Stage + Commit + Push', icon: 'git-commit', defaultCommand: 'git add -A && git commit -m "{{message}}" && git push', aiCommit: true, builtIn: true },
 ]

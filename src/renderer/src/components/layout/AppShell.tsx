@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import { AnimatePresence } from 'framer-motion'
 import { TopBar } from './TopBar'
 import { CommandCenter } from '../command-center/CommandCenter'
 import { AgentDetailView } from '../command-center/AgentDetailView'
@@ -15,6 +16,9 @@ import { useUIStore } from '../../stores/useUIStore'
 import { useSessionStore } from '../../stores/useSessionStore'
 import { useProjectStore } from '../../stores/useProjectStore'
 import { useTerminalStore } from '../../stores/useTerminalStore'
+import { useKeybindingsStore } from '../../stores/useKeybindingsStore'
+import { matchesEvent } from '../../lib/keybindings'
+import { ShortcutsOverlay } from '../shortcuts/ShortcutsOverlay'
 
 export function AppShell() {
   const viewMode = useUIStore(s => s.viewMode)
@@ -27,57 +31,69 @@ export function AppShell() {
   const terminalWorkspaceOpen = useUIStore(s => s.terminalWorkspaceOpen)
   const timelineOpen = useUIStore(s => s.timelineOpen)
   const settingsOpen = useUIStore(s => s.settingsOpen)
+  const shortcutsOverlayOpen = useUIStore(s => s.shortcutsOverlayOpen)
   const selectedSessionId = useSessionStore(s => s.selectedSessionId)
 
   // Global keyboard shortcuts — reads fresh state via getState() so no reactive deps needed
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
-      // Cmd+K -> Command Palette
-      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+      const kb = useKeybindingsStore.getState()
+
+      if (matchesEvent(kb.getShortcut('toggleCommandPalette'), e)) {
         e.preventDefault()
         useUIStore.getState().toggleCommandPalette()
-      }
-      // Ctrl+` -> Toggle terminal workspace
-      if (e.ctrlKey && e.key === '`') {
-        e.preventDefault()
-        const ui = useUIStore.getState()
-        if (ui.terminalWorkspaceOpen) {
-          ui.closeTerminalWorkspace()
-        } else {
-          ui.openTerminalWorkspace()
-        }
         return
       }
-      // Cmd+, -> Toggle settings
-      if ((e.metaKey || e.ctrlKey) && e.key === ',') {
+      if (matchesEvent(kb.getShortcut('toggleTerminalWorkspace'), e)) {
+        e.preventDefault()
+        const ui = useUIStore.getState()
+        if (ui.terminalWorkspaceOpen) ui.closeTerminalWorkspace()
+        else ui.openTerminalWorkspace()
+        return
+      }
+      if (matchesEvent(kb.getShortcut('toggleSettings'), e)) {
         e.preventDefault()
         const ui = useUIStore.getState()
         if (ui.settingsOpen) ui.closeSettings()
         else ui.openSettings()
         return
       }
-      // Cmd+Shift+O -> Toggle project overview
-      if ((e.metaKey || e.ctrlKey) && e.shiftKey && (e.key === 'O' || e.key === 'o' || e.code === 'KeyO')) {
+      if (matchesEvent(kb.getShortcut('toggleOverview'), e)) {
         e.preventDefault()
         useUIStore.getState().toggleOverview()
         return
       }
-      // Cmd+Shift+T -> Toggle session timeline
-      if ((e.metaKey || e.ctrlKey) && e.shiftKey && (e.key === 'T' || e.key === 't' || e.code === 'KeyT')) {
+      if (matchesEvent(kb.getShortcut('toggleTimeline'), e)) {
         e.preventDefault()
         const ui = useUIStore.getState()
-        if (ui.timelineOpen) {
-          ui.closeTimeline()
-        } else {
-          ui.openTimeline()
-        }
+        if (ui.timelineOpen) ui.closeTimeline()
+        else ui.openTimeline()
         return
       }
-      // Escape -> Close overlays (highest z-index first)
+      if (matchesEvent(kb.getShortcut('togglePlanOverlay'), e)) {
+        e.preventDefault()
+        const ui = useUIStore.getState()
+        if (ui.planOverlayOpen) ui.closePlanOverlay()
+        else ui.openPlanOverlay()
+        return
+      }
+      if (matchesEvent(kb.getShortcut('toggleProjectSelector'), e)) {
+        e.preventDefault()
+        useUIStore.getState().toggleProjectSelector()
+        return
+      }
+      if (matchesEvent(kb.getShortcut('showShortcuts'), e)) {
+        e.preventDefault()
+        useUIStore.getState().toggleShortcutsOverlay()
+        return
+      }
+      // Escape -> Close overlays (highest z-index first) — stays hardcoded
       if (e.key === 'Escape') {
         const ui = useUIStore.getState()
         const session = useSessionStore.getState()
-        if (ui.settingsOpen) {
+        if (ui.shortcutsOverlayOpen) {
+          ui.closeShortcutsOverlay()
+        } else if (ui.settingsOpen) {
           ui.closeSettings()
         } else if (ui.playbookEditorState) {
           ui.closePlaybookEditor()
@@ -133,7 +149,8 @@ export function AppShell() {
       {planOverlayOpen && <PlanOverlay />}
       {terminalWorkspaceOpen && <TerminalWorkspace />}
       {timelineOpen && <SessionTimeline />}
-      {settingsOpen && <SettingsOverlay />}
+      <AnimatePresence>{settingsOpen && <SettingsOverlay />}</AnimatePresence>
+      <AnimatePresence>{shortcutsOverlayOpen && <ShortcutsOverlay />}</AnimatePresence>
       {commandPaletteOpen && <CommandPalette />}
       {terminalDrawerOpen && <TerminalDrawer />}
     </div>

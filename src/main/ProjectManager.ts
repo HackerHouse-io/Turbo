@@ -73,6 +73,16 @@ export class ProjectManager {
     }
   }
 
+  setRunCommand(projectId: string, command: string | undefined, source?: string, sourceMtime?: number): void {
+    const project = this.projects.get(projectId)
+    if (project) {
+      project.runCommand = command
+      project.runCommandSource = source
+      project.runCommandSourceMtime = sourceMtime
+      this.save()
+    }
+  }
+
   setGitIdentityOverride(projectId: string, identity: GitIdentity | undefined): void {
     const project = this.projects.get(projectId)
     if (project) {

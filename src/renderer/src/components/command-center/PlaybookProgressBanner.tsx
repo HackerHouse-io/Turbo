@@ -3,7 +3,6 @@ import { motion, AnimatePresence } from 'framer-motion'
 import type { PlaybookExecution, PlaybookStepStatus } from '../../../../shared/types'
 import { useSessionStore } from '../../stores/useSessionStore'
 import { useUIStore } from '../../stores/useUIStore'
-import { useGitStore } from '../../stores/useGitStore'
 import { usePlaybookStore } from '../../stores/usePlaybookStore'
 import { PaletteIcon } from '../command-palette/PaletteIcon'
 
@@ -35,11 +34,11 @@ function PlaybookBannerCard({ execution }: { execution: PlaybookExecution }) {
   const selectSession = useSessionStore(s => s.selectSession)
   const setViewMode = useUIStore(s => s.setViewMode)
   const removeExecution = usePlaybookStore(s => s.removeExecution)
-  const gitLoading = useGitStore(s => s.gitLoading)
 
   const [commitMessage, setCommitMessage] = useState<string | null>(null)
   const [committed, setCommitted] = useState(false)
   const [pushed, setPushed] = useState(false)
+  const [loading, setLoading] = useState(false)
 
   const completedCount = execution.steps.filter(s => s.status === 'completed').length
   const totalSteps = execution.steps.length
@@ -59,13 +58,23 @@ function PlaybookBannerCard({ execution }: { execution: PlaybookExecution }) {
 
   const handleCommit = useCallback(async () => {
     if (!commitMessage) return
-    const result = await useGitStore.getState().commit(execution.projectPath, commitMessage)
-    if (result.success) setCommitted(true)
+    setLoading(true)
+    try {
+      const result = await window.api.gitCommit({ projectPath: execution.projectPath, message: commitMessage })
+      if (result.success) setCommitted(true)
+    } finally {
+      setLoading(false)
+    }
   }, [commitMessage, execution.projectPath])
 
   const handlePush = useCallback(async () => {
-    const result = await useGitStore.getState().push(execution.projectPath)
-    if (result.success) setPushed(true)
+    setLoading(true)
+    try {
+      const result = await window.api.gitPush(execution.projectPath)
+      if (result.success) setPushed(true)
+    } finally {
+      setLoading(false)
+    }
   }, [execution.projectPath])
 
   const handleDismiss = useCallback(async () => {
@@ -205,22 +214,22 @@ function PlaybookBannerCard({ execution }: { execution: PlaybookExecution }) {
               {!committed ? (
                 <button
                   onClick={handleCommit}
-                  disabled={!commitMessage || gitLoading}
+                  disabled={!commitMessage || loading}
                   className="h-7 text-[11px] px-3 rounded-md bg-turbo-accent text-white font-medium
                              hover:bg-turbo-accent/90 transition-colors disabled:opacity-50"
                 >
-                  {gitLoading ? 'Committing...' : 'Commit'}
+                  {loading ? 'Committing...' : 'Commit'}
                 </button>
               ) : !pushed ? (
                 <>
                   <span className="text-xs text-turbo-success">Committed</span>
                   <button
                     onClick={handlePush}
-                    disabled={gitLoading}
+                    disabled={loading}
                     className="h-7 text-[11px] px-3 rounded-md bg-turbo-accent text-white font-medium
                                hover:bg-turbo-accent/90 transition-colors disabled:opacity-50"
                   >
-                    {gitLoading ? 'Pushing...' : 'Push'}
+                    {loading ? 'Pushing...' : 'Push'}
                   </button>
                 </>
               ) : (

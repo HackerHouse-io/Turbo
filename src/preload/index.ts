@@ -78,6 +78,12 @@ const api = {
   scanProjectsDir: (dirPath: string): Promise<ScannedProject[]> =>
     ipcRenderer.invoke(IPC.PROJECTS_SCAN_DIR, dirPath),
 
+  setProjectRunCommand: (projectId: string, command: string | undefined, source?: string, sourceMtime?: number): Promise<void> =>
+    ipcRenderer.invoke(IPC.PROJECT_SET_RUN_COMMAND, projectId, command, source, sourceMtime),
+
+  detectRunCommand: (projectPath: string): Promise<{ command: string; source: string; sourceMtime?: number } | null> =>
+    ipcRenderer.invoke(IPC.PROJECT_DETECT_RUN_COMMAND, projectPath),
+
   // ─── Claude CLI ───────────────────────────────────────────
 
   detectModels: (): Promise<ClaudeModelInfo[]> =>

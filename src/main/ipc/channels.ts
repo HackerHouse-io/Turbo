@@ -32,6 +32,7 @@ import { PlaybookExecutor } from '../playbooks/PlaybookExecutor'
 import { PlanFileManager } from '../plan/PlanFileManager'
 import { PlainTerminalManager } from '../terminal/PlainTerminalManager'
 import { detectModels } from '../claude/ClaudeModelDetector'
+import { detectRunCommand, detectRunCommandWithClaude } from '../run/detectRunCommand'
 
 interface IpcHandlerOptions {
   sessionManager: ClaudeSessionManager
@@ -145,6 +146,22 @@ export function registerIpcHandlers(opts: IpcHandlerOptions): void {
 
   ipcMain.handle(IPC.PROJECTS_SCAN_DIR, async (_e, dirPath: string) => {
     return projectManager.scanDirectory(dirPath)
+  })
+
+  ipcMain.handle(IPC.PROJECT_SET_RUN_COMMAND, async (_e, projectId: string, command: string | undefined, source?: string, sourceMtime?: number) => {
+    projectManager.setRunCommand(projectId, command, source, sourceMtime)
+  })
+
+  ipcMain.handle(IPC.PROJECT_DETECT_RUN_COMMAND, async (_e, projectPath: string) => {
+    // Tier 1: file-based (async for xcodebuild)
+    const fileResult = await detectRunCommand(projectPath)
+    if (fileResult) return fileResult
+
+    // Tier 2: Claude AI
+    const aiResult = await detectRunCommandWithClaude(projectPath)
+    if (aiResult) return { ...aiResult, source: 'claude', sourceMtime: undefined }
+
+    return null
   })
 
   // ─── Claude CLI ─────────────────────────────────────────────

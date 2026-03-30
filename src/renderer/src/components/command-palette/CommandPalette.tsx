@@ -3,14 +3,13 @@ import { motion } from 'framer-motion'
 import { useUIStore } from '../../stores/useUIStore'
 import { useSessionStore } from '../../stores/useSessionStore'
 import { useProjectStore, selectProjectPath } from '../../stores/useProjectStore'
-import { useGitStore } from '../../stores/useGitStore'
 import { useTerminalStore } from '../../stores/useTerminalStore'
 import { useCommandPaletteData } from './useCommandPaletteData'
-import { CommandPaletteGitConfirm } from './CommandPaletteGitConfirm'
-import { CommandPaletteGitPresetFill } from './CommandPaletteGitPresetFill'
 import { CommandPalettePlaybookFill } from './CommandPalettePlaybookFill'
 import { PaletteIcon } from './PaletteIcon'
-import type { GitPreset, Playbook } from '../../../../shared/types'
+import { runInTerminalDrawer, resolveGitCommand } from '../../lib/runInTerminalDrawer'
+import { useGitQuickActions } from '../../hooks/useGitQuickActions'
+import type { Playbook } from '../../../../shared/types'
 
 // ─── Types ───────────────────────────────────────────────────
 
@@ -65,30 +64,21 @@ function PaletteShell({ onClose, children }: { onClose: () => void; children: Re
 export function CommandPalette() {
   const [query, setQuery] = useState('')
   const [selectedIndex, setSelectedIndex] = useState(0)
-  const [fillGitPreset, setFillGitPreset] = useState<GitPreset | null>(null)
   const [fillPlaybook, setFillPlaybook] = useState<Playbook | null>(null)
-  const [gitConfirm, setGitConfirm] = useState<{ message: string; diffStat: string; pushAfter: boolean } | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const closeCommandPalette = useUIStore(s => s.closeCommandPalette)
   const selectSession = useSessionStore(s => s.selectSession)
   const setViewMode = useUIStore(s => s.setViewMode)
   const sessionsRecord = useSessionStore(s => s.sessions)
   const sessions = useMemo(() => Object.values(sessionsRecord), [sessionsRecord])
-  const gitLoading = useGitStore(s => s.gitLoading)
   const selectedProjectPath = useProjectStore(selectProjectPath)
   const projects = useProjectStore(s => s.projects)
   const selectedProjectId = useProjectStore(s => s.selectedProjectId)
-  const { gitPresets, playbooks, models, loading } = useCommandPaletteData()
+  const { playbooks, models, loading } = useCommandPaletteData()
+  const gitActions = useGitQuickActions()
 
   useEffect(() => {
     inputRef.current?.focus()
-
-    // Hydrate git confirm from pending commit (set by launchpad git buttons)
-    const pending = useGitStore.getState().pendingCommit
-    if (pending) {
-      setGitConfirm({ message: pending.message, diffStat: pending.diffStat, pushAfter: pending.pushAfter })
-      useGitStore.getState().setPendingCommit(null)
-    }
 
     // Hydrate playbook fill from pending playbook (set by detail overlay Run)
     const pendingPlaybook = useUIStore.getState().pendingPlaybookFill
@@ -100,50 +90,11 @@ export function CommandPalette() {
 
   // ─── Git action handler ────────────────────────────────────
 
-  const handleGitAction = useCallback(async (preset: GitPreset) => {
+  const handleGitAction = useCallback(async (command: string, aiCommit?: boolean) => {
     if (!selectedProjectPath) return
-
-    // Special AI commit flows
-    if (preset.flow === 'quick-commit' || preset.flow === 'full-commit-push') {
-      const pushAfter = preset.flow === 'full-commit-push'
-      const result = await useGitStore.getState().generateAIMessage(selectedProjectPath)
-      if (result) {
-        setGitConfirm({ message: result.message, diffStat: result.diffStat, pushAfter })
-      }
-      return
-    }
-
-    // Custom preset with variables
-    if (preset.variables.length > 0) {
-      setFillGitPreset(preset)
-      return
-    }
-
-    // Direct execution
-    await useGitStore.getState().execCommands(selectedProjectPath, preset.commands)
     closeCommandPalette()
-  }, [selectedProjectPath, closeCommandPalette])
-
-  // ─── Git confirm handler ───────────────────────────────────
-
-  const handleGitConfirm = useCallback(async (message: string) => {
-    if (!selectedProjectPath || !gitConfirm) return
-
-    const commitResult = await useGitStore.getState().commit(selectedProjectPath, message)
-    if (commitResult.success && gitConfirm.pushAfter) {
-      await useGitStore.getState().push(selectedProjectPath)
-    }
-    setGitConfirm(null)
-    closeCommandPalette()
-  }, [selectedProjectPath, gitConfirm, closeCommandPalette])
-
-  // ─── Git preset fill handler ───────────────────────────────
-
-  const handleGitPresetFill = useCallback(async (commands: string[]) => {
-    if (!selectedProjectPath) return
-    await useGitStore.getState().execCommands(selectedProjectPath, commands)
-    setFillGitPreset(null)
-    closeCommandPalette()
+    const resolved = await resolveGitCommand(selectedProjectPath, command, aiCommit)
+    await runInTerminalDrawer(selectedProjectPath, resolved)
   }, [selectedProjectPath, closeCommandPalette])
 
   // ─── Playbook handler ───────────────────────────────────────
@@ -211,15 +162,15 @@ export function CommandPalette() {
     }
 
     // Git Actions
-    for (const g of gitPresets) {
+    for (const g of gitActions) {
       items.push({
         id: `git-${g.id}`,
-        label: g.name,
-        description: g.description,
+        label: g.label,
+        description: g.command,
         icon: g.icon,
         section: 'git',
-        action: () => handleGitAction(g),
-        keywords: ['git', g.description, ...g.commands]
+        action: () => handleGitAction(g.command, g.aiCommit),
+        keywords: ['git', g.label, g.command]
       })
     }
 
@@ -327,7 +278,7 @@ export function CommandPalette() {
     })
 
     return items
-  }, [projects, selectedProjectId, playbooks, gitPresets, sessions, selectedProjectPath, handleGitAction, handleStartPlaybook, openTerminalAction, closeCommandPalette, selectSession, setViewMode])
+  }, [projects, selectedProjectId, playbooks, gitActions, sessions, selectedProjectPath, handleGitAction, handleStartPlaybook, openTerminalAction, closeCommandPalette, selectSession, setViewMode])
 
   // ─── Filtering ─────────────────────────────────────────────
 
@@ -394,38 +345,6 @@ export function CommandPalette() {
           playbook={fillPlaybook}
           onSubmit={(variables) => handleStartPlaybook(fillPlaybook.id, variables)}
           onBack={() => setFillPlaybook(null)}
-        />
-      </PaletteShell>
-    )
-  }
-
-  // ─── Git confirm mode ───────────────────────────────────────
-
-  if (gitConfirm) {
-    return (
-      <PaletteShell onClose={closeCommandPalette}>
-        <CommandPaletteGitConfirm
-          message={gitConfirm.message}
-          diffStat={gitConfirm.diffStat}
-          pushAfter={gitConfirm.pushAfter}
-          loading={gitLoading}
-          onConfirm={handleGitConfirm}
-          onBack={() => setGitConfirm(null)}
-        />
-      </PaletteShell>
-    )
-  }
-
-  // ─── Git preset fill mode ──────────────────────────────────
-
-  if (fillGitPreset) {
-    return (
-      <PaletteShell onClose={closeCommandPalette}>
-        <CommandPaletteGitPresetFill
-          preset={fillGitPreset}
-          loading={gitLoading}
-          onSubmit={handleGitPresetFill}
-          onBack={() => setFillGitPreset(null)}
         />
       </PaletteShell>
     )
