@@ -34,7 +34,7 @@
 - [ ] Shareable routine templates
 - [ ] Keyboard shortcut customization
 - [ ] Performance profiling and optimization
-- [ ] Notification system for long-running tasks
+- [x] Notification system for long-running tasks
 
 ## Phase 6: Distribution
 - [ ] Code signing and notarization (macOS)

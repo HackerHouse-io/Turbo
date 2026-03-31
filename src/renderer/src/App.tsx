@@ -7,6 +7,7 @@ import { usePlaybookStore } from './stores/usePlaybookStore'
 import { useTerminalStore } from './stores/useTerminalStore'
 import { useUIStore } from './stores/useUIStore'
 import { useKeybindingsStore } from './stores/useKeybindingsStore'
+import { useNotificationStore } from './stores/useNotificationStore'
 import { appendTerminalData, clearTerminalBuffer } from './lib/terminalBuffer'
 import { clearDrawerTerminal } from './lib/runInTerminalDrawer'
 
@@ -21,10 +22,11 @@ export default function App() {
       return
     }
 
-    // Initialize project store + git identity + keybindings
+    // Initialize project store + git identity + keybindings + notification settings
     useProjectStore.getState().initialize()
     useGitIdentityStore.getState().initialize()
     useKeybindingsStore.getState().initialize()
+    useNotificationStore.getState().loadSettings()
 
     // Buffer all terminal data globally so XTermRenderer can replay on mount
     const unsubTerminal = window.api.onTerminalData((sessionId, data) => {
@@ -56,6 +58,7 @@ export default function App() {
 
     const unsubAttention = window.api.onAttentionNeeded((item) => {
       addAttentionItem(item)
+      useNotificationStore.getState().showToast(item)
     })
 
     const unsubRemoved = window.api.onSessionRemoved((sessionId) => {

@@ -69,7 +69,17 @@ export interface AttentionItem {
   message: string
   timestamp: number
   dismissed: boolean
+  read: boolean
 }
+
+// ─── Notification Preferences ──────────────────────────────────
+
+export interface NotificationTypeSettings {
+  osNotification: boolean
+  inAppToast: boolean
+}
+
+export type NotificationPreferences = Record<AttentionType, NotificationTypeSettings>
 
 // ─── Plain Terminal ─────────────────────────────────────────────
 
@@ -350,6 +360,8 @@ export interface TurboSettings {
   defaultProjectsDir: string
   gitIdentityGlobal?: GitIdentity
   notificationsEnabled?: boolean
+  notificationSound?: boolean
+  notificationPreferences?: NotificationPreferences
   defaultModel?: string
   defaultEffort?: EffortLevel
   defaultPermissionMode?: PermissionMode

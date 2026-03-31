@@ -19,6 +19,8 @@ import { useTerminalStore } from '../../stores/useTerminalStore'
 import { useKeybindingsStore } from '../../stores/useKeybindingsStore'
 import { matchesEvent } from '../../lib/keybindings'
 import { ShortcutsOverlay } from '../shortcuts/ShortcutsOverlay'
+import { ToastContainer } from '../notifications/ToastContainer'
+import { NotificationCenter } from '../notifications/NotificationCenter'
 
 export function AppShell() {
   const viewMode = useUIStore(s => s.viewMode)
@@ -32,6 +34,7 @@ export function AppShell() {
   const timelineOpen = useUIStore(s => s.timelineOpen)
   const settingsOpen = useUIStore(s => s.settingsOpen)
   const shortcutsOverlayOpen = useUIStore(s => s.shortcutsOverlayOpen)
+  const notificationCenterOpen = useUIStore(s => s.notificationCenterOpen)
   const selectedSessionId = useSessionStore(s => s.selectedSessionId)
 
   // Global keyboard shortcuts — reads fresh state via getState() so no reactive deps needed
@@ -93,6 +96,8 @@ export function AppShell() {
         const session = useSessionStore.getState()
         if (ui.shortcutsOverlayOpen) {
           ui.closeShortcutsOverlay()
+        } else if (ui.notificationCenterOpen) {
+          ui.closeNotificationCenter()
         } else if (ui.settingsOpen) {
           ui.closeSettings()
         } else if (ui.playbookEditorState) {
@@ -153,6 +158,8 @@ export function AppShell() {
       <AnimatePresence>{shortcutsOverlayOpen && <ShortcutsOverlay />}</AnimatePresence>
       {commandPaletteOpen && <CommandPalette />}
       {terminalDrawerOpen && <TerminalDrawer />}
+      <AnimatePresence>{notificationCenterOpen && <NotificationCenter />}</AnimatePresence>
+      <ToastContainer />
     </div>
   )
 }

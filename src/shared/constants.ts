@@ -124,6 +124,36 @@ export const PERMISSION_MODES: { value: PermissionMode; label: string }[] = [
   { value: 'auto', label: 'Auto' }
 ]
 
+// ─── Attention Type Display ───────────────────────────────────
+
+import type { AttentionType, NotificationPreferences } from './types'
+
+export const ATTENTION_TYPE_COLORS: Record<AttentionType, string> = {
+  error: 'bg-red-500',
+  completed: 'bg-emerald-500',
+  decision: 'bg-amber-500',
+  stuck: 'bg-orange-500',
+  review: 'bg-blue-500',
+}
+
+export const ATTENTION_TYPE_LABELS: Record<AttentionType, string> = {
+  completed: 'Completed',
+  decision: 'Decision Required',
+  error: 'Error',
+  stuck: 'Stuck',
+  review: 'Review Ready',
+}
+
+// ─── Default Notification Preferences ─────────────────────────
+
+export const DEFAULT_NOTIFICATION_PREFERENCES: NotificationPreferences = {
+  completed: { osNotification: true, inAppToast: true },
+  decision:  { osNotification: true, inAppToast: true },
+  error:     { osNotification: true, inAppToast: true },
+  stuck:     { osNotification: true, inAppToast: true },
+  review:    { osNotification: true, inAppToast: true },
+}
+
 // Estimated cost per token (rough averages)
 export const COST_PER_INPUT_TOKEN = 0.000003
 export const COST_PER_OUTPUT_TOKEN = 0.000015

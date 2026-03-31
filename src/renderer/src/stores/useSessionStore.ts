@@ -13,7 +13,12 @@ interface SessionState {
   selectSession: (sessionId: string | null) => void
   addAttentionItem: (item: AttentionItem) => void
   dismissAttentionItem: (itemId: string) => void
+  markItemRead: (itemId: string) => void
+  markAllRead: () => void
+  clearAllNotifications: () => void
 }
+
+const MAX_ATTENTION_ITEMS = 200
 
 export const useSessionStore = create<SessionState>((set) => ({
   sessions: {},
@@ -29,14 +34,15 @@ export const useSessionStore = create<SessionState>((set) => ({
   updateSession: (session) => {
     set(state => {
       // Auto-dismiss stale attention items when session no longer needs attention
-      // (user responded via terminal, session went back to active, etc.)
-      const attentionItems = !session.needsAttention
-        ? state.attentionItems.map(item =>
-            item.sessionId === session.id && !item.dismissed
-              ? { ...item, dismissed: true }
-              : item
-          )
-        : state.attentionItems
+      // Only map if there are actually items to dismiss (avoid no-op re-renders)
+      let attentionItems = state.attentionItems
+      if (!session.needsAttention && attentionItems.some(i => i.sessionId === session.id && !i.dismissed)) {
+        attentionItems = attentionItems.map(item =>
+          item.sessionId === session.id && !item.dismissed
+            ? { ...item, dismissed: true }
+            : item
+        )
+      }
 
       return {
         sessions: { ...state.sessions, [session.id]: session },
@@ -50,6 +56,8 @@ export const useSessionStore = create<SessionState>((set) => ({
       const { [sessionId]: _, ...rest } = state.sessions
       return {
         sessions: rest,
+        // Prune attention items for the removed session
+        attentionItems: state.attentionItems.filter(i => i.sessionId !== sessionId),
         selectedSessionId:
           state.selectedSessionId === sessionId ? null : state.selectedSessionId
       }
@@ -69,14 +77,38 @@ export const useSessionStore = create<SessionState>((set) => ({
             ? { ...existing, dismissed: true }
             : existing
         )
-      ]
+      ].slice(0, MAX_ATTENTION_ITEMS)
     }))
   },
 
   dismissAttentionItem: (itemId) => {
     set(state => ({
       attentionItems: state.attentionItems.map(item =>
-        item.id === itemId ? { ...item, dismissed: true } : item
+        item.id === itemId && !item.dismissed ? { ...item, dismissed: true } : item
+      )
+    }))
+  },
+
+  markItemRead: (itemId) => {
+    set(state => ({
+      attentionItems: state.attentionItems.map(item =>
+        item.id === itemId && !item.read ? { ...item, read: true } : item
+      )
+    }))
+  },
+
+  markAllRead: () => {
+    set(state => ({
+      attentionItems: state.attentionItems.map(item =>
+        item.read ? item : { ...item, read: true }
+      )
+    }))
+  },
+
+  clearAllNotifications: () => {
+    set(state => ({
+      attentionItems: state.attentionItems.map(item =>
+        item.dismissed ? item : { ...item, dismissed: true }
       )
     }))
   }

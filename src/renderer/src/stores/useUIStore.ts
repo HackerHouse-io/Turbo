@@ -69,6 +69,12 @@ interface UIState {
   openShortcutsOverlay: () => void
   closeShortcutsOverlay: () => void
   toggleShortcutsOverlay: () => void
+
+  // Notification center
+  notificationCenterOpen: boolean
+  openNotificationCenter: () => void
+  closeNotificationCenter: () => void
+  toggleNotificationCenter: () => void
 }
 
 export const useUIStore = create<UIState>((set) => ({
@@ -152,5 +158,10 @@ export const useUIStore = create<UIState>((set) => ({
   shortcutsOverlayOpen: false,
   openShortcutsOverlay: () => set({ shortcutsOverlayOpen: true }),
   closeShortcutsOverlay: () => set({ shortcutsOverlayOpen: false }),
-  toggleShortcutsOverlay: () => set(s => ({ shortcutsOverlayOpen: !s.shortcutsOverlayOpen }))
+  toggleShortcutsOverlay: () => set(s => ({ shortcutsOverlayOpen: !s.shortcutsOverlayOpen })),
+
+  notificationCenterOpen: false,
+  openNotificationCenter: () => set({ notificationCenterOpen: true }),
+  closeNotificationCenter: () => set({ notificationCenterOpen: false }),
+  toggleNotificationCenter: () => set(s => ({ notificationCenterOpen: !s.notificationCenterOpen }))
 }))

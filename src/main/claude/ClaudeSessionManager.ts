@@ -121,7 +121,8 @@ export class ClaudeSessionManager extends EventEmitter {
         title: s.name,
         message,
         timestamp: Date.now(),
-        dismissed: false
+        dismissed: false,
+        read: false
       }
       this.emit('attention-needed', item)
     }

@@ -1,6 +1,6 @@
 import { Notification, BrowserWindow } from 'electron'
-import { IPC } from '../shared/constants'
-import type { AttentionItem } from '../shared/types'
+import { IPC, DEFAULT_NOTIFICATION_PREFERENCES } from '../shared/constants'
+import type { AttentionItem, NotificationPreferences } from '../shared/types'
 import type { SettingsManager } from './SettingsManager'
 
 export class NotificationManager {
@@ -20,8 +20,14 @@ export class NotificationManager {
     if (this.mainWindow.isFocused()) return
     if (this.settings.get('notificationsEnabled') === false) return
 
+    // Check per-type OS notification preference
+    const prefs = (this.settings.get('notificationPreferences') as NotificationPreferences | undefined)
+      ?? DEFAULT_NOTIFICATION_PREFERENCES
+    if (!prefs[item.type]?.osNotification) return
+
     const { title, body } = this.formatNotification(item)
-    const notification = new Notification({ title, body, silent: false })
+    const soundEnabled = this.settings.get('notificationSound') ?? true
+    const notification = new Notification({ title, body, silent: !soundEnabled })
 
     notification.on('click', () => {
       if (this.mainWindow && !this.mainWindow.isDestroyed()) {

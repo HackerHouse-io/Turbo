@@ -9,7 +9,9 @@ import { SectionGit } from './sections/SectionGit'
 import { SectionProjects } from './sections/SectionProjects'
 import { SectionAbout } from './sections/SectionAbout'
 import { SectionKeybindings } from './sections/SectionKeybindings'
-import type { ClaudeModelInfo, EffortLevel, PermissionMode, GitQuickActionOverride } from '../../../../shared/types'
+import { useNotificationStore } from '../../stores/useNotificationStore'
+import { DEFAULT_NOTIFICATION_PREFERENCES } from '../../../../shared/constants'
+import type { ClaudeModelInfo, EffortLevel, PermissionMode, GitQuickActionOverride, NotificationPreferences } from '../../../../shared/types'
 
 export function SettingsOverlay() {
   const closeSettings = useUIStore(s => s.closeSettings)
@@ -21,6 +23,8 @@ export function SettingsOverlay() {
   const [defaultEffort, setDefaultEffort] = useState<EffortLevel>('medium')
   const [defaultPermissionMode, setDefaultPermissionMode] = useState<PermissionMode>('default')
   const [notificationsEnabled, setNotificationsEnabled] = useState(true)
+  const [notificationSound, setNotificationSound] = useState(true)
+  const [notificationPreferences, setNotificationPreferences] = useState<NotificationPreferences>(DEFAULT_NOTIFICATION_PREFERENCES)
   const [projectsDir, setProjectsDir] = useState('')
   const [dataDir, setDataDir] = useState('')
   const [gitOverrides, setGitOverrides] = useState<Record<string, string>>({})
@@ -32,16 +36,20 @@ export function SettingsOverlay() {
       window.api.getSetting('defaultEffort'),
       window.api.getSetting('defaultPermissionMode'),
       window.api.getSetting('notificationsEnabled'),
+      window.api.getSetting('notificationSound'),
+      window.api.getSetting('notificationPreferences'),
       window.api.getSetting('defaultProjectsDir'),
       window.api.getAppPath('userData'),
       window.api.detectModels(),
       window.api.getSetting('gitQuickActionOverrides'),
       window.api.getSetting('gitCustomActions')
-    ]).then(([model, effort, perm, notif, dir, userData, detectedModels, gitOvr, gitCust]) => {
+    ]).then(([model, effort, perm, notif, sound, notifPrefs, dir, userData, detectedModels, gitOvr, gitCust]) => {
       if (model) setDefaultModel(model as string)
       if (effort) setDefaultEffort(effort as EffortLevel)
       if (perm) setDefaultPermissionMode(perm as PermissionMode)
       if (notif != null) setNotificationsEnabled(notif as boolean)
+      if (sound != null) setNotificationSound(sound as boolean)
+      if (notifPrefs) setNotificationPreferences(notifPrefs as NotificationPreferences)
       if (dir) setProjectsDir(dir as string)
       setDataDir(userData as string)
       setModels(detectedModels as ClaudeModelInfo[])
@@ -81,7 +89,17 @@ export function SettingsOverlay() {
         return (
           <SectionNotifications
             notificationsEnabled={notificationsEnabled}
-            onToggle={v => { setNotificationsEnabled(v); save('notificationsEnabled', v) }}
+            notificationSound={notificationSound}
+            notificationPreferences={notificationPreferences}
+            onToggle={v => {
+              setNotificationsEnabled(v); save('notificationsEnabled', v)
+              useNotificationStore.getState().setMasterEnabled(v)
+            }}
+            onSoundToggle={v => { setNotificationSound(v); save('notificationSound', v) }}
+            onPreferencesChange={v => {
+              setNotificationPreferences(v); save('notificationPreferences', v)
+              useNotificationStore.getState().setPreferences(v)
+            }}
           />
         )
       case 'quickActions':

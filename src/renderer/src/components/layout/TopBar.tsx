@@ -13,8 +13,9 @@ export function TopBar() {
   const openSettings = useUIStore(s => s.openSettings)
   const projectSelectorOpen = useUIStore(s => s.projectSelectorOpen)
   const toggleProjectSelector = useUIStore(s => s.toggleProjectSelector)
+  const toggleNotificationCenter = useUIStore(s => s.toggleNotificationCenter)
   const rawItems = useSessionStore(s => s.attentionItems)
-  const attentionItems = useMemo(() => rawItems.filter(i => !i.dismissed), [rawItems])
+  const unreadCount = useMemo(() => rawItems.filter(i => !i.dismissed && !i.read).length, [rawItems])
 
   const projects = useProjectStore(s => s.projects)
   const selectedProjectId = useProjectStore(s => s.selectedProjectId)
@@ -134,24 +135,19 @@ export function TopBar() {
           </span>
         )}
 
-        {/* Attention Queue Badge */}
-        {attentionItems.length > 0 && (
-          <button
-            className="relative btn-ghost flex items-center gap-1.5"
-            onClick={() => {
-              if (attentionItems.length > 0) {
-                useSessionStore.getState().selectSession(attentionItems[0].sessionId)
-                useUIStore.getState().setViewMode('detail')
-              }
-            }}
-          >
-            <BellIcon />
+        {/* Notification Center Bell */}
+        <button
+          className="relative btn-ghost flex items-center gap-1.5"
+          onClick={toggleNotificationCenter}
+        >
+          <BellIcon />
+          {unreadCount > 0 && (
             <span className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-turbo-warning
                            text-[10px] font-bold text-black flex items-center justify-center">
-              {attentionItems.length}
+              {unreadCount}
             </span>
-          </button>
-        )}
+          )}
+        </button>
       </div>
     </div>
   )
