@@ -27,7 +27,7 @@
 ## Phase 4: Interactive Views
 - [x] Interactive PLAN.md viewer with inline editing
 - [ ] Session timeline / Gantt view
-- [ ] Multi-project dashboard overview
+- [x] Multi-project dashboard overview
 - [x] Settings screen
 
 ## Phase 5: Collaboration & Polish

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import type { GitBranchInfo, GitCommitEntry } from '../../../shared/types'
+import { parsePorcelainStatus } from '../lib/gitParsers'
 
 interface NerveCenterData {
   git: GitBranchInfo | null
@@ -7,22 +8,6 @@ interface NerveCenterData {
   loading: boolean
   error: string | null
   refresh: () => void
-}
-
-function parsePorcelainStatus(raw: string): { dirty: number; staged: number } {
-  let dirty = 0
-  let staged = 0
-  for (const line of raw.split('\n')) {
-    if (line.length < 2) continue
-    const index = line[0]
-    const worktree = line[1]
-    // Staged: index column has a letter (not space or ?)
-    if (index !== ' ' && index !== '?') staged++
-    // Dirty: worktree column has a letter, or untracked (??)
-    if (worktree !== ' ' && worktree !== '?') dirty++
-    if (line.startsWith('??')) dirty++
-  }
-  return { dirty, staged }
 }
 
 function parseCommits(raw: string): GitCommitEntry[] {

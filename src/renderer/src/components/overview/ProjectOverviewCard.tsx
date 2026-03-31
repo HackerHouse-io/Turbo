@@ -1,7 +1,9 @@
+import React from 'react'
 import { motion } from 'framer-motion'
 import { timeAgo, formatCost } from '../../lib/format'
 import { PaletteIcon } from '../command-palette/PaletteIcon'
 import type { Project, AgentSession } from '../../../../shared/types/index'
+import type { ProjectOverviewData } from '../../hooks/useOverviewData'
 
 export interface ProjectStats {
   active: number
@@ -14,16 +16,16 @@ export interface ProjectStats {
 interface ProjectOverviewCardProps {
   project: Project
   stats: ProjectStats
-  gitBranch: string | null
   latestSession: AgentSession | null
+  overviewData: ProjectOverviewData | undefined
   onSelect: () => void
 }
 
-export function ProjectOverviewCard({
+export const ProjectOverviewCard = React.memo(function ProjectOverviewCard({
   project,
   stats,
-  gitBranch,
   latestSession,
+  overviewData,
   onSelect
 }: ProjectOverviewCardProps) {
   const hasActive = stats.active > 0
@@ -31,13 +33,29 @@ export function ProjectOverviewCard({
   const allDone = !hasActive && !hasWaiting && stats.completed > 0
   const isIdle = stats.active === 0 && stats.waiting === 0 && stats.completed === 0
 
-  const borderClass = hasActive
-    ? 'border-turbo-accent/50'
-    : hasWaiting
-      ? 'border-turbo-warning/50'
-      : allDone
-        ? 'border-turbo-success/40'
-        : ''
+  const attentionCount = overviewData?.attentionCount ?? 0
+  const errorCount = overviewData?.errorCount ?? 0
+  const git = overviewData?.git ?? null
+  const plan = overviewData?.plan ?? null
+  const activePlaybook = overviewData?.activePlaybook ?? null
+
+  const borderClass = attentionCount > 0
+    ? 'border-turbo-error/50'
+    : hasActive
+      ? 'border-turbo-accent/50'
+      : hasWaiting
+        ? 'border-turbo-warning/50'
+        : allDone
+          ? 'border-turbo-success/40'
+          : ''
+
+  // Plan progress ring calculations
+  const planProgress = plan && plan.totalTasks > 0
+    ? plan.completedTasks / plan.totalTasks
+    : null
+  const radius = 8
+  const circumference = 2 * Math.PI * radius
+  const strokeDashoffset = planProgress !== null ? circumference * (1 - planProgress) : circumference
 
   return (
     <motion.div
@@ -55,7 +73,7 @@ export function ProjectOverviewCard({
                         animate-shimmer bg-[length:200%_100%] pointer-events-none" />
       )}
 
-      {/* Header: project name + status dot */}
+      {/* Header: project name + status dot + attention badge */}
       <div className="flex items-center justify-between gap-2 mb-2 relative">
         <div className="flex items-center gap-2 min-w-0 flex-1">
           <div
@@ -63,6 +81,12 @@ export function ProjectOverviewCard({
             style={{ backgroundColor: project.color }}
           />
           <h3 className="text-sm font-medium text-turbo-text truncate">{project.name}</h3>
+          {attentionCount > 0 && (
+            <span className="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 text-[10px]
+                             font-bold rounded-full bg-turbo-error text-white flex-shrink-0">
+              {attentionCount}
+            </span>
+          )}
         </div>
         {!isIdle && (
           <div className={`w-2 h-2 rounded-full flex-shrink-0 ${
@@ -73,11 +97,51 @@ export function ProjectOverviewCard({
         )}
       </div>
 
-      {/* Git branch */}
-      {gitBranch && (
+      {/* Git branch + dirty/staged */}
+      {git?.branch && (
         <div className="flex items-center gap-1.5 mb-3 relative">
           <PaletteIcon icon="git-branch" className="w-3 h-3 text-turbo-text-muted flex-shrink-0" />
-          <span className="text-xs text-turbo-text-muted truncate">{gitBranch}</span>
+          <span className="text-xs text-turbo-text-muted truncate">{git.branch}</span>
+          {git && git.dirty > 0 && (
+            <span className="inline-flex items-center gap-0.5 text-[10px] text-turbo-text-muted flex-shrink-0">
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+              {git.dirty}
+            </span>
+          )}
+          {git && git.staged > 0 && (
+            <span className="inline-flex items-center gap-0.5 text-[10px] text-turbo-text-muted flex-shrink-0">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+              {git.staged}
+            </span>
+          )}
+        </div>
+      )}
+
+      {/* Plan progress row */}
+      {planProgress !== null && plan && (
+        <div className="flex items-center gap-2 mb-3 relative">
+          <svg width="20" height="20" viewBox="0 0 20 20" className="-rotate-90 flex-shrink-0">
+            <circle
+              cx="10" cy="10" r={radius}
+              stroke="currentColor"
+              strokeWidth="2"
+              fill="none"
+              className="text-turbo-border"
+            />
+            <circle
+              cx="10" cy="10" r={radius}
+              stroke="currentColor"
+              strokeWidth="2"
+              fill="none"
+              strokeLinecap="round"
+              strokeDasharray={circumference}
+              strokeDashoffset={strokeDashoffset}
+              className="text-turbo-accent transition-all duration-500"
+            />
+          </svg>
+          <span className="text-xs text-turbo-text-muted">
+            {plan.completedTasks}/{plan.totalTasks} tasks
+          </span>
         </div>
       )}
 
@@ -87,8 +151,22 @@ export function ProjectOverviewCard({
           <StatLabel label="Active" value={stats.active} dot="bg-turbo-accent" />
           <StatLabel label="Waiting" value={stats.waiting} dot="bg-turbo-warning" />
           <StatLabel label="Done" value={stats.completed} dot="bg-turbo-success" />
+          {errorCount > 0 && (
+            <StatLabel label="Error" value={errorCount} dot="bg-turbo-error" />
+          )}
         </div>
       </div>
+
+      {/* Active playbook */}
+      {activePlaybook && (
+        <div className="flex items-center gap-1.5 mb-3 relative">
+          <PaletteIcon icon="playbook" className="w-3 h-3 text-turbo-accent flex-shrink-0" />
+          <span className="text-xs text-turbo-text-dim truncate">{activePlaybook.name}</span>
+          <span className="text-[10px] text-turbo-text-muted flex-shrink-0">
+            {activePlaybook.currentStep}/{activePlaybook.totalSteps}
+          </span>
+        </div>
+      )}
 
       {/* Latest session */}
       {latestSession ? (
@@ -115,7 +193,7 @@ export function ProjectOverviewCard({
       )}
     </motion.div>
   )
-}
+})
 
 function StatLabel({ label, value, dot }: { label: string; value: number; dot: string }) {
   return (
