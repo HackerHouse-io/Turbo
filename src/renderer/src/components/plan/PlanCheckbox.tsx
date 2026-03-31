@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion'
 import { EditableText } from './EditableText'
+import { TaskPlaybookPicker } from './TaskPlaybookPicker'
 
 interface PlanCheckboxProps {
   content: string
@@ -8,6 +9,9 @@ interface PlanCheckboxProps {
   onToggle: () => void
   onEdit: (newContent: string) => void
   onDelete: () => void
+  onStartTask?: (playbookId: string) => Promise<void>
+  defaultPlaybookId?: string | null
+  onSetDefaultPlaybook?: (playbookId: string) => void
 }
 
 export function PlanCheckbox({
@@ -16,7 +20,10 @@ export function PlanCheckbox({
   level,
   onToggle,
   onEdit,
-  onDelete
+  onDelete,
+  onStartTask,
+  defaultPlaybookId,
+  onSetDefaultPlaybook
 }: PlanCheckboxProps) {
   return (
     <motion.div
@@ -67,6 +74,17 @@ export function PlanCheckbox({
           placeholder="Task description..."
         />
       </span>
+
+      {/* Playbook picker — only for unchecked tasks */}
+      {onStartTask && !checked && (
+        <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+          <TaskPlaybookPicker
+            onSelect={(playbookId) => onStartTask(playbookId)}
+            defaultPlaybookId={defaultPlaybookId ?? null}
+            onSetDefault={onSetDefaultPlaybook ?? (() => {})}
+          />
+        </div>
+      )}
     </motion.div>
   )
 }

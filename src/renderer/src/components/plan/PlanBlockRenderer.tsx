@@ -10,6 +10,9 @@ interface PlanBlockRendererProps {
   onEditLine: (lineIndex: number, content: string) => void
   onDeleteLine: (lineIndex: number) => void
   onUpdateBlock: (lineIndex: number, lineCount: number, newContent: string) => void
+  onStartTask?: (content: string, playbookId: string) => Promise<void>
+  defaultPlaybookId?: string | null
+  onSetDefaultPlaybook?: (playbookId: string) => void
 }
 
 export function PlanBlockRenderer({
@@ -17,7 +20,10 @@ export function PlanBlockRenderer({
   onToggleCheckbox,
   onEditLine,
   onDeleteLine,
-  onUpdateBlock
+  onUpdateBlock,
+  onStartTask,
+  defaultPlaybookId,
+  onSetDefaultPlaybook
 }: PlanBlockRendererProps) {
   switch (block.type) {
     case 'checkbox':
@@ -29,6 +35,12 @@ export function PlanBlockRenderer({
           onToggle={() => onToggleCheckbox(block.lineIndex)}
           onEdit={(val) => onEditLine(block.lineIndex, val)}
           onDelete={() => onDeleteLine(block.lineIndex)}
+          onStartTask={onStartTask && !block.checked
+            ? (playbookId: string) => onStartTask!(block.content, playbookId)
+            : undefined
+          }
+          defaultPlaybookId={defaultPlaybookId}
+          onSetDefaultPlaybook={onSetDefaultPlaybook}
         />
       )
 

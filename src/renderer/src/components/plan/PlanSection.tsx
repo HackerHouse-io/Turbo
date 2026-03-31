@@ -12,6 +12,9 @@ interface PlanSectionProps {
   onDeleteLine: (lineIndex: number) => void
   onInsertLine: (afterLineIndex: number, content: string) => void
   onUpdateBlock: (lineIndex: number, lineCount: number, newContent: string) => void
+  onStartTask?: (content: string, playbookId: string) => Promise<void>
+  defaultPlaybookId?: string | null
+  onSetDefaultPlaybook?: (playbookId: string) => void
 }
 
 export function PlanSection({
@@ -21,7 +24,10 @@ export function PlanSection({
   onEditLine,
   onDeleteLine,
   onInsertLine,
-  onUpdateBlock
+  onUpdateBlock,
+  onStartTask,
+  defaultPlaybookId,
+  onSetDefaultPlaybook
 }: PlanSectionProps) {
   const [collapsed, setCollapsed] = useState(false)
   const { heading, blocks, totalTasks, completedTasks } = section
@@ -111,6 +117,9 @@ export function PlanSection({
                     onEditLine={onEditLine}
                     onDeleteLine={onDeleteLine}
                     onUpdateBlock={onUpdateBlock}
+                    onStartTask={onStartTask}
+                    defaultPlaybookId={defaultPlaybookId}
+                    onSetDefaultPlaybook={onSetDefaultPlaybook}
                   />
                 ))}
               </AnimatePresence>

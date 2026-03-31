@@ -290,12 +290,43 @@ export interface PlaybookExecution {
   startedAt: number
   completedAt?: number
   variables: Record<string, string>
+  worktreePath?: string
+  worktreeSourceProject?: string
 }
 
 export interface StartPlaybookPayload {
   playbookId: string
   projectPath: string
   variables: Record<string, string>
+  startFromStep?: number
+  worktreePath?: string
+  worktreeSourceProject?: string
+}
+
+// ─── Worktree ────────────────────────────────────────────────
+
+export interface WorktreeInfo {
+  path: string
+  branch: string
+  slug: string
+  projectPath: string
+}
+
+export interface RebaseResult {
+  success: boolean
+  conflicted: boolean
+  message: string
+}
+
+export interface PRResult {
+  success: boolean
+  url?: string
+  message: string
+}
+
+export interface CreateWorktreePayload {
+  projectPath: string
+  slug: string
 }
 
 // ─── Plan ─────────────────────────────────────────────────────

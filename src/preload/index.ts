@@ -26,7 +26,11 @@ import type {
   PlanSavePayload,
   PlanSaveResult,
   PlainTerminal,
-  CreatePlainTerminalPayload
+  CreatePlainTerminalPayload,
+  WorktreeInfo,
+  RebaseResult,
+  PRResult,
+  CreateWorktreePayload
 } from '../shared/types'
 
 /**
@@ -252,6 +256,23 @@ const api = {
     ipcRenderer.on(IPC.PLAIN_TERMINAL_REMOVED, handler)
     return () => ipcRenderer.removeListener(IPC.PLAIN_TERMINAL_REMOVED, handler)
   },
+
+  // ─── Worktree ────────────────────────────────────────────
+
+  createWorktree: (payload: CreateWorktreePayload): Promise<WorktreeInfo> =>
+    ipcRenderer.invoke(IPC.WORKTREE_CREATE, payload),
+
+  listWorktrees: (projectPath: string): Promise<WorktreeInfo[]> =>
+    ipcRenderer.invoke(IPC.WORKTREE_LIST, projectPath),
+
+  rebaseWorktree: (worktreePath: string): Promise<RebaseResult> =>
+    ipcRenderer.invoke(IPC.WORKTREE_REBASE, worktreePath),
+
+  createWorktreePR: (worktreePath: string, title: string, body: string): Promise<PRResult> =>
+    ipcRenderer.invoke(IPC.WORKTREE_CREATE_PR, worktreePath, title, body),
+
+  removeWorktree: (worktreePath: string, deleteBranch?: boolean): Promise<void> =>
+    ipcRenderer.invoke(IPC.WORKTREE_REMOVE, worktreePath, deleteBranch),
 
   // ─── Event Subscriptions ──────────────────────────────────
 

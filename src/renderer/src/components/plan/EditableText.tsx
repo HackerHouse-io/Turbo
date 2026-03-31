@@ -103,7 +103,7 @@ export function EditableText({
           className="ml-2 opacity-0 group-hover/editable:opacity-60 hover:!opacity-100 text-red-400 transition-opacity text-xs"
           title="Delete"
         >
-          &#x1f5d1;
+          &#x00d7;
         </button>
       )}
     </span>

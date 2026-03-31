@@ -61,7 +61,7 @@ const BUILT_IN_PLAYBOOKS: Omit<Playbook, 'id' | 'variables'>[] = [
     ]
   },
   {
-    name: 'Feature Build',
+    name: 'Build Feature',
     description: 'Branch, plan, implement, review, test — then commit',
     icon: 'bolt',
     builtIn: true,

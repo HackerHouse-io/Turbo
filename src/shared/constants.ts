@@ -102,6 +102,13 @@ export const IPC = {
   PLAIN_TERMINAL_CREATED: 'plain-terminal:created',
   PLAIN_TERMINAL_REMOVED: 'plain-terminal:removed',
 
+  // Worktree
+  WORKTREE_CREATE: 'worktree:create',
+  WORKTREE_LIST: 'worktree:list',
+  WORKTREE_REBASE: 'worktree:rebase',
+  WORKTREE_CREATE_PR: 'worktree:create-pr',
+  WORKTREE_REMOVE: 'worktree:remove',
+
   // Notifications
   NOTIFICATION_CLICK: 'notification:click'
 } as const

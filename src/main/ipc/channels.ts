@@ -17,7 +17,8 @@ import type {
   Playbook,
   PlanSavePayload,
   CreatePlainTerminalPayload,
-  PlainTerminal
+  PlainTerminal,
+  CreateWorktreePayload
 } from '../../shared/types'
 import { IPC } from '../../shared/constants'
 import { ClaudeSessionManager } from '../claude/ClaudeSessionManager'
@@ -31,6 +32,7 @@ import { PlaybookManager } from '../playbooks/PlaybookManager'
 import { PlaybookExecutor } from '../playbooks/PlaybookExecutor'
 import { PlanFileManager } from '../plan/PlanFileManager'
 import { PlainTerminalManager } from '../terminal/PlainTerminalManager'
+import { WorktreeManager } from '../git/WorktreeManager'
 import { detectModels } from '../claude/ClaudeModelDetector'
 import { detectRunCommand, detectRunCommandWithClaude } from '../run/detectRunCommand'
 
@@ -46,6 +48,7 @@ interface IpcHandlerOptions {
   playbookExecutor: PlaybookExecutor
   planFileManager: PlanFileManager
   plainTerminalManager: PlainTerminalManager
+  worktreeManager: WorktreeManager
   getMainWindow: () => BrowserWindow | null
 }
 
@@ -65,6 +68,7 @@ export function registerIpcHandlers(opts: IpcHandlerOptions): void {
     playbookExecutor,
     planFileManager,
     plainTerminalManager,
+    worktreeManager,
     getMainWindow
   } = opts
 
@@ -376,6 +380,28 @@ export function registerIpcHandlers(opts: IpcHandlerOptions): void {
 
   ipcMain.on(IPC.PLAIN_TERMINAL_RESIZE, (_e, payload: { terminalId: string; cols: number; rows: number }) => {
     plainTerminalManager.resize(payload.terminalId, payload.cols, payload.rows)
+  })
+
+  // ─── Worktree ─────────────────────────────────────────────
+
+  ipcMain.handle(IPC.WORKTREE_CREATE, async (_e, payload: CreateWorktreePayload) => {
+    return worktreeManager.createWorktree(payload.projectPath, payload.slug)
+  })
+
+  ipcMain.handle(IPC.WORKTREE_LIST, async (_e, projectPath: string) => {
+    return worktreeManager.listWorktrees(projectPath)
+  })
+
+  ipcMain.handle(IPC.WORKTREE_REBASE, async (_e, worktreePath: string) => {
+    return worktreeManager.rebaseOntoMain(worktreePath)
+  })
+
+  ipcMain.handle(IPC.WORKTREE_CREATE_PR, async (_e, worktreePath: string, title: string, body: string) => {
+    return worktreeManager.createPR(worktreePath, title, body)
+  })
+
+  ipcMain.handle(IPC.WORKTREE_REMOVE, async (_e, worktreePath: string, deleteBranch?: boolean) => {
+    return worktreeManager.removeWorktree(worktreePath, deleteBranch)
   })
 
   // ─── Forward events to renderer ────────────────────────────

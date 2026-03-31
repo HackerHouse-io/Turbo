@@ -39,6 +39,12 @@ function PlaybookBannerCard({ execution }: { execution: PlaybookExecution }) {
   const [committed, setCommitted] = useState(false)
   const [pushed, setPushed] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [prCreated, setPrCreated] = useState(false)
+  const [prUrl, setPrUrl] = useState<string | null>(null)
+  const [merged, setMerged] = useState(false)
+  const [rebaseError, setRebaseError] = useState<string | null>(null)
+
+  const isWorktree = !!execution.worktreePath
 
   const completedCount = execution.steps.filter(s => s.status === 'completed').length
   const totalSteps = execution.steps.length
@@ -76,6 +82,81 @@ function PlaybookBannerCard({ execution }: { execution: PlaybookExecution }) {
       setLoading(false)
     }
   }, [execution.projectPath])
+
+  // Shared helper: commit changes and rebase onto main. Returns false if either step fails.
+  const commitAndRebase = useCallback(async (): Promise<boolean> => {
+    if (!execution.worktreePath || !commitMessage) return false
+    setRebaseError(null)
+
+    const commitResult = await window.api.gitCommit({ projectPath: execution.projectPath, message: commitMessage })
+    if (!commitResult.success) return false
+    setCommitted(true)
+
+    const rebaseResult = await window.api.rebaseWorktree(execution.worktreePath)
+    if (!rebaseResult.success) {
+      setRebaseError(rebaseResult.message)
+      return false
+    }
+    return true
+  }, [execution.worktreePath, execution.projectPath, commitMessage])
+
+  // Worktree: Create PR (commit + rebase + push + gh pr create)
+  const handleCreatePR = useCallback(async () => {
+    if (!execution.worktreePath) return
+    setLoading(true)
+    try {
+      if (!await commitAndRebase()) return
+
+      const prResult = await window.api.createWorktreePR(
+        execution.worktreePath,
+        commitMessage!.split('\n')[0],
+        `## Summary\n\nAutomated PR from Turbo playbook.\n\n${commitMessage}`
+      )
+      if (prResult.success) {
+        setPrCreated(true)
+        setPrUrl(prResult.url ?? null)
+      }
+    } finally {
+      setLoading(false)
+    }
+  }, [execution.worktreePath, commitMessage, commitAndRebase])
+
+  // Worktree: Merge locally (commit + rebase + merge into source)
+  const handleMergeLocal = useCallback(async () => {
+    if (!execution.worktreePath) return
+    setLoading(true)
+    try {
+      if (!await commitAndRebase()) return
+
+      if (execution.worktreeSourceProject) {
+        const branchResult = await window.api.gitExec({
+          projectPath: execution.worktreePath,
+          commands: ['git rev-parse --abbrev-ref HEAD']
+        })
+        if (branchResult.success) {
+          const branch = branchResult.steps[0]?.stdout?.trim()
+          if (branch) {
+            await window.api.gitExec({
+              projectPath: execution.worktreeSourceProject,
+              commands: [`git merge ${branch}`]
+            })
+          }
+        }
+      }
+
+      setMerged(true)
+    } finally {
+      setLoading(false)
+    }
+  }, [execution.worktreePath, execution.worktreeSourceProject, commitAndRebase])
+
+  // Worktree: Keep branch (commit to preserve work, then dismiss)
+  const handleKeepBranch = useCallback(async () => {
+    if (commitMessage && !committed) {
+      await window.api.gitCommit({ projectPath: execution.projectPath, message: commitMessage })
+    }
+    await window.api.dismissPlaybook(execution.id)
+  }, [execution.id, execution.projectPath, commitMessage, committed])
 
   const handleDismiss = useCallback(async () => {
     await window.api.dismissPlaybook(execution.id)
@@ -201,48 +282,105 @@ function PlaybookBannerCard({ execution }: { execution: PlaybookExecution }) {
             <svg className="w-3.5 h-3.5 text-turbo-success" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
-            <span className="text-xs font-medium text-turbo-success">Ready to commit</span>
+            <span className="text-xs font-medium text-turbo-success">
+              {isWorktree ? 'Ready to merge' : 'Ready to commit'}
+            </span>
           </div>
 
           <div className="space-y-2">
-            {!committed && commitMessage && (
+            {!committed && !prCreated && !merged && commitMessage && (
               <div className="text-xs text-turbo-text-dim bg-turbo-bg rounded px-2 py-1.5 border border-turbo-border">
                 {commitMessage}
               </div>
             )}
-            <div className="flex items-center gap-2">
-              {!committed ? (
-                <button
-                  onClick={handleCommit}
-                  disabled={!commitMessage || loading}
-                  className="h-7 text-[11px] px-3 rounded-md bg-turbo-accent text-white font-medium
-                             hover:bg-turbo-accent/90 transition-colors disabled:opacity-50"
-                >
-                  {loading ? 'Committing...' : 'Commit'}
-                </button>
-              ) : !pushed ? (
-                <>
-                  <span className="text-xs text-turbo-success">Committed</span>
+
+            {rebaseError && (
+              <div className="text-xs text-red-400 bg-red-500/10 rounded px-2 py-1.5 border border-red-500/20">
+                Rebase conflict: {rebaseError.slice(0, 200)}
+              </div>
+            )}
+
+            {isWorktree ? (
+              /* Worktree-aware merge prompt */
+              <div className="flex items-center gap-2">
+                {prCreated || merged ? (
+                  <>
+                    <span className="text-xs text-turbo-success">
+                      {prCreated ? 'PR created' : 'Merged to main'}
+                      {prUrl && <>{': '}<span className="font-mono text-turbo-accent">{prUrl}</span></>}
+                    </span>
+                    <button
+                      onClick={handleDismiss}
+                      className="h-7 text-[11px] px-3 rounded-md bg-turbo-surface border border-turbo-border
+                                 text-turbo-text-dim hover:bg-turbo-surface-hover transition-colors"
+                    >
+                      Done
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button
+                      onClick={handleCreatePR}
+                      disabled={!commitMessage || loading}
+                      className="h-7 text-[11px] px-3 rounded-md bg-turbo-accent text-white font-medium
+                                 hover:bg-turbo-accent/90 transition-colors disabled:opacity-50"
+                    >
+                      {loading ? 'Creating PR...' : 'Create PR'}
+                    </button>
+                    <button
+                      onClick={handleMergeLocal}
+                      disabled={!commitMessage || loading}
+                      className="h-7 text-[11px] px-3 rounded-md bg-turbo-surface border border-turbo-border
+                                 text-turbo-text-dim hover:bg-turbo-surface-hover transition-colors disabled:opacity-50"
+                    >
+                      Merge to main
+                    </button>
+                    <button
+                      onClick={handleKeepBranch}
+                      className="h-7 text-[11px] px-3 rounded-md bg-turbo-surface border border-turbo-border
+                                 text-turbo-text-dim hover:bg-turbo-surface-hover transition-colors"
+                    >
+                      Keep branch
+                    </button>
+                  </>
+                )}
+              </div>
+            ) : (
+              /* Standard (non-worktree) commit prompt */
+              <div className="flex items-center gap-2">
+                {!committed ? (
                   <button
-                    onClick={handlePush}
-                    disabled={loading}
+                    onClick={handleCommit}
+                    disabled={!commitMessage || loading}
                     className="h-7 text-[11px] px-3 rounded-md bg-turbo-accent text-white font-medium
                                hover:bg-turbo-accent/90 transition-colors disabled:opacity-50"
                   >
-                    {loading ? 'Pushing...' : 'Push'}
+                    {loading ? 'Committing...' : 'Commit'}
                   </button>
-                </>
-              ) : (
-                <span className="text-xs text-turbo-success">Pushed to remote</span>
-              )}
-              <button
-                onClick={handleDismiss}
-                className="h-7 text-[11px] px-3 rounded-md bg-turbo-surface border border-turbo-border
-                           text-turbo-text-dim hover:bg-turbo-surface-hover transition-colors"
-              >
-                Done
-              </button>
-            </div>
+                ) : !pushed ? (
+                  <>
+                    <span className="text-xs text-turbo-success">Committed</span>
+                    <button
+                      onClick={handlePush}
+                      disabled={loading}
+                      className="h-7 text-[11px] px-3 rounded-md bg-turbo-accent text-white font-medium
+                                 hover:bg-turbo-accent/90 transition-colors disabled:opacity-50"
+                    >
+                      {loading ? 'Pushing...' : 'Push'}
+                    </button>
+                  </>
+                ) : (
+                  <span className="text-xs text-turbo-success">Pushed to remote</span>
+                )}
+                <button
+                  onClick={handleDismiss}
+                  className="h-7 text-[11px] px-3 rounded-md bg-turbo-surface border border-turbo-border
+                             text-turbo-text-dim hover:bg-turbo-surface-hover transition-colors"
+                >
+                  Done
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}

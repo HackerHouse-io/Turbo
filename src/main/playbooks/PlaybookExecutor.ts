@@ -39,10 +39,12 @@ export class PlaybookExecutor extends EventEmitter {
     const playbook = this.playbookManager.getPlaybook(payload.playbookId)
     if (!playbook) throw new Error(`Playbook not found: ${payload.playbookId}`)
 
+    const startFrom = payload.startFromStep ?? 0
+
     const steps: PlaybookStepState[] = playbook.steps.map((step, index) => ({
       index,
       name: step.name,
-      status: 'pending'
+      status: index < startFrom ? 'skipped' : 'pending'
     }))
 
     const execution: PlaybookExecution = {
@@ -52,15 +54,17 @@ export class PlaybookExecutor extends EventEmitter {
       projectPath: payload.projectPath,
       status: 'running',
       steps,
-      currentStepIndex: 0,
+      currentStepIndex: startFrom,
       startedAt: Date.now(),
-      variables: payload.variables
+      variables: payload.variables,
+      worktreePath: payload.worktreePath,
+      worktreeSourceProject: payload.worktreeSourceProject
     }
 
     this.executions.set(execution.id, execution)
     this.emitUpdate(execution)
 
-    await this.runStep(execution.id, 0)
+    await this.runStep(execution.id, startFrom)
 
     return execution
   }

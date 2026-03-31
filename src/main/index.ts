@@ -11,6 +11,7 @@ import { PlaybookManager } from './playbooks/PlaybookManager'
 import { PlaybookExecutor } from './playbooks/PlaybookExecutor'
 import { PlanFileManager } from './plan/PlanFileManager'
 import { PlainTerminalManager } from './terminal/PlainTerminalManager'
+import { WorktreeManager } from './git/WorktreeManager'
 import { NotificationManager } from './NotificationManager'
 import { registerIpcHandlers } from './ipc/channels'
 
@@ -95,6 +96,7 @@ app.whenReady().then(() => {
   playbookExecutor = new PlaybookExecutor(sessionManager, playbookManager)
   planFileManager = new PlanFileManager()
   plainTerminalManager = new PlainTerminalManager()
+  const worktreeManager = new WorktreeManager()
 
   // Register IPC handlers
   registerIpcHandlers({
@@ -109,6 +111,7 @@ app.whenReady().then(() => {
     playbookExecutor,
     planFileManager,
     plainTerminalManager,
+    worktreeManager,
     getMainWindow: () => mainWindow
   })
 
