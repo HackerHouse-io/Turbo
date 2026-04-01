@@ -31,6 +31,12 @@ export const IPC = {
 
   // Dialog
   DIALOG_OPEN_FOLDER: 'dialog:open-folder',
+  DIALOG_OPEN_FILE: 'dialog:open-file',
+
+  // Attachments
+  ATTACHMENT_SAVE_CLIPBOARD_IMAGE: 'attachment:save-clipboard-image',
+  ATTACHMENT_GET_FILE_INFO: 'attachment:get-file-info',
+  ATTACHMENT_GET_THUMBNAIL: 'attachment:get-thumbnail',
 
   // Projects scanning
   PROJECTS_SCAN_DIR: 'projects:scan-dir',

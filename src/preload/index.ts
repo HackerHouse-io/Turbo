@@ -7,6 +7,7 @@ import type {
   AddProjectPayload,
   AgentSession,
   AttentionItem,
+  AttachmentInfo,
   Project,
   ScannedProject,
   PromptHistoryItem,
@@ -67,6 +68,20 @@ const api = {
 
   openFolderDialog: (): Promise<string | null> =>
     ipcRenderer.invoke(IPC.DIALOG_OPEN_FOLDER),
+
+  openFileDialog: (): Promise<string[] | null> =>
+    ipcRenderer.invoke(IPC.DIALOG_OPEN_FILE),
+
+  // ─── Attachments ─────────────────────────────────────────
+
+  getFileInfo: (filePaths: string[]): Promise<{ files: AttachmentInfo[]; errors: { path: string; error: string }[] }> =>
+    ipcRenderer.invoke(IPC.ATTACHMENT_GET_FILE_INFO, filePaths),
+
+  saveClipboardImage: (dataUrl: string, projectPath: string): Promise<AttachmentInfo> =>
+    ipcRenderer.invoke(IPC.ATTACHMENT_SAVE_CLIPBOARD_IMAGE, { dataUrl, projectPath }),
+
+  getThumbnail: (filePath: string): Promise<string | null> =>
+    ipcRenderer.invoke(IPC.ATTACHMENT_GET_THUMBNAIL, filePath),
 
   // ─── Project Management ───────────────────────────────────
 

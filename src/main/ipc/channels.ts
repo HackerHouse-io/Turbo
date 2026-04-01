@@ -1,6 +1,9 @@
-import { ipcMain, BrowserWindow, dialog, app } from 'electron'
+import { ipcMain, BrowserWindow, dialog, app, nativeImage } from 'electron'
 import { EventEmitter } from 'events'
-import { basename } from 'path'
+import { basename, extname, join } from 'path'
+import { stat, writeFile, mkdir } from 'fs/promises'
+import { tmpdir } from 'os'
+import { v4 as uuid } from 'uuid'
 import type {
   CreateSessionPayload,
   SessionInputPayload,
@@ -8,6 +11,7 @@ import type {
   AddProjectPayload,
   AgentSession,
   AttentionItem,
+  AttachmentInfo,
   GitIdentity,
   GitCommitPayload,
   GitExecPayload,
@@ -35,6 +39,22 @@ import { PlainTerminalManager } from '../terminal/PlainTerminalManager'
 import { WorktreeManager } from '../git/WorktreeManager'
 import { detectModels } from '../claude/ClaudeModelDetector'
 import { detectRunCommand, detectRunCommandWithClaude } from '../run/detectRunCommand'
+
+const MIME_MAP: Record<string, string> = {
+  '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg',
+  '.gif': 'image/gif', '.webp': 'image/webp', '.svg': 'image/svg+xml',
+  '.pdf': 'application/pdf', '.json': 'application/json',
+  '.ts': 'text/typescript', '.tsx': 'text/typescript',
+  '.js': 'text/javascript', '.jsx': 'text/javascript',
+  '.py': 'text/x-python', '.rs': 'text/x-rust', '.go': 'text/x-go',
+  '.md': 'text/markdown', '.txt': 'text/plain', '.html': 'text/html',
+  '.css': 'text/css', '.yaml': 'text/yaml', '.yml': 'text/yaml',
+  '.toml': 'text/toml', '.xml': 'text/xml', '.sh': 'text/x-shellscript',
+  '.java': 'text/x-java', '.c': 'text/x-c', '.cpp': 'text/x-c++',
+  '.h': 'text/x-c', '.rb': 'text/x-ruby', '.swift': 'text/x-swift',
+  '.kt': 'text/x-kotlin',
+}
+const IMAGE_EXTS = new Set(['.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg'])
 
 interface IpcHandlerOptions {
   sessionManager: ClaudeSessionManager
@@ -132,6 +152,90 @@ export function registerIpcHandlers(opts: IpcHandlerOptions): void {
     })
     if (result.canceled || result.filePaths.length === 0) return null
     return result.filePaths[0]
+  })
+
+  ipcMain.handle(IPC.DIALOG_OPEN_FILE, async () => {
+    const win = getMainWindow()
+    if (!win) return null
+    const result = await dialog.showOpenDialog(win, {
+      properties: ['openFile', 'multiSelections'],
+      filters: [
+        { name: 'All Files', extensions: ['*'] }
+      ]
+    })
+    if (result.canceled || result.filePaths.length === 0) return null
+    return result.filePaths
+  })
+
+  // ─── Attachments ────────────────────────────────────────────
+
+  ipcMain.handle(IPC.ATTACHMENT_GET_FILE_INFO, async (_e, filePaths: string[]) => {
+    const results = await Promise.all(filePaths.map(async (fp) => {
+      try {
+        const s = await stat(fp)
+        if (!s.isFile()) return { error: { path: fp, error: 'Not a file' } }
+        const ext = extname(fp).toLowerCase()
+        return {
+          file: {
+            id: uuid(),
+            filePath: fp,
+            fileName: basename(fp),
+            mimeType: MIME_MAP[ext] || 'application/octet-stream',
+            sizeBytes: s.size,
+            isImage: IMAGE_EXTS.has(ext)
+          } as AttachmentInfo
+        }
+      } catch (err: unknown) {
+        return { error: { path: fp, error: (err as Error).message } }
+      }
+    }))
+
+    const files = results.map(r => 'file' in r ? r.file : null).filter(Boolean) as AttachmentInfo[]
+    const errors = results.map(r => 'error' in r ? r.error : null).filter(Boolean) as { path: string; error: string }[]
+    return { files, errors }
+  })
+
+  ipcMain.handle(IPC.ATTACHMENT_SAVE_CLIPBOARD_IMAGE, async (_e, payload: { dataUrl: string; projectPath: string }): Promise<AttachmentInfo> => {
+    const match = payload.dataUrl.match(/^data:image\/([\w+.-]+);base64,(.+)$/)
+    if (!match) throw new Error('Invalid data URL')
+
+    const rawType = match[1]
+    const ext = rawType === 'jpeg' ? 'jpg' : rawType.replace(/\+.*$/, '')
+    const mimeType = `image/${rawType}`
+    const buffer = Buffer.from(match[2], 'base64')
+    const dir = join(tmpdir(), 'turbo-attachments')
+    await mkdir(dir, { recursive: true })
+
+    const fileName = `clipboard-${uuid().slice(0, 8)}.${ext}`
+    const filePath = join(dir, fileName)
+    await writeFile(filePath, buffer)
+
+    return {
+      id: uuid(),
+      filePath,
+      fileName,
+      mimeType,
+      sizeBytes: buffer.length,
+      isImage: true
+    }
+  })
+
+  const thumbnailCache = new Map<string, string | null>()
+
+  ipcMain.handle(IPC.ATTACHMENT_GET_THUMBNAIL, async (_e, filePath: string) => {
+    const cached = thumbnailCache.get(filePath)
+    if (cached !== undefined) return cached
+
+    try {
+      const img = nativeImage.createFromPath(filePath)
+      if (img.isEmpty()) { thumbnailCache.set(filePath, null); return null }
+      const dataUrl = img.resize({ width: 80, height: 80 }).toDataURL()
+      thumbnailCache.set(filePath, dataUrl)
+      return dataUrl
+    } catch {
+      thumbnailCache.set(filePath, null)
+      return null
+    }
   })
 
   // ─── Projects ───────────────────────────────────────────────

@@ -133,6 +133,17 @@ export interface Project {
 export type PermissionMode = 'default' | 'plan' | 'auto'
 export type EffortLevel = 'low' | 'medium' | 'high' | 'max'
 
+// ─── Attachments ────────────────────────────────────────────────
+
+export interface AttachmentInfo {
+  id: string
+  filePath: string       // absolute path on disk
+  fileName: string       // basename for display
+  mimeType: string       // e.g. 'image/png', 'text/plain'
+  sizeBytes: number
+  isImage: boolean
+}
+
 // ─── IPC Payloads ───────────────────────────────────────────────
 
 export interface CreateSessionPayload {
@@ -142,6 +153,7 @@ export interface CreateSessionPayload {
   permissionMode?: PermissionMode
   effort?: EffortLevel
   model?: string
+  attachments?: AttachmentInfo[]
 }
 
 export interface ClaudeModelInfo {
