@@ -5,7 +5,7 @@ import { SettingsSidebar, type SettingsSection } from './SettingsSidebar'
 import { SectionGeneral } from './sections/SectionGeneral'
 import { SectionNotifications } from './sections/SectionNotifications'
 import { SectionQuickActions } from './sections/SectionQuickActions'
-import { SectionGit } from './sections/SectionGit'
+import { SectionIntegrations } from './sections/SectionIntegrations'
 import { SectionProjects } from './sections/SectionProjects'
 import { SectionAbout } from './sections/SectionAbout'
 import { SectionKeybindings } from './sections/SectionKeybindings'
@@ -113,8 +113,8 @@ export function SettingsOverlay() {
         )
       case 'keybindings':
         return <SectionKeybindings />
-      case 'git':
-        return <SectionGit />
+      case 'integrations':
+        return <SectionIntegrations />
       case 'projects':
         return (
           <SectionProjects

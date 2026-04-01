@@ -31,7 +31,12 @@ import type {
   WorktreeInfo,
   RebaseResult,
   PRResult,
-  CreateWorktreePayload
+  CreateWorktreePayload,
+  GitHubConnectionStatus,
+  GitHubTokenValidation,
+  GitHubOrg,
+  CreateProjectPayload,
+  CreateProjectResult
 } from '../shared/types'
 
 /**
@@ -271,6 +276,25 @@ const api = {
     ipcRenderer.on(IPC.PLAIN_TERMINAL_REMOVED, handler)
     return () => ipcRenderer.removeListener(IPC.PLAIN_TERMINAL_REMOVED, handler)
   },
+
+  // ─── GitHub Integration ───────────────────────────────────
+
+  githubSaveToken: (pat: string): Promise<GitHubTokenValidation> =>
+    ipcRenderer.invoke(IPC.GITHUB_SAVE_TOKEN, pat),
+
+  githubRemoveToken: (): Promise<void> =>
+    ipcRenderer.invoke(IPC.GITHUB_REMOVE_TOKEN),
+
+  githubConnectionStatus: (): Promise<GitHubConnectionStatus> =>
+    ipcRenderer.invoke(IPC.GITHUB_CONNECTION_STATUS),
+
+  githubListOrgs: (): Promise<GitHubOrg[]> =>
+    ipcRenderer.invoke(IPC.GITHUB_LIST_ORGS),
+
+  // ─── Project Creation ────────────────────────────────────
+
+  createNewProject: (payload: CreateProjectPayload): Promise<CreateProjectResult> =>
+    ipcRenderer.invoke(IPC.PROJECT_CREATE_NEW, payload),
 
   // ─── Worktree ────────────────────────────────────────────
 

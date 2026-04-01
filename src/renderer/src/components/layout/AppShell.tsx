@@ -19,6 +19,7 @@ import { matchesEvent } from '../../lib/keybindings'
 import { ShortcutsOverlay } from '../shortcuts/ShortcutsOverlay'
 import { ToastContainer } from '../notifications/ToastContainer'
 import { NotificationCenter } from '../notifications/NotificationCenter'
+import { CreateProjectOverlay } from '../project/CreateProjectOverlay'
 
 // ─── Main Content (only re-renders on viewMode / selectedSession changes) ───
 
@@ -52,6 +53,7 @@ const Overlays = memo(function Overlays() {
   const commandPaletteOpen = useUIStore(s => s.commandPaletteOpen)
   const terminalDrawerOpen = useUIStore(s => s.terminalDrawerOpen)
   const notificationCenterOpen = useUIStore(s => s.notificationCenterOpen)
+  const createProjectOverlayOpen = useUIStore(s => s.createProjectOverlayOpen)
 
   return (
     <>
@@ -65,6 +67,7 @@ const Overlays = memo(function Overlays() {
       {commandPaletteOpen && <CommandPalette />}
       {terminalDrawerOpen && <TerminalDrawer />}
       <AnimatePresence>{notificationCenterOpen && <NotificationCenter />}</AnimatePresence>
+      <AnimatePresence>{createProjectOverlayOpen && <CreateProjectOverlay />}</AnimatePresence>
       <ToastContainer />
     </>
   )
@@ -130,7 +133,9 @@ export function AppShell() {
       if (e.key === 'Escape') {
         const ui = useUIStore.getState()
         const session = useSessionStore.getState()
-        if (ui.shortcutsOverlayOpen) {
+        if (ui.createProjectOverlayOpen) {
+          ui.closeCreateProjectOverlay()
+        } else if (ui.shortcutsOverlayOpen) {
           ui.closeShortcutsOverlay()
         } else if (ui.notificationCenterOpen) {
           ui.closeNotificationCenter()

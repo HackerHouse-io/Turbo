@@ -75,6 +75,11 @@ interface UIState {
   openNotificationCenter: () => void
   closeNotificationCenter: () => void
   toggleNotificationCenter: () => void
+
+  // Create project overlay
+  createProjectOverlayOpen: boolean
+  openCreateProjectOverlay: () => void
+  closeCreateProjectOverlay: () => void
 }
 
 export const useUIStore = create<UIState>((set) => ({
@@ -163,5 +168,9 @@ export const useUIStore = create<UIState>((set) => ({
   notificationCenterOpen: false,
   openNotificationCenter: () => set({ notificationCenterOpen: true }),
   closeNotificationCenter: () => set({ notificationCenterOpen: false }),
-  toggleNotificationCenter: () => set(s => ({ notificationCenterOpen: !s.notificationCenterOpen }))
+  toggleNotificationCenter: () => set(s => ({ notificationCenterOpen: !s.notificationCenterOpen })),
+
+  createProjectOverlayOpen: false,
+  openCreateProjectOverlay: () => set({ createProjectOverlayOpen: true }),
+  closeCreateProjectOverlay: () => set({ createProjectOverlayOpen: false })
 }))

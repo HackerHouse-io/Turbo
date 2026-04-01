@@ -8,6 +8,7 @@ import { useTerminalStore } from './stores/useTerminalStore'
 import { useUIStore } from './stores/useUIStore'
 import { useKeybindingsStore } from './stores/useKeybindingsStore'
 import { useNotificationStore } from './stores/useNotificationStore'
+import { useGitHubStore } from './stores/useGitHubStore'
 import { appendTerminalData, clearTerminalBuffer } from './lib/terminalBuffer'
 import { clearDrawerTerminal } from './lib/runInTerminalDrawer'
 
@@ -37,6 +38,7 @@ export default function App() {
     useGitIdentityStore.getState().initialize()
     useKeybindingsStore.getState().initialize()
     useNotificationStore.getState().loadSettings()
+    useGitHubStore.getState().initialize()
 
     // Buffer all terminal data globally so XTermRenderer can replay on mount
     const unsubTerminal = window.api.onTerminalData((sessionId, data) => {

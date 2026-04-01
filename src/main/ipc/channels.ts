@@ -22,7 +22,8 @@ import type {
   PlanSavePayload,
   CreatePlainTerminalPayload,
   PlainTerminal,
-  CreateWorktreePayload
+  CreateWorktreePayload,
+  CreateProjectPayload
 } from '../../shared/types'
 import { IPC } from '../../shared/constants'
 import { ClaudeSessionManager } from '../claude/ClaudeSessionManager'
@@ -37,6 +38,8 @@ import { PlaybookExecutor } from '../playbooks/PlaybookExecutor'
 import { PlanFileManager } from '../plan/PlanFileManager'
 import { PlainTerminalManager } from '../terminal/PlainTerminalManager'
 import { WorktreeManager } from '../git/WorktreeManager'
+import { GitHubManager } from '../github/GitHubManager'
+import { ProjectCreationManager } from '../ProjectCreationManager'
 import { detectModels } from '../claude/ClaudeModelDetector'
 import { detectRunCommand, detectRunCommandWithClaude } from '../run/detectRunCommand'
 
@@ -69,6 +72,8 @@ interface IpcHandlerOptions {
   planFileManager: PlanFileManager
   plainTerminalManager: PlainTerminalManager
   worktreeManager: WorktreeManager
+  githubManager: GitHubManager
+  projectCreationManager: ProjectCreationManager
   getMainWindow: () => BrowserWindow | null
 }
 
@@ -89,6 +94,8 @@ export function registerIpcHandlers(opts: IpcHandlerOptions): void {
     planFileManager,
     plainTerminalManager,
     worktreeManager,
+    githubManager,
+    projectCreationManager,
     getMainWindow
   } = opts
 
@@ -506,6 +513,30 @@ export function registerIpcHandlers(opts: IpcHandlerOptions): void {
 
   ipcMain.handle(IPC.WORKTREE_REMOVE, async (_e, worktreePath: string, deleteBranch?: boolean) => {
     return worktreeManager.removeWorktree(worktreePath, deleteBranch)
+  })
+
+  // ─── GitHub Integration ────────────────────────────────────
+
+  ipcMain.handle(IPC.GITHUB_SAVE_TOKEN, async (_e, pat: string) => {
+    return githubManager.saveToken(pat)
+  })
+
+  ipcMain.handle(IPC.GITHUB_REMOVE_TOKEN, async () => {
+    return githubManager.removeToken()
+  })
+
+  ipcMain.handle(IPC.GITHUB_CONNECTION_STATUS, async () => {
+    return githubManager.getConnectionStatus()
+  })
+
+  ipcMain.handle(IPC.GITHUB_LIST_ORGS, async () => {
+    return githubManager.listOrgs()
+  })
+
+  // ─── Project Creation ──────────────────────────────────────
+
+  ipcMain.handle(IPC.PROJECT_CREATE_NEW, async (_e, payload: CreateProjectPayload) => {
+    return projectCreationManager.createProject(payload)
   })
 
   // ─── Forward events to renderer ────────────────────────────

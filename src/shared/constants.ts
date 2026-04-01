@@ -116,7 +116,16 @@ export const IPC = {
   WORKTREE_REMOVE: 'worktree:remove',
 
   // Notifications
-  NOTIFICATION_CLICK: 'notification:click'
+  NOTIFICATION_CLICK: 'notification:click',
+
+  // GitHub Integration
+  GITHUB_SAVE_TOKEN: 'github:save-token',
+  GITHUB_REMOVE_TOKEN: 'github:remove-token',
+  GITHUB_CONNECTION_STATUS: 'github:connection-status',
+  GITHUB_LIST_ORGS: 'github:list-orgs',
+
+  // Project Creation
+  PROJECT_CREATE_NEW: 'project:create-new'
 } as const
 
 export const PROMPT_HISTORY_MAX = 50
@@ -174,6 +183,47 @@ export const DEFAULT_NOTIFICATION_PREFERENCES: NotificationPreferences = {
 // Estimated cost per token (rough averages)
 export const COST_PER_INPUT_TOKEN = 0.000003
 export const COST_PER_OUTPUT_TOKEN = 0.000015
+
+// ─── GitHub Integration ─────────────────────────────────────────
+
+import type { GitHubRepoDefaults } from './types'
+
+export const GITHUB_API_BASE = 'https://api.github.com'
+
+export const COMMON_LICENSES = [
+  { value: '', label: 'None' },
+  { value: 'MIT', label: 'MIT License' },
+  { value: 'Apache-2.0', label: 'Apache 2.0' },
+  { value: 'GPL-3.0', label: 'GPL 3.0' },
+  { value: 'BSD-2-Clause', label: 'BSD 2-Clause' },
+  { value: 'BSD-3-Clause', label: 'BSD 3-Clause' },
+  { value: 'ISC', label: 'ISC' },
+  { value: 'MPL-2.0', label: 'Mozilla Public License 2.0' },
+  { value: 'Unlicense', label: 'The Unlicense' },
+]
+
+export const COMMON_GITIGNORE_TEMPLATES = [
+  { value: '', label: 'None' },
+  { value: 'Node', label: 'Node' },
+  { value: 'Python', label: 'Python' },
+  { value: 'Rust', label: 'Rust' },
+  { value: 'Go', label: 'Go' },
+  { value: 'Java', label: 'Java' },
+  { value: 'Swift', label: 'Swift' },
+  { value: 'Kotlin', label: 'Kotlin' },
+  { value: 'C', label: 'C' },
+  { value: 'C++', label: 'C++' },
+  { value: 'Ruby', label: 'Ruby' },
+]
+
+export const DEFAULT_GITHUB_REPO_DEFAULTS: GitHubRepoDefaults = {
+  visibility: 'private',
+  defaultOrg: '',
+  autoInitReadme: true,
+  defaultLicense: 'MIT',
+  defaultGitignore: 'Node',
+  descriptionTemplate: '',
+}
 
 // PTY buffer flush interval (60fps)
 export const PTY_BUFFER_INTERVAL_MS = 16

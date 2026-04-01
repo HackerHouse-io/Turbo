@@ -404,6 +404,88 @@ export interface KeybindingDefinition {
 
 export type KeybindingOverrides = Partial<Record<KeybindingActionId, string | null>>
 
+// ─── GitHub Integration ─────────────────────────────────────────
+
+export type RepoVisibility = 'private' | 'public'
+
+export type GitHubAuthSource = 'gh-cli' | 'classic-token' | 'fine-grained-token'
+
+export interface GitHubUser {
+  login: string
+  avatarUrl: string
+  name: string | null
+  email: string | null
+  plan?: string
+}
+
+export interface GitHubOrg {
+  login: string
+  avatarUrl: string
+  description: string | null
+}
+
+export interface GitHubConnectionStatus {
+  connected: boolean
+  source: GitHubAuthSource | null
+  user: GitHubUser | null
+  orgs: GitHubOrg[]
+  scopes: string[]
+}
+
+export interface GitHubTokenValidation {
+  valid: boolean
+  source?: GitHubAuthSource
+  user?: GitHubUser
+  scopes?: string[]
+  error?: string
+}
+
+export interface GitHubRepoDefaults {
+  visibility: RepoVisibility
+  defaultOrg: string
+  autoInitReadme: boolean
+  defaultLicense: string
+  defaultGitignore: string
+  descriptionTemplate: string
+}
+
+export interface CreateGitHubRepoPayload {
+  name: string
+  description: string
+  visibility: RepoVisibility
+  org: string
+  license: string
+  gitignoreTemplate: string
+}
+
+export interface CreateGitHubRepoResult {
+  success: boolean
+  cloneUrl?: string
+  sshUrl?: string
+  htmlUrl?: string
+  error?: string
+}
+
+export interface CreateProjectPayload {
+  name: string
+  description: string
+  createGitHubRepo: boolean
+  visibility: RepoVisibility
+  org: string
+  license: string
+  gitignoreTemplate: string
+  initReadme: boolean
+}
+
+export interface CreateProjectResult {
+  success: boolean
+  projectPath?: string
+  projectId?: string
+  repoUrl?: string
+  error?: string
+  steps: { label: string; success: boolean; error?: string }[]
+}
+
 // ─── Settings ─────────────────────────────────────────────────
 
 export interface TurboSettings {
@@ -419,5 +501,6 @@ export interface TurboSettings {
   gitCustomActions?: GitQuickActionOverride[]
   keybindingOverrides?: KeybindingOverrides
   playbookSkipConfirm?: Record<string, boolean>
+  githubRepoDefaults?: GitHubRepoDefaults
   [key: string]: unknown
 }

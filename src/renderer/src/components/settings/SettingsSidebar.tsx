@@ -1,6 +1,6 @@
 import { useEffect, useRef, useCallback } from 'react'
 
-export type SettingsSection = 'general' | 'notifications' | 'quickActions' | 'keybindings' | 'git' | 'projects' | 'about'
+export type SettingsSection = 'general' | 'notifications' | 'quickActions' | 'keybindings' | 'integrations' | 'projects' | 'about'
 
 interface SectionDef {
   id: SettingsSection
@@ -46,14 +46,11 @@ const SECTIONS: SectionDef[] = [
     )
   },
   {
-    id: 'git',
-    label: 'Git',
+    id: 'integrations',
+    label: 'Integrations',
     icon: (
       <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-        <circle cx="18" cy="6" r="2.5" />
-        <circle cx="6" cy="6" r="2.5" />
-        <circle cx="6" cy="18" r="2.5" />
-        <path strokeLinecap="round" strokeLinejoin="round" d="M6 8.5v7m12-2.5c0 2.5-2 4-6 4h-0" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m9.86-4.071a4.5 4.5 0 00-6.364-6.364L4.5 6.257m11.57 1.373l4.5-4.5" />
       </svg>
     )
   },
