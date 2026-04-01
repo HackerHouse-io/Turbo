@@ -114,6 +114,8 @@ export const IPC = {
 } as const
 
 export const PROMPT_HISTORY_MAX = 50
+export const SESSION_HISTORY_MAX = 200
+export const PLAYBOOK_HISTORY_MAX = 100
 
 // ─── Session option labels ───────────────────────────────────
 import type { EffortLevel, PermissionMode } from './types'

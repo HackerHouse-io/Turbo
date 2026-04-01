@@ -51,7 +51,26 @@ export class WorktreeManager {
     const branch = `feat/${slug}`
 
     await fs.promises.mkdir(path.dirname(wtPath), { recursive: true })
-    await execFileAsync('git', ['worktree', 'add', wtPath, '-b', branch], { cwd: projectPath })
+
+    // If worktree already exists at this path, reuse it
+    try {
+      await fs.promises.access(wtPath)
+      return { path: wtPath, branch, slug, projectPath }
+    } catch {
+      // Path doesn't exist — create fresh
+    }
+
+    try {
+      await execFileAsync('git', ['worktree', 'add', wtPath, '-b', branch], { cwd: projectPath })
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      // Branch already exists — create worktree using the existing branch
+      if (msg.includes('already exists')) {
+        await execFileAsync('git', ['worktree', 'add', wtPath, branch], { cwd: projectPath })
+      } else {
+        throw err
+      }
+    }
 
     return { path: wtPath, branch, slug, projectPath }
   }

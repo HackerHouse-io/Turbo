@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, memo } from 'react'
 import { motion } from 'framer-motion'
 import type { AgentSession, AttentionType } from '../../../../shared/types'
+import { isTerminalStatus } from '../../../../shared/types'
 import { useSessionStore } from '../../stores/useSessionStore'
 import { useUIStore } from '../../stores/useUIStore'
 import { StatusBadge } from '../shared/StatusBadge'
@@ -61,7 +62,7 @@ export const AgentCard = memo(function AgentCard({ session, focused }: AgentCard
   const elapsed = formatElapsed(session.startedAt, session.completedAt)
   const isActive = session.status === 'active' || session.status === 'starting'
   const isRunning = isActive || session.status === 'waiting_for_input' || session.status === 'paused'
-  const isFinished = session.status === 'completed' || session.status === 'stopped' || session.status === 'error'
+  const isFinished = isTerminalStatus(session.status)
 
   const progress = useTimedProgress(session)
   const borderClass = cardBorderClass(session.status, session.needsAttention, session.attentionType)

@@ -1,7 +1,9 @@
 import { EventEmitter } from 'events'
+import { join } from 'path'
 import { v4 as uuid } from 'uuid'
 import { PtyManager } from '../pty/PtyManager'
 import { OutputMonitor } from './OutputMonitor'
+import { JsonFileStore } from '../JsonFileStore'
 import type {
   AgentSession,
   AgentStatus,
@@ -9,7 +11,8 @@ import type {
   AttentionItem,
   ActivityBlock
 } from '../../shared/types'
-import { COST_PER_INPUT_TOKEN, COST_PER_OUTPUT_TOKEN } from '../../shared/constants'
+import { isTerminalStatus } from '../../shared/types'
+import { COST_PER_INPUT_TOKEN, COST_PER_OUTPUT_TOKEN, SESSION_HISTORY_MAX } from '../../shared/constants'
 import { GitIdentityManager } from '../git/GitIdentityManager'
 import type { GitOpsManager } from '../git/GitOpsManager'
 import type { SettingsManager } from '../SettingsManager'
@@ -38,15 +41,20 @@ export class ClaudeSessionManager extends EventEmitter {
   private projectManager: ProjectManager
   private gitOpsManager: GitOpsManager
   private gitIdentity: GitIdentityManager
+  private store: JsonFileStore<AgentSession[]>
+  private saveTimer: ReturnType<typeof setTimeout> | null = null
+  private savePending = false
 
-  constructor(settingsManager: SettingsManager, projectManager: ProjectManager, gitOpsManager: GitOpsManager) {
+  constructor(settingsManager: SettingsManager, projectManager: ProjectManager, gitOpsManager: GitOpsManager, userDataPath: string) {
     super()
     this.settingsManager = settingsManager
     this.projectManager = projectManager
     this.gitOpsManager = gitOpsManager
     this.gitIdentity = new GitIdentityManager()
     this.ptyManager = new PtyManager()
+    this.store = new JsonFileStore(join(userDataPath, 'session-history.json'))
     this.setupPtyListeners()
+    this.load()
   }
 
   /**
@@ -107,7 +115,7 @@ export class ClaudeSessionManager extends EventEmitter {
       const s = this.sessions.get(id)
       if (!s || s.status === 'stopped') return
       // Block 'stuck' alerts on sessions that already reached a terminal state
-      if (type === 'stuck' && (s.status === 'completed' || s.status === 'error')) return
+      if (type === 'stuck' && isTerminalStatus(s.status)) return
 
       s.needsAttention = true
       s.attentionMessage = message
@@ -201,6 +209,7 @@ export class ClaudeSessionManager extends EventEmitter {
     this.sessions.delete(sessionId)
     this.monitors.delete(sessionId)
     this.gitSnapshots.delete(sessionId)
+    this.saveNow()
     this.emit('session-removed', sessionId)
   }
 
@@ -208,10 +217,83 @@ export class ClaudeSessionManager extends EventEmitter {
    * Clean up all sessions on app quit.
    */
   dispose(): void {
+    // Mark all non-terminal sessions as stopped before killing PTYs
+    for (const session of this.sessions.values()) {
+      if (!isTerminalStatus(session.status)) {
+        session.status = 'stopped'
+        session.completedAt = Date.now()
+      }
+    }
+    this.saveNow()
+
     this.ptyManager.killAll()
-    this.sessions.clear()
     this.monitors.clear()
     this.gitSnapshots.clear()
+  }
+
+  // ─── Persistence ────────────────────────────────────────────
+
+  private load(): void {
+    const sessions = this.store.read([])
+
+    for (const session of sessions) {
+      if (!isTerminalStatus(session.status)) {
+        session.status = 'stopped'
+        session.completedAt = session.completedAt || Date.now()
+      }
+      // Clear live-only fields
+      session.needsAttention = false
+      session.attentionMessage = undefined
+      session.attentionType = undefined
+      session.currentAction = undefined
+      this.sessions.set(session.id, session)
+    }
+
+    this.enforceHistoryCap()
+  }
+
+  /** Debounced save — batches rapid mutations into a single async write */
+  private save(): void {
+    if (this.savePending) return
+    this.savePending = true
+    this.saveTimer = setTimeout(() => {
+      this.savePending = false
+      this.saveTimer = null
+      this.enforceHistoryCap()
+      this.store.writeAsync(this.serializeSessions())
+    }, 2000)
+  }
+
+  /** Immediate sync save — used for dispose and removeSession */
+  private saveNow(): void {
+    if (this.saveTimer) {
+      clearTimeout(this.saveTimer)
+      this.saveTimer = null
+      this.savePending = false
+    }
+    this.enforceHistoryCap()
+    this.store.write(this.serializeSessions())
+  }
+
+  private serializeSessions(): AgentSession[] {
+    return Array.from(this.sessions.values()).map(s => {
+      const { currentAction, needsAttention, attentionMessage, attentionType, ...rest } = s
+      return rest as AgentSession
+    })
+  }
+
+  private enforceHistoryCap(): void {
+    if (this.sessions.size <= SESSION_HISTORY_MAX) return
+    const completed = Array.from(this.sessions.values())
+      .filter(s => isTerminalStatus(s.status))
+      .sort((a, b) => (a.startedAt ?? 0) - (b.startedAt ?? 0))
+
+    let toRemove = this.sessions.size - SESSION_HISTORY_MAX
+    for (const session of completed) {
+      if (toRemove <= 0) break
+      this.sessions.delete(session.id)
+      toRemove--
+    }
   }
 
   // ─── Private ────────────────────────────────────────────────
@@ -367,7 +449,7 @@ export class ClaudeSessionManager extends EventEmitter {
     if (!session) return
 
     session.status = status
-    if (status === 'completed' || status === 'error' || status === 'stopped') {
+    if (isTerminalStatus(status)) {
       session.completedAt = Date.now()
       // Clear stale attention (e.g., lingering 'stuck' from idle timer)
       // Fresh attention ('completed'/'error') will be set immediately after by notifyExit
@@ -383,6 +465,7 @@ export class ClaudeSessionManager extends EventEmitter {
     const session = this.sessions.get(sessionId)
     if (session) {
       this.emit('session-updated', { ...session })
+      this.save()
     }
   }
 

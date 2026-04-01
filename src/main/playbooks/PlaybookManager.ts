@@ -1,28 +1,22 @@
 import { v4 as uuid } from 'uuid'
-import { readFileSync, writeFileSync, renameSync } from 'fs'
+import { renameSync } from 'fs'
 import { join } from 'path'
 import type { Playbook, PlaybookStepDefinition } from '../../shared/types'
 import { extractTemplateVariables } from '../../shared/templateVars'
+import { JsonFileStore } from '../JsonFileStore'
 
 // ─── Shared Steps ────────────────────────────────────────────
 
 const REVIEW_STEP: PlaybookStepDefinition = {
-  name: 'Simplify & review',
-  prompt: 'Review all changed code for reuse, quality, and efficiency. Fix any issues found. Check for duplicated logic, unnecessary complexity, and missed existing utilities.',
+  name: 'Review',
+  prompt: 'Review all changed code. Look for: duplicated logic, unnecessary complexity, missed reuse of existing utilities, and anything that could be simpler. Fix every issue you find.',
   permissionMode: 'default',
   effort: 'high'
 }
 
 const TEST_STEP: PlaybookStepDefinition = {
-  name: 'Test & verify',
-  prompt: 'Run the full test suite. Fix any test failures caused by recent changes. Do not fix pre-existing failures.',
-  permissionMode: 'default',
-  effort: 'medium'
-}
-
-const IOS_BUILD_TEST_STEP: PlaybookStepDefinition = {
-  name: 'Build & test',
-  prompt: 'Build the project using xcodebuild (detect the scheme and destination from the project). Fix any build errors or warnings introduced by recent changes. Run the test suite with xcodebuild test and fix any test failures caused by the new code.',
+  name: 'Test',
+  prompt: 'Run the project\'s test suite. Fix any failures caused by the changes you made. Ignore pre-existing failures.',
   permissionMode: 'default',
   effort: 'medium'
 }
@@ -30,36 +24,7 @@ const IOS_BUILD_TEST_STEP: PlaybookStepDefinition = {
 // ─── Built-in Playbooks ───────────────────────────────────────
 
 const BUILT_IN_PLAYBOOKS: Omit<Playbook, 'id' | 'variables'>[] = [
-  // ─── Development Playbooks ────────────────────────────────
-  {
-    name: 'Fix Issue',
-    description: 'Branch, plan, fix, review, test — then commit',
-    icon: 'bug',
-    builtIn: true,
-    endsWithCommit: true,
-    steps: [
-      {
-        name: 'Create branch',
-        prompt: 'Create and switch to a new git branch named fix/{{issueSlug}}. Do not make any other changes.',
-        permissionMode: 'auto',
-        effort: 'low'
-      },
-      {
-        name: 'Plan approach',
-        prompt: 'Analyze the codebase and plan how to fix: {{issueDescription}}. Identify the root cause, list every file that needs to change, and describe the fix approach step by step.',
-        permissionMode: 'plan',
-        effort: 'high'
-      },
-      {
-        name: 'Implement fix',
-        prompt: 'Implement the fix for: {{issueDescription}}. Follow existing code patterns. Keep changes minimal — only modify what is necessary to resolve the issue.',
-        permissionMode: 'default',
-        effort: 'high'
-      },
-      REVIEW_STEP,
-      TEST_STEP
-    ]
-  },
+  // ─── Development ───────────────────────────────────────────
   {
     name: 'Build Feature',
     description: 'Branch, plan, implement, review, test — then commit',
@@ -69,19 +34,31 @@ const BUILT_IN_PLAYBOOKS: Omit<Playbook, 'id' | 'variables'>[] = [
     steps: [
       {
         name: 'Create branch',
-        prompt: 'Create and switch to a new git branch named feat/{{featureSlug}}. Do not make any other changes.',
+        prompt: 'Create and switch to branch feat/{{featureSlug}}. Make no other changes.',
         permissionMode: 'auto',
         effort: 'low'
       },
       {
-        name: 'Plan approach',
-        prompt: 'Analyze the codebase and design the implementation for: {{featureDescription}}. List affected files, describe the architecture, identify edge cases, and note any existing utilities to reuse.',
+        name: 'Plan',
+        prompt: `You are implementing: {{featureDescription}}
+
+Explore the codebase first. Then produce a plan covering:
+- Which files to create or modify, and why
+- Existing utilities, patterns, or components to reuse
+- Edge cases to handle
+
+Do not write any code yet.`,
         permissionMode: 'plan',
         effort: 'high'
       },
       {
-        name: 'Implement feature',
-        prompt: 'Implement the feature: {{featureDescription}}. Follow existing code patterns in the codebase. Reuse existing utilities and components where possible.',
+        name: 'Implement',
+        prompt: `Implement: {{featureDescription}}
+
+Requirements:
+- Follow the conventions already established in this codebase
+- Reuse existing utilities and components — do not reinvent
+- Keep the change minimal and focused`,
         permissionMode: 'default',
         effort: 'high'
       },
@@ -90,104 +67,144 @@ const BUILT_IN_PLAYBOOKS: Omit<Playbook, 'id' | 'variables'>[] = [
     ]
   },
   {
-    name: 'Code Review',
-    description: 'Read changes, identify issues, suggest improvements',
-    icon: 'eye',
+    name: 'Fix Issue',
+    description: 'Branch, diagnose, fix, review, test — then commit',
+    icon: 'bug',
     builtIn: true,
-    endsWithCommit: false,
+    endsWithCommit: true,
     steps: [
       {
-        name: 'Read changes',
-        prompt: 'Read all uncommitted changes (git diff HEAD) and the last 5 commits. Summarize what changed, why, and which areas of the codebase are affected.',
+        name: 'Create branch',
+        prompt: 'Create and switch to branch fix/{{issueSlug}}. Make no other changes.',
+        permissionMode: 'auto',
+        effort: 'low'
+      },
+      {
+        name: 'Diagnose',
+        prompt: `Investigate: {{issueDescription}}
+
+Find the root cause. Trace the code path, check related tests, and identify every file that needs to change. Explain the root cause clearly. Do not write any code yet.`,
         permissionMode: 'plan',
         effort: 'high'
       },
       {
-        name: 'Identify issues',
-        prompt: 'Review for bugs, security vulnerabilities, race conditions, edge cases, performance issues, and violations of existing code patterns. Rank findings by severity (critical, warning, nit).',
-        permissionMode: 'plan',
-        effort: 'max'
-      },
-      {
-        name: 'Suggest improvements',
-        prompt: 'For each issue found, provide a specific code fix with exact file path and line reference. Group by severity.',
-        permissionMode: 'plan',
+        name: 'Fix',
+        prompt: `Fix: {{issueDescription}}
+
+Requirements:
+- Only change what is necessary to resolve the issue
+- Follow existing code patterns
+- Do not refactor surrounding code`,
+        permissionMode: 'default',
         effort: 'high'
-      }
+      },
+      REVIEW_STEP,
+      TEST_STEP
     ]
   },
   {
     name: 'Refactor',
-    description: 'Run tests, refactor, verify — then commit',
+    description: 'Baseline tests, refactor, verify — then commit',
     icon: 'refresh',
     builtIn: true,
     endsWithCommit: true,
     steps: [
       {
-        name: 'Run baseline tests',
-        prompt: 'Run the full test suite and record the results. Note any pre-existing failures.',
+        name: 'Baseline',
+        prompt: 'Run the full test suite. Record the results and note any pre-existing failures.',
         permissionMode: 'default',
         effort: 'medium'
       },
       {
         name: 'Refactor',
-        prompt: 'Refactor {{target}} to improve {{goal}}. Maintain exact same external behavior.',
+        prompt: 'Refactor {{target}} to improve {{goal}}. External behavior must remain identical.',
         permissionMode: 'default',
         effort: 'high'
       },
       {
-        name: 'Verify tests',
-        prompt: 'Run full test suite. Fix regressions. Do not fix pre-existing failures.',
+        name: 'Verify',
+        prompt: 'Run the full test suite. Fix any regressions from the refactor. Ignore pre-existing failures.',
         permissionMode: 'default',
         effort: 'medium'
       }
     ]
   },
   {
+    name: 'Code Review',
+    description: 'Read changes, find issues, suggest fixes',
+    icon: 'eye',
+    builtIn: true,
+    endsWithCommit: false,
+    steps: [
+      {
+        name: 'Analyze',
+        prompt: 'Read all uncommitted changes (git diff HEAD) and recent commits. Summarize what changed and which areas are affected.',
+        permissionMode: 'plan',
+        effort: 'high'
+      },
+      {
+        name: 'Review',
+        prompt: `Review the changes for:
+- Bugs, security issues, race conditions
+- Edge cases and error handling gaps
+- Performance problems
+- Violations of existing codebase conventions
+
+Rank each finding as critical, warning, or nit. For each, give the exact file, line, and a specific fix.`,
+        permissionMode: 'plan',
+        effort: 'max'
+      }
+    ]
+  },
+  {
     name: 'Test Coverage',
-    description: 'Analyze coverage, write tests, verify',
+    description: 'Find gaps, write tests, verify',
     icon: 'test',
     builtIn: true,
     endsWithCommit: true,
     steps: [
       {
-        name: 'Analyze coverage',
-        prompt: 'Run the test suite with coverage enabled. Identify files and functions with low or missing test coverage. Prioritize critical paths.',
+        name: 'Analyze',
+        prompt: 'Run the test suite with coverage. Identify files and functions with low or missing coverage. Prioritize critical code paths.',
         permissionMode: 'default',
         effort: 'high'
       },
       {
-        name: 'Write missing tests',
-        prompt: 'Write comprehensive tests for the uncovered areas identified in the previous analysis. Cover happy path, edge cases, and error conditions. Follow existing test patterns.',
+        name: 'Write tests',
+        prompt: 'Write tests for the uncovered areas. Cover the happy path, edge cases, and error conditions. Follow the existing test patterns in this project.',
         permissionMode: 'default',
         effort: 'high'
       },
       {
-        name: 'Verify improvement',
-        prompt: 'Run the full test suite with coverage. Verify all new tests pass and coverage improved. Fix any failures.',
+        name: 'Verify',
+        prompt: 'Run the full test suite with coverage. Confirm all new tests pass and coverage improved. Fix any failures.',
         permissionMode: 'default',
         effort: 'medium'
       }
     ]
   },
 
-  // ─── Documentation Playbooks ──────────────────────────────
+  // ─── Documentation ────────────────────────────────────────
   {
-    name: 'System Architecture Doc',
-    description: 'Analyze codebase and write architecture documentation',
+    name: 'Architecture Doc',
+    description: 'Analyze codebase, write architecture documentation',
     icon: 'search',
     builtIn: true,
     endsWithCommit: false,
     steps: [
       {
-        name: 'Analyze codebase',
-        prompt: 'Analyze the entire project structure, architecture, data flow, and key design decisions. Map out all major components and how they communicate.',
+        name: 'Analyze',
+        prompt: 'Map the entire project: structure, architecture, data flow, component boundaries, and key design decisions.',
         permissionMode: 'plan',
         effort: 'max'
       },
       {
-        name: 'Write architecture doc',
-        prompt: 'Write a comprehensive system architecture document to docs/architecture.md (create the docs/ directory if it doesn\'t exist). Cover: project overview, high-level architecture diagram (Mermaid), component responsibilities, data flow, tech stack decisions, and key patterns used.',
+        name: 'Write doc',
+        prompt: `Write docs/architecture.md (create the directory if needed). Cover:
+- Project overview
+- High-level architecture (include a Mermaid diagram)
+- Component responsibilities and data flow
+- Tech stack rationale and key patterns`,
         permissionMode: 'default',
         effort: 'high'
       }
@@ -195,41 +212,25 @@ const BUILT_IN_PLAYBOOKS: Omit<Playbook, 'id' | 'variables'>[] = [
   },
   {
     name: 'Tech Design Doc',
-    description: 'Analyze context and write technical design document',
+    description: 'Research and write a technical design document',
     icon: 'search',
     builtIn: true,
     endsWithCommit: false,
     steps: [
       {
-        name: 'Analyze context',
-        prompt: 'Analyze the codebase to understand how {{feature}} should be designed. Study existing patterns, data models, and architectural constraints.',
+        name: 'Research',
+        prompt: 'Study the codebase to understand how {{feature}} should be designed. Note existing patterns, data models, and constraints.',
         permissionMode: 'plan',
         effort: 'high'
       },
       {
-        name: 'Write tech design',
-        prompt: 'Write a technical design document to docs/design-{{feature}}.md (create the docs/ directory if it doesn\'t exist). Cover: context & motivation, requirements, proposed design with diagrams (Mermaid), alternatives considered, implementation plan, and risks.',
-        permissionMode: 'default',
-        effort: 'high'
-      }
-    ]
-  },
-  {
-    name: 'Test Plan',
-    description: 'Analyze feature and write comprehensive test plan',
-    icon: 'test',
-    builtIn: true,
-    endsWithCommit: false,
-    steps: [
-      {
-        name: 'Analyze feature',
-        prompt: 'Analyze {{feature}} in the codebase. Identify all testable behaviors, integration points, edge cases, and failure modes.',
-        permissionMode: 'plan',
-        effort: 'high'
-      },
-      {
-        name: 'Write test plan',
-        prompt: 'Write a comprehensive test plan to docs/test-plan-{{feature}}.md (create the docs/ directory if it doesn\'t exist). Cover: scope, test strategy, test cases (unit, integration, e2e), edge cases, performance criteria, and acceptance criteria.',
+        name: 'Write doc',
+        prompt: `Write docs/design-{{feature}}.md (create the directory if needed). Cover:
+- Context and motivation
+- Requirements
+- Proposed design (include Mermaid diagrams)
+- Alternatives considered
+- Implementation plan and risks`,
         permissionMode: 'default',
         effort: 'high'
       }
@@ -237,107 +238,27 @@ const BUILT_IN_PLAYBOOKS: Omit<Playbook, 'id' | 'variables'>[] = [
   },
   {
     name: 'PRD',
-    description: 'Research context and write product requirements document',
+    description: 'Research and write product requirements',
     icon: 'eye',
     builtIn: true,
     endsWithCommit: false,
     steps: [
       {
-        name: 'Research context',
-        prompt: 'Analyze the current codebase and understand how {{feature}} fits into the product. Identify existing capabilities, gaps, and user-facing implications.',
+        name: 'Research',
+        prompt: 'Analyze the codebase to understand how {{feature}} fits into the product. Identify existing capabilities and gaps.',
         permissionMode: 'plan',
         effort: 'high'
       },
       {
         name: 'Write PRD',
-        prompt: 'Write a product requirements document to docs/prd-{{feature}}.md (create the docs/ directory if it doesn\'t exist). Cover: problem statement, goals & non-goals, user stories, functional requirements, non-functional requirements, success metrics, and out of scope.',
+        prompt: `Write docs/prd-{{feature}}.md (create the directory if needed). Cover:
+- Problem statement
+- Goals and non-goals
+- User stories
+- Functional and non-functional requirements
+- Success metrics`,
         permissionMode: 'default',
         effort: 'high'
-      }
-    ]
-  },
-
-  // ─── iOS Development Playbooks ────────────────────────────
-  {
-    name: 'iOS Feature',
-    description: 'Branch, plan, implement, build & test — then commit',
-    icon: 'phone',
-    builtIn: true,
-    endsWithCommit: true,
-    steps: [
-      {
-        name: 'Create branch',
-        prompt: 'Create and switch to a new git branch named feat/{{featureSlug}}. Do not make any other changes.',
-        permissionMode: 'auto',
-        effort: 'low'
-      },
-      {
-        name: 'Plan approach',
-        prompt: 'Analyze the iOS project structure (Xcode project, targets, Swift packages). Design the implementation for: {{featureDescription}}. Identify which views, view models, models, and services need to change. Note any Info.plist or entitlement changes required.',
-        permissionMode: 'plan',
-        effort: 'high'
-      },
-      {
-        name: 'Implement feature',
-        prompt: 'Implement the iOS feature: {{featureDescription}}. Use SwiftUI for new views unless the project uses UIKit. Follow existing project patterns for architecture (MVVM, coordinators, etc.), naming conventions, and dependency injection. Reuse existing components and services.',
-        permissionMode: 'default',
-        effort: 'high'
-      },
-      IOS_BUILD_TEST_STEP
-    ]
-  },
-  {
-    name: 'iOS Bug Fix',
-    description: 'Branch, diagnose, fix, build & test — then commit',
-    icon: 'phone',
-    builtIn: true,
-    endsWithCommit: true,
-    steps: [
-      {
-        name: 'Create branch',
-        prompt: 'Create and switch to a new git branch named fix/{{issueSlug}}. Do not make any other changes.',
-        permissionMode: 'auto',
-        effort: 'low'
-      },
-      {
-        name: 'Diagnose',
-        prompt: 'Analyze the iOS codebase to diagnose: {{issueDescription}}. Check relevant view controllers/SwiftUI views, view models, services, and any platform-specific code (lifecycle, threading, memory). Identify the root cause and list files that need to change.',
-        permissionMode: 'plan',
-        effort: 'high'
-      },
-      {
-        name: 'Implement fix',
-        prompt: 'Fix the iOS issue: {{issueDescription}}. Follow existing project patterns. Keep changes minimal — only modify what is necessary to resolve the issue.',
-        permissionMode: 'default',
-        effort: 'high'
-      },
-      IOS_BUILD_TEST_STEP
-    ]
-  },
-  {
-    name: 'SwiftUI View',
-    description: 'Plan UI, implement view, build & verify — then commit',
-    icon: 'phone',
-    builtIn: true,
-    endsWithCommit: true,
-    steps: [
-      {
-        name: 'Plan UI',
-        prompt: 'Design the SwiftUI view "{{viewName}}": {{viewDescription}}. Define the view hierarchy, state management (@State, @Binding, @ObservedObject, @EnvironmentObject as appropriate), and any subviews needed. Follow existing project patterns for theming, spacing, and component structure.',
-        permissionMode: 'plan',
-        effort: 'medium'
-      },
-      {
-        name: 'Implement view',
-        prompt: 'Implement the SwiftUI view "{{viewName}}" as designed. Create the view file and any supporting subviews, view models, or model types needed. Follow existing project naming conventions and file organization. Include a PreviewProvider with representative sample data.',
-        permissionMode: 'default',
-        effort: 'high'
-      },
-      {
-        name: 'Build & verify',
-        prompt: 'Build the project using xcodebuild to verify the new view compiles without errors. Fix any build issues. If the project has snapshot or UI tests, run them and fix any failures.',
-        permissionMode: 'default',
-        effort: 'medium'
       }
     ]
   }
@@ -349,10 +270,10 @@ const BUILT_IN_PLAYBOOKS: Omit<Playbook, 'id' | 'variables'>[] = [
  */
 export class PlaybookManager {
   private playbooks: Playbook[] = []
-  private filePath: string
+  private store: JsonFileStore<Playbook[]>
 
   constructor(userDataPath: string) {
-    this.filePath = join(userDataPath, 'playbooks.json')
+    this.store = new JsonFileStore(join(userDataPath, 'playbooks.json'))
 
     // Migrate from routines.json if needed
     try { renameSync(join(userDataPath, 'routines.json'), this.filePath) } catch { /* No migration needed */ }
@@ -414,13 +335,8 @@ export class PlaybookManager {
 
   private load(): void {
     // Read saved playbooks — only user-created ones survive reload
-    let raw = ''
-    let userPlaybooks: Playbook[] = []
-    try {
-      raw = readFileSync(this.filePath, 'utf-8')
-      const all: Playbook[] = JSON.parse(raw)
-      userPlaybooks = all.filter(p => !p.builtIn)
-    } catch { /* File missing or corrupt */ }
+    const saved = this.store.read([])
+    const userPlaybooks = saved.filter(p => !p.builtIn)
 
     // Always generate built-ins from code
     const builtIns: Playbook[] = BUILT_IN_PLAYBOOKS.map(r => ({
@@ -429,18 +345,18 @@ export class PlaybookManager {
       variables: extractTemplateVariables(r.steps.map(s => s.prompt))
     }))
 
-    this.playbooks = [...builtIns, ...userPlaybooks]
+    const merged = [...builtIns, ...userPlaybooks]
 
     // Only write if content actually changed
-    const updated = JSON.stringify(this.playbooks, null, 2)
-    if (updated !== raw) this.save()
+    if (JSON.stringify(merged) !== JSON.stringify(saved)) {
+      this.playbooks = merged
+      this.save()
+    } else {
+      this.playbooks = merged
+    }
   }
 
   private save(): void {
-    try {
-      writeFileSync(this.filePath, JSON.stringify(this.playbooks, null, 2), 'utf-8')
-    } catch {
-      // Save failed — non-fatal
-    }
+    this.store.write(this.playbooks)
   }
 }

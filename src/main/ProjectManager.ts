@@ -1,8 +1,9 @@
 import { v4 as uuid } from 'uuid'
-import { readdirSync, existsSync, readFileSync, writeFileSync } from 'fs'
-import { join, basename } from 'path'
+import { readdirSync, existsSync } from 'fs'
+import { join } from 'path'
 import type { Project, AddProjectPayload, ScannedProject, GitIdentity } from '../shared/types'
 import { PROJECT_COLORS } from '../shared/constants'
+import { JsonFileStore } from './JsonFileStore'
 
 /**
  * ProjectManager: Manages project registry with JSON file persistence.
@@ -10,10 +11,10 @@ import { PROJECT_COLORS } from '../shared/constants'
 export class ProjectManager {
   private projects = new Map<string, Project>()
   private colorIndex = 0
-  private savePath: string
+  private store: JsonFileStore<Project[]>
 
   constructor(userDataPath: string) {
-    this.savePath = join(userDataPath, 'projects.json')
+    this.store = new JsonFileStore(join(userDataPath, 'projects.json'))
     this.load()
   }
 
@@ -123,25 +124,14 @@ export class ProjectManager {
   }
 
   private save(): void {
-    try {
-      const data = Array.from(this.projects.values())
-      writeFileSync(this.savePath, JSON.stringify(data, null, 2), 'utf-8')
-    } catch {
-      // Save failed — non-fatal
-    }
+    this.store.write(Array.from(this.projects.values()))
   }
 
   private load(): void {
-    try {
-      if (!existsSync(this.savePath)) return
-      const raw = readFileSync(this.savePath, 'utf-8')
-      const data: Project[] = JSON.parse(raw)
-      for (const project of data) {
-        this.projects.set(project.id, project)
-      }
-      this.colorIndex = data.length
-    } catch {
-      // Load failed — start fresh
+    const data = this.store.read([])
+    for (const project of data) {
+      this.projects.set(project.id, project)
     }
+    this.colorIndex = data.length
   }
 }

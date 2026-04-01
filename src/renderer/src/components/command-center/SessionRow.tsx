@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import type { AgentSession, AttentionItem, AttentionType } from '../../../../shared/types'
+import { isTerminalStatus } from '../../../../shared/types'
 import { useSessionStore } from '../../stores/useSessionStore'
 import { useUIStore } from '../../stores/useUIStore'
 import { StatusBadge } from '../shared/StatusBadge'
@@ -72,7 +73,7 @@ export function SessionRow({ session, attentionItem, focused, onDismissAttention
   const elapsed = formatElapsed(session.startedAt, session.completedAt)
   const isActive = session.status === 'active' || session.status === 'starting'
   const isRunning = isActive || session.status === 'waiting_for_input' || session.status === 'paused'
-  const isFinished = session.status === 'completed' || session.status === 'stopped' || session.status === 'error'
+  const isFinished = isTerminalStatus(session.status)
 
   const progress = useTimedProgress(session)
 

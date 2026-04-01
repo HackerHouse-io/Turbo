@@ -1,3 +1,4 @@
+import { forwardRef } from 'react'
 import type { PlanBlock } from '../../lib/planParser'
 import { PlanCheckbox } from './PlanCheckbox'
 import { PlanCodeBlock } from './PlanCodeBlock'
@@ -10,21 +11,18 @@ interface PlanBlockRendererProps {
   onEditLine: (lineIndex: number, content: string) => void
   onDeleteLine: (lineIndex: number) => void
   onUpdateBlock: (lineIndex: number, lineCount: number, newContent: string) => void
-  onStartTask?: (content: string, playbookId: string) => Promise<void>
-  defaultPlaybookId?: string | null
-  onSetDefaultPlaybook?: (playbookId: string) => void
+  onStartTask?: (content: string) => Promise<void>
 }
 
-export function PlanBlockRenderer({
+export const PlanBlockRenderer = forwardRef<HTMLDivElement, PlanBlockRendererProps>(function PlanBlockRenderer({
   block,
   onToggleCheckbox,
   onEditLine,
   onDeleteLine,
   onUpdateBlock,
-  onStartTask,
-  defaultPlaybookId,
-  onSetDefaultPlaybook
-}: PlanBlockRendererProps) {
+  onStartTask
+}, ref) {
+  const content = (() => {
   switch (block.type) {
     case 'checkbox':
       return (
@@ -36,11 +34,9 @@ export function PlanBlockRenderer({
           onEdit={(val) => onEditLine(block.lineIndex, val)}
           onDelete={() => onDeleteLine(block.lineIndex)}
           onStartTask={onStartTask && !block.checked
-            ? (playbookId: string) => onStartTask!(block.content, playbookId)
+            ? () => onStartTask!(block.content)
             : undefined
           }
-          defaultPlaybookId={defaultPlaybookId}
-          onSetDefaultPlaybook={onSetDefaultPlaybook}
         />
       )
 
@@ -139,4 +135,7 @@ export function PlanBlockRenderer({
     default:
       return null
   }
-}
+  })()
+
+  return <div ref={ref}>{content}</div>
+})

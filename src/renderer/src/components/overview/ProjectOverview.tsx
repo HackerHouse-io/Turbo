@@ -16,6 +16,7 @@ export function ProjectOverview() {
   const projects = useProjectStore(s => s.projects)
   const selectProject = useProjectStore(s => s.selectProject)
   const addProjectFromPath = useProjectStore(s => s.addProjectFromPath)
+  const removeProject = useProjectStore(s => s.removeProject)
   const sessionsRecord = useSessionStore(s => s.sessions)
   const attentionItems = useSessionStore(s => s.attentionItems)
 
@@ -230,6 +231,7 @@ export function ProjectOverview() {
               latestSession={latestMap[project.id] || null}
               overviewData={overviewData[project.id]}
               onSelect={() => selectProject(project.id)}
+              onRemove={() => removeProject(project.id)}
             />
           ))}
         </motion.div>

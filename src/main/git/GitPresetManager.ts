@@ -1,8 +1,8 @@
 import { v4 as uuid } from 'uuid'
-import { readFileSync, writeFileSync } from 'fs'
 import { join } from 'path'
 import type { GitPreset } from '../../shared/types'
 import { extractTemplateVariables } from '../../shared/templateVars'
+import { JsonFileStore } from '../JsonFileStore'
 
 const BUILT_IN_PRESETS: Omit<GitPreset, 'id'>[] = [
   {
@@ -55,10 +55,10 @@ const BUILT_IN_PRESETS: Omit<GitPreset, 'id'>[] = [
  */
 export class GitPresetManager {
   private presets: GitPreset[] = []
-  private savePath: string
+  private store: JsonFileStore<GitPreset[]>
 
   constructor(userDataPath: string) {
-    this.savePath = join(userDataPath, 'git-presets.json')
+    this.store = new JsonFileStore(join(userDataPath, 'git-presets.json'))
     this.load()
   }
 
@@ -90,12 +90,7 @@ export class GitPresetManager {
   }
 
   private load(): void {
-    try {
-      const raw = readFileSync(this.savePath, 'utf-8')
-      this.presets = JSON.parse(raw)
-    } catch {
-      // File missing or corrupt — seed below
-    }
+    this.presets = this.store.read([])
 
     if (this.presets.length === 0) {
       this.presets = BUILT_IN_PRESETS.map(p => ({ ...p, id: uuid() }))
@@ -104,10 +99,6 @@ export class GitPresetManager {
   }
 
   private save(): void {
-    try {
-      writeFileSync(this.savePath, JSON.stringify(this.presets, null, 2), 'utf-8')
-    } catch {
-      // Save failed — non-fatal
-    }
+    this.store.write(this.presets)
   }
 }

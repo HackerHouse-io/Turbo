@@ -9,6 +9,13 @@ export type AgentStatus =
   | 'completed'
   | 'stopped'
 
+const TERMINAL_STATUSES = new Set<string>(['completed', 'error', 'stopped', 'failed'])
+
+/** True when a session or playbook execution has reached a final state */
+export function isTerminalStatus(status: AgentStatus | PlaybookExecutionStatus): boolean {
+  return TERMINAL_STATUSES.has(status)
+}
+
 // ─── Activity Blocks (Warp-style) ──────────────────────────────
 
 export type ActivityBlockType =

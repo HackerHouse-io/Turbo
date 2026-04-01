@@ -89,11 +89,11 @@ app.whenReady().then(() => {
   const gitIdentityManager = new GitIdentityManager()
   gitOpsManager = new GitOpsManager(gitIdentityManager)
 
-  sessionManager = new ClaudeSessionManager(settingsManager, projectManager, gitOpsManager)
+  sessionManager = new ClaudeSessionManager(settingsManager, projectManager, gitOpsManager, app.getPath('userData'))
   promptHistoryManager = new PromptHistoryManager(app.getPath('userData'))
   gitPresetManager = new GitPresetManager(app.getPath('userData'))
   playbookManager = new PlaybookManager(app.getPath('userData'))
-  playbookExecutor = new PlaybookExecutor(sessionManager, playbookManager)
+  playbookExecutor = new PlaybookExecutor(sessionManager, playbookManager, app.getPath('userData'))
   planFileManager = new PlanFileManager()
   plainTerminalManager = new PlainTerminalManager()
   const worktreeManager = new WorktreeManager()

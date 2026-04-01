@@ -4,6 +4,7 @@ import { usePlaybookStore } from '../stores/usePlaybookStore'
 import { parsePlan } from '../lib/planParser'
 import { parsePorcelainStatus } from '../lib/gitParsers'
 import type { Project, PlaybookExecution } from '../../../shared/types'
+import { isTerminalStatus } from '../../../shared/types'
 
 export interface ProjectOverviewData {
   git: {
@@ -186,7 +187,7 @@ function mergeStoreData(
   // Find active playbook per project
   const activePlaybooks: Record<string, ProjectOverviewData['activePlaybook']> = {}
   for (const exec of Object.values(playbookExecutions)) {
-    if (exec.status === 'completed' || exec.status === 'stopped' || exec.status === 'failed') continue
+    if (isTerminalStatus(exec.status)) continue
     const pid = byPath.get(exec.projectPath)
     if (pid && !activePlaybooks[pid]) {
       activePlaybooks[pid] = {

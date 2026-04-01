@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import type { PlaybookExecution, PlaybookStepStatus } from '../../../../shared/types'
+import { isTerminalStatus } from '../../../../shared/types'
 import { useSessionStore } from '../../stores/useSessionStore'
 import { useUIStore } from '../../stores/useUIStore'
 import { usePlaybookStore } from '../../stores/usePlaybookStore'
@@ -185,7 +186,7 @@ function PlaybookBannerCard({ execution }: { execution: PlaybookExecution }) {
     setViewMode('detail')
   }, [selectSession, setViewMode])
 
-  const isTerminal = execution.status === 'completed' || execution.status === 'stopped' || execution.status === 'failed'
+  const isTerminal = isTerminalStatus(execution.status)
 
   return (
     <div className="card">

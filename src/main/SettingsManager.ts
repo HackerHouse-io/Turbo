@@ -1,34 +1,21 @@
 import { app } from 'electron'
 import { join } from 'path'
-import { readFileSync, writeFileSync, existsSync } from 'fs'
+import { existsSync } from 'fs'
 import { homedir } from 'os'
 import type { TurboSettings } from '../shared/types'
-
-const SETTINGS_FILE = 'settings.json'
+import { JsonFileStore } from './JsonFileStore'
 
 export class SettingsManager {
-  private filePath: string
+  private store: JsonFileStore<TurboSettings>
   private settings: TurboSettings
 
   constructor() {
-    this.filePath = join(app.getPath('userData'), SETTINGS_FILE)
-    this.settings = this.load()
-  }
-
-  private load(): TurboSettings {
-    try {
-      if (existsSync(this.filePath)) {
-        const raw = readFileSync(this.filePath, 'utf-8')
-        return JSON.parse(raw) as TurboSettings
-      }
-    } catch {
-      // Corrupted file — use defaults
-    }
-    return { defaultProjectsDir: this.detectDefaultDir() }
+    this.store = new JsonFileStore(join(app.getPath('userData'), 'settings.json'))
+    this.settings = this.store.read({ defaultProjectsDir: this.detectDefaultDir() })
   }
 
   private save(): void {
-    writeFileSync(this.filePath, JSON.stringify(this.settings, null, 2), 'utf-8')
+    this.store.write(this.settings)
   }
 
   private detectDefaultDir(): string {

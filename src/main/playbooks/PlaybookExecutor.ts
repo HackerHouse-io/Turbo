@@ -1,14 +1,18 @@
 import { EventEmitter } from 'events'
+import { join } from 'path'
 import { v4 as uuid } from 'uuid'
 import type { ClaudeSessionManager } from '../claude/ClaudeSessionManager'
 import type { PlaybookManager } from './PlaybookManager'
+import { JsonFileStore } from '../JsonFileStore'
 import type {
   PlaybookExecution,
   PlaybookStepState,
   StartPlaybookPayload,
   AgentSession
 } from '../../shared/types'
+import { isTerminalStatus } from '../../shared/types'
 import { substituteTemplateVariables } from '../../shared/templateVars'
+import { PLAYBOOK_HISTORY_MAX } from '../../shared/constants'
 
 /**
  * PlaybookExecutor: Orchestrates multi-step playbook execution.
@@ -22,15 +26,19 @@ export class PlaybookExecutor extends EventEmitter {
   private sessionManager: ClaudeSessionManager
   private playbookManager: PlaybookManager
   private boundHandleSessionUpdate: (session: AgentSession) => void
+  private store: JsonFileStore<PlaybookExecution[]>
 
-  constructor(sessionManager: ClaudeSessionManager, playbookManager: PlaybookManager) {
+  constructor(sessionManager: ClaudeSessionManager, playbookManager: PlaybookManager, userDataPath: string) {
     super()
     this.sessionManager = sessionManager
     this.playbookManager = playbookManager
+    this.store = new JsonFileStore(join(userDataPath, 'playbook-executions.json'))
 
     // Monitor session completions to advance playbook steps
     this.boundHandleSessionUpdate = (session: AgentSession) => this.handleSessionUpdate(session)
     this.sessionManager.on('session-updated', this.boundHandleSessionUpdate)
+
+    this.load()
   }
 
   // ─── Public API ──────────────────────────────────────────────
@@ -96,7 +104,7 @@ export class PlaybookExecutor extends EventEmitter {
 
   stopPlaybook(executionId: string): void {
     const exec = this.executions.get(executionId)
-    if (!exec || exec.status === 'completed' || exec.status === 'stopped') return
+    if (!exec || isTerminalStatus(exec.status)) return
 
     // Stop current session
     const currentStep = exec.steps[exec.currentStepIndex]
@@ -115,7 +123,7 @@ export class PlaybookExecutor extends EventEmitter {
     exec.status = 'stopped'
     exec.completedAt = Date.now()
     this.emitUpdate(exec)
-    this.cleanupExecution(executionId)
+    this.cleanupReverseMap(executionId)
   }
 
   dismissPlaybook(executionId: string): void {
@@ -126,8 +134,7 @@ export class PlaybookExecutor extends EventEmitter {
     exec.completedAt = Date.now()
     this.emitUpdate(exec)
 
-    // Clean up from maps
-    this.cleanupExecution(executionId)
+    this.cleanupReverseMap(executionId)
   }
 
   removeExecution(executionId: string): void {
@@ -139,7 +146,9 @@ export class PlaybookExecutor extends EventEmitter {
       this.stopPlaybook(executionId)
     }
 
-    this.cleanupExecution(executionId)
+    this.cleanupReverseMap(executionId)
+    this.executions.delete(executionId)
+    this.save()
   }
 
   listExecutions(): PlaybookExecution[] {
@@ -147,28 +156,74 @@ export class PlaybookExecutor extends EventEmitter {
   }
 
   dispose(): void {
-    // Stop all running executions
-    for (const [id, exec] of this.executions) {
-      if (exec.status === 'running' || exec.status === 'paused') {
-        this.stopPlaybook(id)
+    // Mark running executions as stopped without killing sessions (session manager handles that)
+    for (const exec of this.executions.values()) {
+      this.markInterrupted(exec)
+    }
+    this.save()
+    this.sessionManager.removeListener('session-updated', this.boundHandleSessionUpdate)
+  }
+
+  // ─── Persistence ────────────────────────────────────────────
+
+  private load(): void {
+    const executions = this.store.read([])
+
+    for (const exec of executions) {
+      this.markInterrupted(exec)
+      this.executions.set(exec.id, exec)
+    }
+
+    this.enforceHistoryCap()
+  }
+
+  private save(): void {
+    this.enforceHistoryCap()
+    this.store.write(Array.from(this.executions.values()))
+  }
+
+  private enforceHistoryCap(): void {
+    if (this.executions.size <= PLAYBOOK_HISTORY_MAX) return
+    const all = Array.from(this.executions.values())
+      .sort((a, b) => (a.startedAt ?? 0) - (b.startedAt ?? 0))
+
+    let toRemove = this.executions.size - PLAYBOOK_HISTORY_MAX
+    for (const exec of all) {
+      if (toRemove <= 0) break
+      if (isTerminalStatus(exec.status)) {
+        this.executions.delete(exec.id)
+        toRemove--
       }
     }
-    this.sessionManager.removeListener('session-updated', this.boundHandleSessionUpdate)
+  }
+
+  /** Mark a non-terminal execution as interrupted (used by load and dispose) */
+  private markInterrupted(exec: PlaybookExecution): void {
+    if (isTerminalStatus(exec.status)) return
+    exec.status = 'stopped'
+    exec.completedAt = exec.completedAt || Date.now()
+    for (const step of exec.steps) {
+      if (step.status === 'running') {
+        step.status = 'failed'
+        step.error = 'Interrupted by app restart'
+        step.completedAt = Date.now()
+      } else if (step.status === 'pending') {
+        step.status = 'skipped'
+      }
+    }
   }
 
   // ─── Private ─────────────────────────────────────────────────
 
-  private cleanupExecution(executionId: string): void {
+  private cleanupReverseMap(executionId: string): void {
     const exec = this.executions.get(executionId)
     if (exec) {
-      // Remove reverse lookup entries
       for (const step of exec.steps) {
         if (step.sessionId) {
           this.sessionToExecution.delete(step.sessionId)
         }
       }
     }
-    this.executions.delete(executionId)
   }
 
   private async runStep(executionId: string, stepIndex: number): Promise<void> {
@@ -212,7 +267,7 @@ export class PlaybookExecutor extends EventEmitter {
       exec.status = 'failed'
       exec.completedAt = Date.now()
       this.emitUpdate(exec)
-      this.cleanupExecution(executionId)
+      this.cleanupReverseMap(executionId)
     }
   }
 
@@ -256,7 +311,7 @@ export class PlaybookExecutor extends EventEmitter {
           exec.status = 'completed'
           exec.completedAt = Date.now()
           this.emitUpdate(exec)
-          this.cleanupExecution(exec.id)
+          this.cleanupReverseMap(exec.id)
         }
       }
     } else if (session.status === 'error' || session.status === 'stopped') {
@@ -266,11 +321,12 @@ export class PlaybookExecutor extends EventEmitter {
       exec.status = 'failed'
       exec.completedAt = Date.now()
       this.emitUpdate(exec)
-      this.cleanupExecution(exec.id)
+      this.cleanupReverseMap(exec.id)
     }
   }
 
   private emitUpdate(execution: PlaybookExecution): void {
     this.emit('playbook-updated', execution)
+    this.save()
   }
 }

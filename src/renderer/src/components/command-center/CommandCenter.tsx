@@ -21,21 +21,32 @@ export function CommandCenter() {
   const playbookExecutions = usePlaybookStore(s => s.executions)
   const selectedProject = projects.find(p => p.id === selectedProjectId)
 
-  // Filter sessions by selected project
-  const sessions = useMemo(() => {
-    const all = Object.values(sessionsRecord)
-    if (!selectedProject) return all
-    return all.filter(s => s.projectPath === selectedProject.path)
-  }, [sessionsRecord, selectedProject])
-
-  // Filter active playbook executions
+  // Filter active playbook executions (must come before sessions so worktree paths are available)
   const activePlaybooks = useMemo(() => {
     const all = Object.values(playbookExecutions)
     const projectFiltered = selectedProject
-      ? all.filter(r => r.projectPath === selectedProject.path)
+      ? all.filter(r =>
+          r.projectPath === selectedProject.path ||
+          r.worktreeSourceProject === selectedProject.path
+        )
       : all
     return projectFiltered.filter(r => r.status !== 'completed')
   }, [playbookExecutions, selectedProject])
+
+  // Filter sessions by selected project (include worktree sessions)
+  const sessions = useMemo(() => {
+    const all = Object.values(sessionsRecord)
+    if (!selectedProject) return all
+    const worktreePaths = new Set(
+      Object.values(playbookExecutions)
+        .filter(e => e.worktreeSourceProject === selectedProject.path && e.worktreePath)
+        .map(e => e.worktreePath)
+    )
+    return all.filter(s =>
+      s.projectPath === selectedProject.path ||
+      worktreePaths.has(s.projectPath)
+    )
+  }, [sessionsRecord, selectedProject, playbookExecutions])
 
   const noProjects = projects.length === 0
 

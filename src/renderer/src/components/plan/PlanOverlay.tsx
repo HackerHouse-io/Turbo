@@ -1,6 +1,7 @@
-import { useCallback, useState, useEffect } from 'react'
+import { useCallback } from 'react'
 import { motion } from 'framer-motion'
 import { useProjectStore } from '../../stores/useProjectStore'
+import { useSessionStore } from '../../stores/useSessionStore'
 import { useUIStore } from '../../stores/useUIStore'
 import { usePlanData } from '../../hooks/usePlanData'
 import { PlanSection } from './PlanSection'
@@ -9,10 +10,10 @@ import { PlanBlockRenderer } from './PlanBlockRenderer'
 import { PlanEmptyState, PLAN_GENERATION_PROMPT } from './PlanEmptyState'
 import { slugify } from '../../../../shared/utils'
 
-const DEFAULT_PLAYBOOK_SETTING = 'planDefaultPlaybookId'
-
 export function PlanOverlay() {
   const closePlanOverlay = useUIStore(s => s.closePlanOverlay)
+  const setViewMode = useUIStore(s => s.setViewMode)
+  const selectSession = useSessionStore(s => s.selectSession)
   const selectedProjectId = useProjectStore(s => s.selectedProjectId)
   const projects = useProjectStore(s => s.projects)
   const selectedProject = projects.find(p => p.id === selectedProjectId)
@@ -37,35 +38,28 @@ export function PlanOverlay() {
   const progress = plan ? (plan.totalTasks > 0 ? plan.completedTasks / plan.totalTasks : 0) : 0
   const progressPct = Math.round(progress * 100)
 
-  // ─── Default playbook persistence ──────────────────────────
-  const [defaultPlaybookId, setDefaultPlaybookId] = useState<string | null>(null)
-
-  useEffect(() => {
-    window.api.getSetting(DEFAULT_PLAYBOOK_SETTING).then((val) => {
-      if (typeof val === 'string') setDefaultPlaybookId(val)
-    })
-  }, [])
-
-  const handleSetDefaultPlaybook = useCallback((playbookId: string) => {
-    setDefaultPlaybookId(playbookId)
-    window.api.setSetting(DEFAULT_PLAYBOOK_SETTING, playbookId)
-  }, [])
-
   // ─── Start task in worktree ─────────────────────────────────
-  const startTaskWithPlaybook = useCallback(async (taskContent: string, playbookId: string) => {
+  const startTask = useCallback(async (taskContent: string) => {
     if (!projectPath) throw new Error('No project selected')
     const slug = slugify(taskContent)
     const worktreeInfo = await window.api.createWorktree({ projectPath, slug })
-    await window.api.startPlaybook({
-      playbookId,
+    const execution = await window.api.startPlaybook({
+      playbookId: 'builtin-build-feature',
       projectPath: worktreeInfo.path,
       variables: { featureSlug: slug, featureDescription: taskContent },
       startFromStep: 1,
       worktreePath: worktreeInfo.path,
       worktreeSourceProject: projectPath
     })
+
+    // Navigate directly to the session terminal
+    const activeStep = execution.steps.find(s => s.sessionId)
+    if (activeStep?.sessionId) {
+      selectSession(activeStep.sessionId)
+      setViewMode('detail')
+    }
     closePlanOverlay()
-  }, [projectPath, closePlanOverlay])
+  }, [projectPath, closePlanOverlay, selectSession, setViewMode])
 
   const handleCreatePlan = useCallback(async () => {
     if (!projectPath) return
@@ -175,9 +169,7 @@ export function PlanOverlay() {
                     onEditLine={updateLine}
                     onDeleteLine={deleteLine}
                     onUpdateBlock={updateBlock}
-                    onStartTask={startTaskWithPlaybook}
-                    defaultPlaybookId={defaultPlaybookId}
-                    onSetDefaultPlaybook={handleSetDefaultPlaybook}
+                    onStartTask={startTask}
                   />
                 ))}
 
@@ -192,9 +184,7 @@ export function PlanOverlay() {
                     onDeleteLine={deleteLine}
                     onInsertLine={insertLine}
                     onUpdateBlock={updateBlock}
-                    onStartTask={startTaskWithPlaybook}
-                    defaultPlaybookId={defaultPlaybookId}
-                    onSetDefaultPlaybook={handleSetDefaultPlaybook}
+                    onStartTask={startTask}
                   />
                 ))}
               </div>

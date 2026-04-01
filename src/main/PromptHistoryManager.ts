@@ -1,8 +1,9 @@
 import { v4 as uuid } from 'uuid'
-import { readFileSync, writeFileSync, unlinkSync } from 'fs'
+import { unlinkSync } from 'fs'
 import { join } from 'path'
 import type { PromptHistoryItem } from '../shared/types'
 import { PROMPT_HISTORY_MAX } from '../shared/constants'
+import { JsonFileStore } from './JsonFileStore'
 
 /**
  * PromptHistoryManager: Prompt history persistence.
@@ -10,10 +11,10 @@ import { PROMPT_HISTORY_MAX } from '../shared/constants'
  */
 export class PromptHistoryManager {
   private history: PromptHistoryItem[] = []
-  private historyPath: string
+  private store: JsonFileStore<PromptHistoryItem[]>
 
   constructor(userDataPath: string) {
-    this.historyPath = join(userDataPath, 'prompt-history.json')
+    this.store = new JsonFileStore(join(userDataPath, 'prompt-history.json'))
 
     // Clean up legacy template file
     try { unlinkSync(join(userDataPath, 'prompt-templates.json')) } catch { /* Non-fatal */ }
@@ -55,19 +56,10 @@ export class PromptHistoryManager {
   // ─── Private ───────────────────────────────────────────────
 
   private load(): void {
-    try {
-      const raw = readFileSync(this.historyPath, 'utf-8')
-      this.history = JSON.parse(raw)
-    } catch {
-      // File missing or corrupt — start fresh
-    }
+    this.history = this.store.read([])
   }
 
   private saveHistory(): void {
-    try {
-      writeFileSync(this.historyPath, JSON.stringify(this.history, null, 2), 'utf-8')
-    } catch {
-      // Save failed — non-fatal
-    }
+    this.store.write(this.history)
   }
 }
