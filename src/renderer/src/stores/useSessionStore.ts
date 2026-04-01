@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { useShallow } from 'zustand/react/shallow'
 import type { AgentSession, AttentionItem } from '../../../shared/types'
 
 interface SessionState {
@@ -33,6 +34,21 @@ export const useSessionStore = create<SessionState>((set) => ({
 
   updateSession: (session) => {
     set(state => {
+      // Short-circuit: skip update if nothing meaningful changed
+      const prev = state.sessions[session.id]
+      if (prev &&
+        prev.status === session.status &&
+        prev.tokenCount === session.tokenCount &&
+        prev.estimatedCost === session.estimatedCost &&
+        prev.activityBlocks.length === session.activityBlocks.length &&
+        prev.needsAttention === session.needsAttention &&
+        prev.currentAction === session.currentAction &&
+        prev.lastActivity === session.lastActivity &&
+        prev.completedAt === session.completedAt
+      ) {
+        return state
+      }
+
       // Auto-dismiss stale attention items when session no longer needs attention
       // Only map if there are actually items to dismiss (avoid no-op re-renders)
       let attentionItems = state.attentionItems
@@ -113,3 +129,37 @@ export const useSessionStore = create<SessionState>((set) => ({
     }))
   }
 }))
+
+// ─── Granular Selectors ─────────────────────────────────────────
+// These prevent re-renders when unrelated sessions change.
+
+/** Returns sessions filtered by project path — shallow-compared array. */
+export function useProjectSessions(projectPath: string | undefined): AgentSession[] {
+  return useSessionStore(
+    useShallow(s => {
+      if (!projectPath) return []
+      return Object.values(s.sessions).filter(sess => sess.projectPath === projectPath)
+    })
+  )
+}
+
+/** Returns session counts for a project — only re-renders when counts change. */
+export function useSessionCounts(projectPath: string | undefined) {
+  return useSessionStore(
+    useShallow(s => {
+      const all = projectPath
+        ? Object.values(s.sessions).filter(sess => sess.projectPath === projectPath)
+        : Object.values(s.sessions)
+      let active = 0, waiting = 0, error = 0, done = 0, tokens = 0, cost = 0
+      for (const sess of all) {
+        if (sess.status === 'active' || sess.status === 'starting') active++
+        else if (sess.status === 'waiting_for_input') waiting++
+        else if (sess.status === 'error') error++
+        else if (sess.status === 'completed' || sess.status === 'stopped') done++
+        tokens += sess.tokenCount
+        cost += sess.estimatedCost
+      }
+      return { active, waiting, error, done, tokens, cost }
+    })
+  )
+}

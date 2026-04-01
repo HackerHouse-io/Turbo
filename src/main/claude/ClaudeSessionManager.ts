@@ -12,7 +12,7 @@ import type {
   ActivityBlock
 } from '../../shared/types'
 import { isTerminalStatus } from '../../shared/types'
-import { COST_PER_INPUT_TOKEN, COST_PER_OUTPUT_TOKEN, SESSION_HISTORY_MAX } from '../../shared/constants'
+import { COST_PER_INPUT_TOKEN, COST_PER_OUTPUT_TOKEN, SESSION_HISTORY_MAX, MAX_ACTIVITY_BLOCKS, MAX_PERSISTED_BLOCKS } from '../../shared/constants'
 import { GitIdentityManager } from '../git/GitIdentityManager'
 import type { GitOpsManager } from '../git/GitOpsManager'
 import type { SettingsManager } from '../SettingsManager'
@@ -44,6 +44,7 @@ export class ClaudeSessionManager extends EventEmitter {
   private store: JsonFileStore<AgentSession[]>
   private saveTimer: ReturnType<typeof setTimeout> | null = null
   private savePending = false
+  private blockUpdateTimers = new Map<string, ReturnType<typeof setTimeout>>()
 
   constructor(settingsManager: SettingsManager, projectManager: ProjectManager, gitOpsManager: GitOpsManager, userDataPath: string) {
     super()
@@ -93,6 +94,10 @@ export class ClaudeSessionManager extends EventEmitter {
       const s = this.sessions.get(id)
       if (s) {
         s.activityBlocks.push(block)
+        // Cap activity blocks to prevent unbounded growth
+        if (s.activityBlocks.length > MAX_ACTIVITY_BLOCKS) {
+          s.activityBlocks = s.activityBlocks.slice(-MAX_ACTIVITY_BLOCKS)
+        }
         s.lastActivity = block.title
         s.currentAction = block.title + (block.content ? ': ' + block.content.slice(0, 60) : '')
         this.emitUpdate(id)
@@ -106,7 +111,13 @@ export class ClaudeSessionManager extends EventEmitter {
         if (idx >= 0) {
           s.activityBlocks[idx] = block
           s.currentAction = block.title + (block.content ? ': ' + block.content.slice(0, 60) : '')
-          this.emitUpdate(id)
+          // Throttle block-update emissions to 200ms
+          if (!this.blockUpdateTimers.has(id)) {
+            this.blockUpdateTimers.set(id, setTimeout(() => {
+              this.blockUpdateTimers.delete(id)
+              this.emitUpdate(id)
+            }, 200))
+          }
         }
       }
     }
@@ -209,6 +220,8 @@ export class ClaudeSessionManager extends EventEmitter {
     this.sessions.delete(sessionId)
     this.monitors.delete(sessionId)
     this.gitSnapshots.delete(sessionId)
+    const timer = this.blockUpdateTimers.get(sessionId)
+    if (timer) { clearTimeout(timer); this.blockUpdateTimers.delete(sessionId) }
     this.saveNow()
     this.emit('session-removed', sessionId)
   }
@@ -229,6 +242,8 @@ export class ClaudeSessionManager extends EventEmitter {
     this.ptyManager.killAll()
     this.monitors.clear()
     this.gitSnapshots.clear()
+    this.blockUpdateTimers.forEach(t => clearTimeout(t))
+    this.blockUpdateTimers.clear()
   }
 
   // ─── Persistence ────────────────────────────────────────────
@@ -278,6 +293,10 @@ export class ClaudeSessionManager extends EventEmitter {
   private serializeSessions(): AgentSession[] {
     return Array.from(this.sessions.values()).map(s => {
       const { currentAction, needsAttention, attentionMessage, attentionType, ...rest } = s
+      // Trim activity blocks for persistence to keep file size manageable
+      if (rest.activityBlocks.length > MAX_PERSISTED_BLOCKS) {
+        rest.activityBlocks = rest.activityBlocks.slice(-MAX_PERSISTED_BLOCKS)
+      }
       return rest as AgentSession
     })
   }

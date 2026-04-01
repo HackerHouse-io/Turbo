@@ -116,6 +116,8 @@ export const IPC = {
 export const PROMPT_HISTORY_MAX = 50
 export const SESSION_HISTORY_MAX = 200
 export const PLAYBOOK_HISTORY_MAX = 100
+export const MAX_ACTIVITY_BLOCKS = 200
+export const MAX_PERSISTED_BLOCKS = 50
 
 // ─── Session option labels ───────────────────────────────────
 import type { EffortLevel, PermissionMode } from './types'

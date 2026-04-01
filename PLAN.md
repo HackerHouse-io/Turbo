@@ -26,14 +26,14 @@
 
 ## Phase 4: Interactive Views
 - [x] Interactive PLAN.md viewer with inline editing
-- [ ] Session timeline / Gantt view
+- [x] Session timeline / Gantt view
 - [x] Multi-project dashboard overview
 - [x] Settings screen
 
 ## Phase 5: Collaboration & Polish
 - [ ] Shareable routine templates
-- [ ] Keyboard shortcut customization
-- [ ] Performance profiling and optimization
+- [x] Keyboard shortcut customization
+- [x] Performance profiling and optimization
 - [x] Notification system for long-running tasks
 
 ## Phase 6: Distribution

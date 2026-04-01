@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useRef, useCallback } from 'react'
 import { AppShell } from './components/layout/AppShell'
 import { useSessionStore } from './stores/useSessionStore'
 import { useProjectStore } from './stores/useProjectStore'
@@ -15,6 +15,16 @@ export default function App() {
   const updateSession = useSessionStore(s => s.updateSession)
   const addAttentionItem = useSessionStore(s => s.addAttentionItem)
   const removeSession = useSessionStore(s => s.removeSession)
+
+  // Throttle refreshProjects — session-updated fires very frequently
+  const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const throttledRefreshProjects = useCallback(() => {
+    if (refreshTimerRef.current) return
+    refreshTimerRef.current = setTimeout(() => {
+      refreshTimerRef.current = null
+      useProjectStore.getState().refreshProjects()
+    }, 2000)
+  }, [])
 
   useEffect(() => {
     if (!window.api) {
@@ -52,8 +62,8 @@ export default function App() {
 
     const unsubSession = window.api.onSessionUpdated((session) => {
       updateSession(session)
-      // Refresh projects to update activeAgents counts
-      useProjectStore.getState().refreshProjects()
+      // Refresh projects to update activeAgents counts (debounced)
+      throttledRefreshProjects()
     })
 
     const unsubAttention = window.api.onAttentionNeeded((item) => {
@@ -100,8 +110,9 @@ export default function App() {
       unsubRemoved()
       unsubPlaybook()
       unsubNotifClick()
+      if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current)
     }
-  }, [updateSession, addAttentionItem, removeSession])
+  }, [updateSession, addAttentionItem, removeSession, throttledRefreshProjects])
 
   // Re-resolve git identity when project changes
   const selectedProjectId = useProjectStore(s => s.selectedProjectId)

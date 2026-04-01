@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, memo } from 'react'
+import { memo } from 'react'
 import { motion } from 'framer-motion'
 import type { AgentSession, AttentionType } from '../../../../shared/types'
 import { isTerminalStatus } from '../../../../shared/types'
@@ -7,6 +7,7 @@ import { useUIStore } from '../../stores/useUIStore'
 import { StatusBadge } from '../shared/StatusBadge'
 import { ProgressBar } from '../shared/ProgressBar'
 import { formatElapsed } from '../../lib/format'
+import { useTimedProgress } from '../../hooks/useTimedProgress'
 
 interface AgentCardProps {
   session: AgentSession
@@ -147,47 +148,6 @@ export const AgentCard = memo(function AgentCard({ session, focused }: AgentCard
     </motion.div>
   )
 })
-
-// ─── Hooks ─────────────────────────────────────────────────────
-
-function useTimedProgress(session: AgentSession): number {
-  const isActive = session.status === 'active' || session.status === 'starting'
-  const frozenRef = useRef(0)
-  const [progress, setProgress] = useState(() => {
-    if (session.status === 'completed') return 100
-    if (!isActive) return frozenRef.current
-    return timeToProgress(Date.now() - session.startedAt)
-  })
-
-  useEffect(() => {
-    if (session.status === 'completed') {
-      setProgress(100)
-      return
-    }
-    if (!isActive) {
-      // Freeze at current value for error/stopped
-      return
-    }
-
-    const tick = () => {
-      const ms = Date.now() - session.startedAt
-      const p = timeToProgress(ms)
-      setProgress(p)
-      frozenRef.current = p
-    }
-    tick()
-    const interval = setInterval(tick, 1000)
-    return () => clearInterval(interval)
-  }, [session.status, session.startedAt, isActive])
-
-  return progress
-}
-
-/** Logarithmic curve: fast early, asymptotic approach to 90% */
-function timeToProgress(ms: number): number {
-  const s = ms / 1000
-  return Math.min(90, (Math.log(1 + s / 10) / Math.log(61)) * 90)
-}
 
 // ─── Helpers ────────────────────────────────────────────────────
 

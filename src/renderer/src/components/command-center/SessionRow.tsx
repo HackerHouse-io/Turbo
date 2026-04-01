@@ -1,10 +1,11 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, memo } from 'react'
 import type { AgentSession, AttentionItem, AttentionType } from '../../../../shared/types'
 import { isTerminalStatus } from '../../../../shared/types'
 import { useSessionStore } from '../../stores/useSessionStore'
 import { useUIStore } from '../../stores/useUIStore'
 import { StatusBadge } from '../shared/StatusBadge'
 import { formatElapsed } from '../../lib/format'
+import { useTimedProgress } from '../../hooks/useTimedProgress'
 
 interface SessionRowProps {
   session: AgentSession
@@ -13,7 +14,7 @@ interface SessionRowProps {
   onDismissAttention?: (id: string) => void
 }
 
-export function SessionRow({ session, attentionItem, focused, onDismissAttention }: SessionRowProps) {
+export const SessionRow = memo(function SessionRow({ session, attentionItem, focused, onDismissAttention }: SessionRowProps) {
   const selectSession = useSessionStore(s => s.selectSession)
   const dismissAttentionItem = useSessionStore(s => s.dismissAttentionItem)
   const setViewMode = useUIStore(s => s.setViewMode)
@@ -220,44 +221,7 @@ export function SessionRow({ session, attentionItem, focused, onDismissAttention
       )}
     </div>
   )
-}
-
-// ─── Progress Hook (from AgentCard) ──────────────────────────
-
-function useTimedProgress(session: AgentSession): number {
-  const isActive = session.status === 'active' || session.status === 'starting'
-  const frozenRef = useRef(0)
-  const [progress, setProgress] = useState(() => {
-    if (session.status === 'completed') return 100
-    if (!isActive) return frozenRef.current
-    return timeToProgress(Date.now() - session.startedAt)
-  })
-
-  useEffect(() => {
-    if (session.status === 'completed') {
-      setProgress(100)
-      return
-    }
-    if (!isActive) return
-
-    const tick = () => {
-      const ms = Date.now() - session.startedAt
-      const p = timeToProgress(ms)
-      setProgress(p)
-      frozenRef.current = p
-    }
-    tick()
-    const interval = setInterval(tick, 1000)
-    return () => clearInterval(interval)
-  }, [session.status, session.startedAt, isActive])
-
-  return progress
-}
-
-function timeToProgress(ms: number): number {
-  const s = ms / 1000
-  return Math.min(90, (Math.log(1 + s / 10) / Math.log(61)) * 90)
-}
+})
 
 // ─── Helpers ─────────────────────────────────────────────────
 

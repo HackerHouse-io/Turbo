@@ -1,10 +1,11 @@
-import { useState, useEffect, useMemo, useCallback } from 'react'
+import { useMemo, useCallback } from 'react'
 import { motion } from 'framer-motion'
 import { useUIStore } from '../../stores/useUIStore'
 import { useSessionStore } from '../../stores/useSessionStore'
 import { useProjectStore } from '../../stores/useProjectStore'
 import { PaletteIcon } from '../command-palette/PaletteIcon'
 import { TimelineRow, BLOCK_COLORS } from './TimelineRow'
+import { useSharedTick } from '../../hooks/useSharedTick'
 import type { ActivityBlockType } from '../../../../shared/types'
 
 // ─── Legend derived from shared BLOCK_COLORS ────────────────────
@@ -63,18 +64,7 @@ export function SessionTimeline() {
     return filtered.sort((a, b) => a.startedAt - b.startedAt)
   }, [sessionsRecord, selectedProject])
 
-  const hasActive = useMemo(
-    () => sessions.some(s => s.status === 'active' || s.status === 'starting'),
-    [sessions]
-  )
-
-  // Real-time tick for active sessions
-  const [now, setNow] = useState(Date.now())
-  useEffect(() => {
-    if (!hasActive) return
-    const interval = setInterval(() => setNow(Date.now()), 1000)
-    return () => clearInterval(interval)
-  }, [hasActive])
+  const now = useSharedTick()
 
   // Compute global time range
   const { minStart, maxEnd } = useMemo(() => {
@@ -101,7 +91,8 @@ export function SessionTimeline() {
     return result
   }, [totalRange, sessions.length])
 
-  // "Now" marker position
+  // "Now" marker position (only show if any session is active)
+  const hasActive = sessions.some(s => s.status === 'active' || s.status === 'starting')
   const nowOffset = hasActive ? ((now - minStart) / totalRange) * 100 : null
 
   const handleSessionClick = useCallback((sessionId: string) => {

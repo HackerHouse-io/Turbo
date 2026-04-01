@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, memo } from 'react'
 import { AnimatePresence } from 'framer-motion'
 import { TopBar } from './TopBar'
 import { CommandCenter } from '../command-center/CommandCenter'
@@ -14,19 +14,34 @@ import { SessionTimeline } from '../timeline/SessionTimeline'
 import { SettingsOverlay } from '../settings/SettingsOverlay'
 import { useUIStore } from '../../stores/useUIStore'
 import { useSessionStore } from '../../stores/useSessionStore'
-import { useProjectStore } from '../../stores/useProjectStore'
-import { useTerminalStore } from '../../stores/useTerminalStore'
 import { useKeybindingsStore } from '../../stores/useKeybindingsStore'
 import { matchesEvent } from '../../lib/keybindings'
 import { ShortcutsOverlay } from '../shortcuts/ShortcutsOverlay'
 import { ToastContainer } from '../notifications/ToastContainer'
 import { NotificationCenter } from '../notifications/NotificationCenter'
 
-export function AppShell() {
+// ─── Main Content (only re-renders on viewMode / selectedSession changes) ───
+
+const MainContent = memo(function MainContent() {
   const viewMode = useUIStore(s => s.viewMode)
-  const commandPaletteOpen = useUIStore(s => s.commandPaletteOpen)
-  const terminalDrawerOpen = useUIStore(s => s.terminalDrawerOpen)
-  const projectSelectorOpen = useUIStore(s => s.projectSelectorOpen)
+  const selectedSessionId = useSessionStore(s => s.selectedSessionId)
+
+  return (
+    <main className="flex-1 overflow-hidden">
+      {viewMode === 'overview' ? (
+        <ProjectOverview />
+      ) : viewMode === 'dashboard' || !selectedSessionId ? (
+        <CommandCenter />
+      ) : (
+        <AgentDetailView sessionId={selectedSessionId} />
+      )}
+    </main>
+  )
+})
+
+// ─── Overlays (each subscribes only to its own boolean) ─────────
+
+const Overlays = memo(function Overlays() {
   const playbookDetail = useUIStore(s => s.playbookDetail)
   const playbookEditorState = useUIStore(s => s.playbookEditorState)
   const planOverlayOpen = useUIStore(s => s.planOverlayOpen)
@@ -34,9 +49,30 @@ export function AppShell() {
   const timelineOpen = useUIStore(s => s.timelineOpen)
   const settingsOpen = useUIStore(s => s.settingsOpen)
   const shortcutsOverlayOpen = useUIStore(s => s.shortcutsOverlayOpen)
+  const commandPaletteOpen = useUIStore(s => s.commandPaletteOpen)
+  const terminalDrawerOpen = useUIStore(s => s.terminalDrawerOpen)
   const notificationCenterOpen = useUIStore(s => s.notificationCenterOpen)
-  const selectedSessionId = useSessionStore(s => s.selectedSessionId)
 
+  return (
+    <>
+      {playbookDetail && <PlaybookDetailOverlay playbook={playbookDetail} />}
+      {playbookEditorState && <PlaybookEditorOverlay />}
+      {planOverlayOpen && <PlanOverlay />}
+      {terminalWorkspaceOpen && <TerminalWorkspace />}
+      {timelineOpen && <SessionTimeline />}
+      <AnimatePresence>{settingsOpen && <SettingsOverlay />}</AnimatePresence>
+      <AnimatePresence>{shortcutsOverlayOpen && <ShortcutsOverlay />}</AnimatePresence>
+      {commandPaletteOpen && <CommandPalette />}
+      {terminalDrawerOpen && <TerminalDrawer />}
+      <AnimatePresence>{notificationCenterOpen && <NotificationCenter />}</AnimatePresence>
+      <ToastContainer />
+    </>
+  )
+})
+
+// ─── App Shell ──────────────────────────────────────────────────
+
+export function AppShell() {
   // Global keyboard shortcuts — reads fresh state via getState() so no reactive deps needed
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
@@ -137,29 +173,8 @@ export function AppShell() {
       {/* Top bar */}
       <TopBar />
 
-      {/* Main content */}
-      <main className="flex-1 overflow-hidden">
-        {viewMode === 'overview' ? (
-          <ProjectOverview />
-        ) : viewMode === 'dashboard' || !selectedSessionId ? (
-          <CommandCenter />
-        ) : (
-          <AgentDetailView sessionId={selectedSessionId} />
-        )}
-      </main>
-
-      {/* Overlays */}
-      {playbookDetail && <PlaybookDetailOverlay playbook={playbookDetail} />}
-      {playbookEditorState && <PlaybookEditorOverlay />}
-      {planOverlayOpen && <PlanOverlay />}
-      {terminalWorkspaceOpen && <TerminalWorkspace />}
-      {timelineOpen && <SessionTimeline />}
-      <AnimatePresence>{settingsOpen && <SettingsOverlay />}</AnimatePresence>
-      <AnimatePresence>{shortcutsOverlayOpen && <ShortcutsOverlay />}</AnimatePresence>
-      {commandPaletteOpen && <CommandPalette />}
-      {terminalDrawerOpen && <TerminalDrawer />}
-      <AnimatePresence>{notificationCenterOpen && <NotificationCenter />}</AnimatePresence>
-      <ToastContainer />
+      <MainContent />
+      <Overlays />
     </div>
   )
 }

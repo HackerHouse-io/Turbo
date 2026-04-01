@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, memo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import type { ActivityBlock as ActivityBlockType } from '../../../../shared/types'
 
@@ -32,7 +32,7 @@ const BLOCK_COLORS: Record<string, string> = {
   unknown: 'text-turbo-text-muted'
 }
 
-export function ActivityBlock({ block }: ActivityBlockProps) {
+export const ActivityBlock = memo(function ActivityBlock({ block }: ActivityBlockProps) {
   const [expanded, setExpanded] = useState(!block.collapsed)
   const iconPath = BLOCK_ICONS[block.type] || BLOCK_ICONS.unknown
   const colorClass = BLOCK_COLORS[block.type] || BLOCK_COLORS.unknown
@@ -115,4 +115,4 @@ export function ActivityBlock({ block }: ActivityBlockProps) {
       </AnimatePresence>
     </motion.div>
   )
-}
+})

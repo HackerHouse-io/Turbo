@@ -48,7 +48,6 @@ export function NotificationToast({ toast }: { toast: ToastItem }) {
 
   return (
     <motion.div
-      layout
       initial={{ opacity: 0, x: 80 }}
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: 80, transition: { duration: 0.15 } }}

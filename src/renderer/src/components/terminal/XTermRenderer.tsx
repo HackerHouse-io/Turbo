@@ -48,7 +48,8 @@ export function XTermRenderer({ terminalId, mode = 'session' }: XTermRendererPro
         brightCyan: '#22d3ee',
         brightWhite: '#ffffff'
       },
-      allowProposedApi: true
+      allowProposedApi: true,
+      scrollback: 10_000
     })
 
     const fitAddon = new FitAddon()

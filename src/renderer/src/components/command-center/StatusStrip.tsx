@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { useSessionStore } from '../../stores/useSessionStore'
+import { useSessionCounts } from '../../stores/useSessionStore'
 import { usePlaybookStore } from '../../stores/usePlaybookStore'
 import { useUIStore } from '../../stores/useUIStore'
 import { useNerveCenterData } from '../../hooks/useNerveCenterData'
@@ -14,34 +14,12 @@ interface StatusStripProps {
 }
 
 export function StatusStrip({ projectPath }: StatusStripProps) {
-  const sessionsRecord = useSessionStore(s => s.sessions)
+  const stats = useSessionCounts(projectPath)
   const playbookExecutions = usePlaybookStore(s => s.executions)
   const openPlanOverlay = useUIStore(s => s.openPlanOverlay)
 
   const { git, refresh } = useNerveCenterData(projectPath)
   const { plan, found } = usePlanData(projectPath)
-
-  // Session counts filtered by project
-  const stats = useMemo(() => {
-    const all = Object.values(sessionsRecord).filter(
-      s => projectPath && s.projectPath === projectPath
-    )
-    let active = 0
-    let waiting = 0
-    let error = 0
-    let done = 0
-    let tokens = 0
-    let cost = 0
-    for (const s of all) {
-      if (s.status === 'active' || s.status === 'starting') active++
-      else if (s.status === 'waiting_for_input') waiting++
-      else if (s.status === 'error') error++
-      else if (s.status === 'completed' || s.status === 'stopped') done++
-      tokens += s.tokenCount
-      cost += s.estimatedCost
-    }
-    return { active, waiting, error, done, tokens, cost }
-  }, [sessionsRecord, projectPath])
 
   // Active playbook for this project
   const activePlaybook = useMemo(() => {
@@ -52,14 +30,20 @@ export function StatusStrip({ projectPath }: StatusStripProps) {
     )
   }, [playbookExecutions, projectPath])
 
-  // Plan progress ring
-  const planProgress = found && plan && plan.totalTasks > 0
-    ? plan.completedTasks / plan.totalTasks
-    : null
-  const planPct = planProgress !== null ? Math.round(planProgress * 100) : 0
-  const radius = 9
-  const circumference = 2 * Math.PI * radius
-  const strokeDashoffset = planProgress !== null ? circumference * (1 - planProgress) : circumference
+  // Plan progress ring (memoized to avoid recalculating SVG math every render)
+  const { planProgress, planPct, circumference, strokeDashoffset } = useMemo(() => {
+    const progress = found && plan && plan.totalTasks > 0
+      ? plan.completedTasks / plan.totalTasks
+      : null
+    const radius = 9
+    const circ = 2 * Math.PI * radius
+    return {
+      planProgress: progress,
+      planPct: progress !== null ? Math.round(progress * 100) : 0,
+      circumference: circ,
+      strokeDashoffset: progress !== null ? circ * (1 - progress) : circ
+    }
+  }, [found, plan])
 
   return (
     <div className="h-9 flex items-center justify-between gap-4 px-4 border-b border-turbo-border bg-turbo-surface/30 text-xs flex-shrink-0">
@@ -115,14 +99,14 @@ export function StatusStrip({ projectPath }: StatusStripProps) {
           >
             <svg width="24" height="24" viewBox="0 0 24 24" className="-rotate-90">
               <circle
-                cx="12" cy="12" r={radius}
+                cx="12" cy="12" r={9}
                 stroke="currentColor"
                 strokeWidth="2"
                 fill="none"
                 className="text-turbo-border"
               />
               <circle
-                cx="12" cy="12" r={radius}
+                cx="12" cy="12" r={9}
                 stroke="currentColor"
                 strokeWidth="2"
                 fill="none"
