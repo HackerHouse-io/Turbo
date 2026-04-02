@@ -222,6 +222,9 @@ const api = {
   removePlaybookExecution: (executionId: string): Promise<void> =>
     ipcRenderer.invoke(IPC.PLAYBOOK_REMOVE, executionId),
 
+  advancePlaybookStep: (executionId: string): Promise<void> =>
+    ipcRenderer.invoke(IPC.PLAYBOOK_ADVANCE_STEP, executionId),
+
   // ─── Plan ──────────────────────────────────────────────────
 
   planRead: (projectPath: string): Promise<PlanReadResult> =>

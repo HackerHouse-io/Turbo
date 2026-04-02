@@ -89,6 +89,7 @@ export const IPC = {
   PLAYBOOK_SAVE: 'playbook:save',
   PLAYBOOK_DELETE: 'playbook:delete',
   PLAYBOOK_DUPLICATE: 'playbook:duplicate',
+  PLAYBOOK_ADVANCE_STEP: 'playbook:advance-step',
 
   // Events (main → renderer)
   PLAYBOOK_UPDATED: 'playbook:updated',

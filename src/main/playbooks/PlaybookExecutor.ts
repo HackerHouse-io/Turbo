@@ -14,6 +14,8 @@ import { isTerminalStatus } from '../../shared/types'
 import { substituteTemplateVariables } from '../../shared/templateVars'
 import { PLAYBOOK_HISTORY_MAX } from '../../shared/constants'
 
+const PLAYBOOK_AUTO_ADVANCE_MS = 1500
+
 /**
  * PlaybookExecutor: Orchestrates multi-step playbook execution.
  *
@@ -23,6 +25,7 @@ import { PLAYBOOK_HISTORY_MAX } from '../../shared/constants'
 export class PlaybookExecutor extends EventEmitter {
   private executions = new Map<string, PlaybookExecution>()
   private sessionToExecution = new Map<string, string>()
+  private autoAdvanceTimers = new Map<string, ReturnType<typeof setTimeout>>()
   private sessionManager: ClaudeSessionManager
   private playbookManager: PlaybookManager
   private boundHandleSessionUpdate: (session: AgentSession) => void
@@ -81,6 +84,7 @@ export class PlaybookExecutor extends EventEmitter {
     const exec = this.executions.get(executionId)
     if (!exec || exec.status !== 'running') return
 
+    this.cancelAutoAdvance(executionId)
     exec.status = 'paused'
     this.emitUpdate(exec)
   }
@@ -102,9 +106,23 @@ export class PlaybookExecutor extends EventEmitter {
     }
   }
 
+  advanceStep(executionId: string): void {
+    const exec = this.executions.get(executionId)
+    if (!exec || exec.status !== 'running') return
+
+    const currentStep = exec.steps[exec.currentStepIndex]
+    if (!currentStep || !currentStep.sessionId || currentStep.status !== 'running') return
+
+    this.sessionManager.writeToSession(currentStep.sessionId, '/exit\n')
+    exec.currentStepWaiting = false
+    this.emitUpdate(exec)
+  }
+
   stopPlaybook(executionId: string): void {
     const exec = this.executions.get(executionId)
     if (!exec || isTerminalStatus(exec.status)) return
+
+    this.cancelAutoAdvance(executionId)
 
     // Stop current session
     const currentStep = exec.steps[exec.currentStepIndex]
@@ -141,6 +159,8 @@ export class PlaybookExecutor extends EventEmitter {
     const exec = this.executions.get(executionId)
     if (!exec) return
 
+    this.cancelAutoAdvance(executionId)
+
     // Stop if still running
     if (exec.status === 'running' || exec.status === 'paused') {
       this.stopPlaybook(executionId)
@@ -156,6 +176,9 @@ export class PlaybookExecutor extends EventEmitter {
   }
 
   dispose(): void {
+    this.autoAdvanceTimers.forEach(t => clearTimeout(t))
+    this.autoAdvanceTimers.clear()
+
     // Mark running executions as stopped without killing sessions (session manager handles that)
     for (const exec of this.executions.values()) {
       this.markInterrupted(exec)
@@ -286,6 +309,8 @@ export class PlaybookExecutor extends EventEmitter {
     if (currentStep.status !== 'running') return
 
     if (session.status === 'completed') {
+      this.cancelAutoAdvance(exec.id)
+      exec.currentStepWaiting = false
       currentStep.status = 'completed'
       currentStep.completedAt = Date.now()
 
@@ -314,7 +339,28 @@ export class PlaybookExecutor extends EventEmitter {
           this.cleanupReverseMap(exec.id)
         }
       }
+    } else if (session.status === 'waiting_for_input') {
+      const playbook = this.playbookManager.getPlaybook(exec.playbookId)
+      const stepDef = playbook?.steps[exec.currentStepIndex]
+      const mode = stepDef?.permissionMode || 'default'
+
+      if (mode === 'auto' || mode === 'plan') {
+        // Safe to auto-advance — these modes never need user interaction
+        this.scheduleAutoAdvance(exec.id, session.id)
+      } else {
+        // Default mode — let user decide when to advance
+        exec.currentStepWaiting = true
+        this.emitUpdate(exec)
+      }
+    } else if (session.status === 'active') {
+      this.cancelAutoAdvance(exec.id)
+      if (exec.currentStepWaiting) {
+        exec.currentStepWaiting = false
+        this.emitUpdate(exec)
+      }
     } else if (session.status === 'error' || session.status === 'stopped') {
+      this.cancelAutoAdvance(exec.id)
+      exec.currentStepWaiting = false
       currentStep.status = 'failed'
       currentStep.completedAt = Date.now()
       currentStep.error = session.status === 'error' ? 'Session error' : 'Session stopped'
@@ -322,6 +368,33 @@ export class PlaybookExecutor extends EventEmitter {
       exec.completedAt = Date.now()
       this.emitUpdate(exec)
       this.cleanupReverseMap(exec.id)
+    }
+  }
+
+  private scheduleAutoAdvance(executionId: string, sessionId: string): void {
+    this.cancelAutoAdvance(executionId)
+
+    this.autoAdvanceTimers.set(executionId, setTimeout(() => {
+      this.autoAdvanceTimers.delete(executionId)
+
+      const exec = this.executions.get(executionId)
+      if (!exec || exec.status !== 'running') return
+
+      const session = this.sessionManager.getSession(sessionId)
+      if (!session || session.status !== 'waiting_for_input') return
+
+      const step = exec.steps[exec.currentStepIndex]
+      if (!step || step.sessionId !== sessionId || step.status !== 'running') return
+
+      this.sessionManager.writeToSession(sessionId, '/exit\n')
+    }, PLAYBOOK_AUTO_ADVANCE_MS))
+  }
+
+  private cancelAutoAdvance(executionId: string): void {
+    const timer = this.autoAdvanceTimers.get(executionId)
+    if (timer) {
+      clearTimeout(timer)
+      this.autoAdvanceTimers.delete(executionId)
     }
   }
 

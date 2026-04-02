@@ -318,6 +318,7 @@ export interface PlaybookExecution {
   status: PlaybookExecutionStatus
   steps: PlaybookStepState[]
   currentStepIndex: number
+  currentStepWaiting?: boolean
   startedAt: number
   completedAt?: number
   variables: Record<string, string>

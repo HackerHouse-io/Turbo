@@ -213,7 +213,7 @@ export class OutputMonitor {
       // Start a new message block for Claude's text output
       this.startBlock('message', 'Response', trimmed)
       if (trimmed.length > 10) this.lastResponseLine = trimmed
-      if (this.status !== 'active') {
+      if (this.status === 'starting') {
         this.setStatus('active')
       }
     }

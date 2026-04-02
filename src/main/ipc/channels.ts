@@ -446,6 +446,10 @@ export function registerIpcHandlers(opts: IpcHandlerOptions): void {
     playbookExecutor.removeExecution(executionId)
   })
 
+  ipcMain.handle(IPC.PLAYBOOK_ADVANCE_STEP, async (_e, executionId: string) => {
+    playbookExecutor.advanceStep(executionId)
+  })
+
   ipcMain.handle(IPC.PLAYBOOK_SAVE, async (_e, playbook: Playbook) => {
     return playbookManager.savePlaybook(playbook)
   })

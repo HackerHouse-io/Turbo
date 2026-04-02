@@ -180,6 +180,10 @@ function PlaybookBannerCard({ execution }: { execution: PlaybookExecution }) {
     window.api.stopPlaybook(execution.id)
   }, [execution.id])
 
+  const handleAdvanceStep = useCallback(() => {
+    window.api.advancePlaybookStep(execution.id)
+  }, [execution.id])
+
   const handleStepClick = useCallback((sessionId?: string) => {
     if (!sessionId) return
     selectSession(sessionId)
@@ -255,6 +259,19 @@ function PlaybookBannerCard({ execution }: { execution: PlaybookExecution }) {
           </button>
         ))}
       </div>
+
+      {/* Next Step button — shown when current step is done and waiting for user */}
+      {execution.currentStepWaiting && execution.status === 'running' && (
+        <div className="px-4 pb-2">
+          <button
+            onClick={handleAdvanceStep}
+            className="h-7 text-[11px] px-3 rounded-md bg-turbo-accent text-white font-medium
+                       hover:bg-turbo-accent/90 transition-colors"
+          >
+            Next Step
+          </button>
+        </div>
+      )}
 
       {/* Progress bar */}
       {!isTerminal && execution.status !== 'awaiting_commit' && (
