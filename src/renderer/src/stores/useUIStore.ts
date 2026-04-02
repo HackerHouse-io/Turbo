@@ -80,6 +80,13 @@ interface UIState {
   createProjectOverlayOpen: boolean
   openCreateProjectOverlay: () => void
   closeCreateProjectOverlay: () => void
+
+  // Global drag-and-drop
+  isDragOver: boolean
+  setIsDragOver: (v: boolean) => void
+  pendingDropPaths: string[]
+  setPendingDropPaths: (paths: string[]) => void
+  consumeDropPaths: () => string[]
 }
 
 export const useUIStore = create<UIState>((set) => ({
@@ -172,5 +179,15 @@ export const useUIStore = create<UIState>((set) => ({
 
   createProjectOverlayOpen: false,
   openCreateProjectOverlay: () => set({ createProjectOverlayOpen: true }),
-  closeCreateProjectOverlay: () => set({ createProjectOverlayOpen: false })
+  closeCreateProjectOverlay: () => set({ createProjectOverlayOpen: false }),
+
+  isDragOver: false,
+  setIsDragOver: (v) => set({ isDragOver: v }),
+  pendingDropPaths: [],
+  setPendingDropPaths: (paths) => set({ pendingDropPaths: paths }),
+  consumeDropPaths: () => {
+    const paths = useUIStore.getState().pendingDropPaths
+    set({ pendingDropPaths: [] })
+    return paths
+  }
 }))

@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { useProjectStore } from '../../stores/useProjectStore'
+import { useUIStore } from '../../stores/useUIStore'
 import { useGitIdentityStore } from '../../stores/useGitIdentityStore'
 import { ModelEffortSelector } from '../shared/ModelEffortSelector'
 import { AttachmentChip } from './AttachmentChip'
@@ -12,17 +13,15 @@ export function InlinePrompt() {
   const [model, setModel] = useState('sonnet')
   const [effort, setEffort] = useState<EffortLevel>('medium')
   const [attachments, setAttachments] = useState<AttachmentInfo[]>([])
-  const [isDragOver, setIsDragOver] = useState(false)
-  const dragCounter = useRef(0)
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const selectedProjectId = useProjectStore(s => s.selectedProjectId)
   const projects = useProjectStore(s => s.projects)
+  const pendingDropPaths = useUIStore(s => s.pendingDropPaths)
 
   const selectedProject = projects.find(p => p.id === selectedProjectId)
   const currentResolved = useGitIdentityStore(s => s.currentResolved)
 
   useEffect(() => {
-    // Load user defaults, then detect models
     Promise.all([
       window.api.getSetting('defaultModel'),
       window.api.getSetting('defaultEffort'),
@@ -37,6 +36,15 @@ export function InlinePrompt() {
       if (savedEffort) setEffort(savedEffort as EffortLevel)
     })
   }, [])
+
+  // Consume files dropped anywhere on the window
+  useEffect(() => {
+    if (pendingDropPaths.length === 0) return
+    const paths = useUIStore.getState().consumeDropPaths()
+    if (paths.length > 0) {
+      addAttachments(paths)
+    }
+  }, [pendingDropPaths])
 
   const addAttachments = async (filePaths: string[]) => {
     const result = await window.api.getFileInfo(filePaths)
@@ -126,38 +134,6 @@ export function InlinePrompt() {
     }
   }
 
-  const handleDragEnter = (e: React.DragEvent) => {
-    e.preventDefault()
-    dragCounter.current++
-    if (e.dataTransfer.types.includes('Files')) {
-      setIsDragOver(true)
-    }
-  }
-
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault()
-  }
-
-  const handleDragLeave = (e: React.DragEvent) => {
-    e.preventDefault()
-    dragCounter.current--
-    if (dragCounter.current === 0) setIsDragOver(false)
-  }
-
-  const handleDrop = async (e: React.DragEvent) => {
-    e.preventDefault()
-    dragCounter.current = 0
-    setIsDragOver(false)
-
-    const files = Array.from(e.dataTransfer.files)
-    if (files.length === 0) return
-
-    const paths = files.map(f => f.path).filter(Boolean)
-    if (paths.length > 0) {
-      await addAttachments(paths)
-    }
-  }
-
   if (!selectedProject) return null
 
   return (
@@ -165,17 +141,7 @@ export function InlinePrompt() {
       <div
         className="relative bg-turbo-surface border border-turbo-border rounded-xl
                     focus-within:border-turbo-accent/50 transition-colors overflow-visible"
-        onDragEnter={handleDragEnter}
-        onDragOver={handleDragOver}
-        onDragLeave={handleDragLeave}
-        onDrop={handleDrop}
       >
-        {isDragOver && (
-          <div className="absolute inset-0 z-10 rounded-xl border-2 border-dashed border-turbo-accent/60
-                          bg-turbo-accent/5 flex items-center justify-center pointer-events-none">
-            <span className="text-sm text-turbo-accent font-medium">Drop files to attach</span>
-          </div>
-        )}
         <textarea
           ref={inputRef}
           value={prompt}

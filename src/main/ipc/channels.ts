@@ -1,4 +1,4 @@
-import { ipcMain, BrowserWindow, dialog, app, nativeImage } from 'electron'
+import { ipcMain, BrowserWindow, dialog, app, nativeImage, shell } from 'electron'
 import { EventEmitter } from 'events'
 import { basename, extname, join } from 'path'
 import { stat, writeFile, mkdir } from 'fs/promises'
@@ -42,6 +42,7 @@ import { GitHubManager } from '../github/GitHubManager'
 import { ProjectCreationManager } from '../ProjectCreationManager'
 import { detectModels } from '../claude/ClaudeModelDetector'
 import { detectRunCommand, detectRunCommandWithClaude } from '../run/detectRunCommand'
+import { detectXcodeProject } from '../run/detectXcodeProject'
 
 const MIME_MAP: Record<string, string> = {
   '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg',
@@ -537,6 +538,17 @@ export function registerIpcHandlers(opts: IpcHandlerOptions): void {
 
   ipcMain.handle(IPC.PROJECT_CREATE_NEW, async (_e, payload: CreateProjectPayload) => {
     return projectCreationManager.createProject(payload)
+  })
+
+  // ─── Xcode ─────────────────────────────────────────────────
+
+  ipcMain.handle(IPC.XCODE_DETECT_PROJECT, async (_e, projectPath: string) => {
+    return detectXcodeProject(projectPath)
+  })
+
+  ipcMain.handle(IPC.XCODE_OPEN_PROJECT, async (_e, filePath: string) => {
+    const err = await shell.openPath(filePath)
+    if (err) throw new Error(`Failed to open in Xcode: ${err}`)
   })
 
   // ─── Forward events to renderer ────────────────────────────

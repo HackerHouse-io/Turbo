@@ -36,13 +36,8 @@ const isDev = !app.isPackaged
 process.stdout?.on('error', () => {})
 process.stderr?.on('error', () => {})
 
-function getAppIcon(): Electron.NativeImage {
-  const iconPath = join(__dirname, '../../resources/icons/icon.png')
-  return nativeImage.createFromPath(iconPath)
-}
-
 function createWindow(): void {
-  const icon = getAppIcon()
+  const iconPath = join(__dirname, '../../resources/icons/icon.png')
 
   mainWindow = new BrowserWindow({
     width: 1400,
@@ -50,7 +45,7 @@ function createWindow(): void {
     minWidth: 900,
     minHeight: 600,
     title: 'Turbo',
-    icon,
+    icon: iconPath,
     titleBarStyle: 'hiddenInset',
     trafficLightPosition: { x: 16, y: 16 },
     backgroundColor: '#0a0a0f',
@@ -63,11 +58,18 @@ function createWindow(): void {
     }
   })
 
-  // Set dock icon on macOS dev mode — dock.setIcon bypasses squircle mask,
-  // so we only use it in dev. Packaged builds use the .icns from the bundle.
-  if (process.platform === 'darwin' && app.dock && !app.isPackaged) {
-    app.dock.setIcon(icon)
+  // Use pre-masked squircle icon for macOS dock (baked-in rounded corners)
+  if (process.platform === 'darwin' && app.dock) {
+    const dockIcon = nativeImage.createFromPath(
+      join(__dirname, '../../resources/icons/icon-dock.png')
+    )
+    app.dock.setIcon(dockIcon)
   }
+
+  // Prevent Electron from navigating to dropped files
+  mainWindow.webContents.on('will-navigate', (e, url) => {
+    if (url.startsWith('file://')) e.preventDefault()
+  })
 
   // Log renderer console messages to main process stdout
   mainWindow.webContents.on('console-message', (_e, level, message, line, sourceId) => {

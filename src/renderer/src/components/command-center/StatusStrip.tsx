@@ -8,6 +8,7 @@ import { formatCost } from '../../lib/format'
 import { BranchSwitcher } from './BranchSwitcher'
 import { PaletteIcon } from '../command-palette/PaletteIcon'
 import { RunButton } from './RunButton'
+import { XcodeButton } from './XcodeButton'
 
 interface StatusStripProps {
   projectPath: string | undefined
@@ -65,6 +66,7 @@ export function StatusStrip({ projectPath }: StatusStripProps) {
           <span className="text-turbo-text-muted">Ready</span>
         )}
         <RunButton projectPath={projectPath} />
+        <XcodeButton projectPath={projectPath} />
       </div>
 
       {/* Right: contextual info */}

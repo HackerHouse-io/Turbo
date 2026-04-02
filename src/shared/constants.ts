@@ -125,7 +125,11 @@ export const IPC = {
   GITHUB_LIST_ORGS: 'github:list-orgs',
 
   // Project Creation
-  PROJECT_CREATE_NEW: 'project:create-new'
+  PROJECT_CREATE_NEW: 'project:create-new',
+
+  // Xcode
+  XCODE_DETECT_PROJECT: 'xcode:detect-project',
+  XCODE_OPEN_PROJECT: 'xcode:open-project'
 } as const
 
 export const PROMPT_HISTORY_MAX = 50

@@ -1,4 +1,4 @@
-import { contextBridge, ipcRenderer } from 'electron'
+import { contextBridge, ipcRenderer, webUtils } from 'electron'
 import { IPC } from '../shared/constants'
 import type {
   CreateSessionPayload,
@@ -36,7 +36,8 @@ import type {
   GitHubTokenValidation,
   GitHubOrg,
   CreateProjectPayload,
-  CreateProjectResult
+  CreateProjectResult,
+  XcodeProjectInfo
 } from '../shared/types'
 
 /**
@@ -296,6 +297,14 @@ const api = {
   createNewProject: (payload: CreateProjectPayload): Promise<CreateProjectResult> =>
     ipcRenderer.invoke(IPC.PROJECT_CREATE_NEW, payload),
 
+  // ─── Xcode ─────────────────────────────────────────────────
+
+  detectXcodeProject: (projectPath: string): Promise<XcodeProjectInfo | null> =>
+    ipcRenderer.invoke(IPC.XCODE_DETECT_PROJECT, projectPath),
+
+  openInXcode: (filePath: string): Promise<void> =>
+    ipcRenderer.invoke(IPC.XCODE_OPEN_PROJECT, filePath),
+
   // ─── Worktree ────────────────────────────────────────────
 
   createWorktree: (payload: CreateWorktreePayload): Promise<WorktreeInfo> =>
@@ -350,7 +359,11 @@ const api = {
     const handler = (_: Electron.IpcRendererEvent, sessionId: string) => callback(sessionId)
     ipcRenderer.on(IPC.NOTIFICATION_CLICK, handler)
     return () => ipcRenderer.removeListener(IPC.NOTIFICATION_CLICK, handler)
-  }
+  },
+
+  // ─── File Utilities ───────────────────────────────────────
+
+  getPathForFile: (file: File): string => webUtils.getPathForFile(file)
 }
 
 contextBridge.exposeInMainWorld('api', api)

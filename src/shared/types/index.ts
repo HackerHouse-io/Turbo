@@ -113,6 +113,18 @@ export type RunCommandFileSource =
 
 export type RunCommandSource = RunCommandFileSource | 'claude' | 'user'
 
+// ─── Xcode Project Info ────────────────────────────────────────
+
+export type XcodePlatform = 'iOS' | 'macOS' | 'watchOS' | 'tvOS' | 'visionOS' | 'multiplatform'
+export type XcodeProjectType = 'xcworkspace' | 'xcodeproj' | 'spm'
+
+export interface XcodeProjectInfo {
+  openPath: string
+  type: XcodeProjectType
+  name: string
+  platform: XcodePlatform | null
+}
+
 // ─── Projects ───────────────────────────────────────────────────
 
 export interface Project {
