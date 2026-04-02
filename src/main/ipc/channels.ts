@@ -1,8 +1,10 @@
 import { ipcMain, BrowserWindow, dialog, app, nativeImage, shell } from 'electron'
+import { execFile } from 'child_process'
 import { EventEmitter } from 'events'
 import { basename, extname, join } from 'path'
 import { stat, writeFile, mkdir } from 'fs/promises'
 import { tmpdir } from 'os'
+import { promisify } from 'util'
 import { v4 as uuid } from 'uuid'
 import type {
   CreateSessionPayload,
@@ -43,6 +45,9 @@ import { ProjectCreationManager } from '../ProjectCreationManager'
 import { detectModels } from '../claude/ClaudeModelDetector'
 import { detectRunCommand, detectRunCommandWithClaude } from '../run/detectRunCommand'
 import { detectXcodeProject } from '../run/detectXcodeProject'
+import { slugify } from '../../shared/utils'
+
+const execFileAsync = promisify(execFile)
 
 const MIME_MAP: Record<string, string> = {
   '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg',
@@ -284,6 +289,20 @@ export function registerIpcHandlers(opts: IpcHandlerOptions): void {
 
   ipcMain.handle(IPC.CLAUDE_DETECT_MODELS, async () => {
     return detectModels()
+  })
+
+  ipcMain.handle(IPC.CLAUDE_GENERATE_SLUG, async (_e, text: string) => {
+    try {
+      const prompt = `Generate a short git branch slug (2-4 words, lowercase, hyphen-separated) that captures the core intent of this task. Output ONLY the slug, nothing else. No "feat/" prefix.\n\nTask: ${text}`
+      const result = await execFileAsync('claude', ['-p', prompt], {
+        timeout: 30_000,
+        maxBuffer: 256 * 1024
+      })
+      const cleaned = result.stdout.trim().replace(/^["'`]|["'`]$/g, '')
+      return slugify(cleaned) || null
+    } catch {
+      return null
+    }
   })
 
   // ─── Settings ───────────────────────────────────────────────

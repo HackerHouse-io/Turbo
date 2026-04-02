@@ -1,8 +1,9 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useMemo, useCallback } from 'react'
 import type { Playbook } from '../../../../shared/types'
 import { PaletteIcon } from './PaletteIcon'
 import { PlaybookStepList } from '../playbooks/PlaybookStepList'
 import { camelToTitle, CMD_ENTER_LABEL } from '../../lib/format'
+import { slugify } from '../../../../shared/utils'
 
 interface PlaybookFillProps {
   playbook: Playbook
@@ -11,41 +12,75 @@ interface PlaybookFillProps {
 }
 
 export function CommandPalettePlaybookFill({ playbook, onSubmit, onBack }: PlaybookFillProps) {
+  const { visibleVars, slugMap } = useMemo(() => {
+    const sMap = new Map<string, string>()
+    for (const v of playbook.variables) {
+      if (v.endsWith('Slug')) {
+        const descVar = v.replace(/Slug$/, 'Description')
+        if (playbook.variables.includes(descVar)) {
+          sMap.set(v, descVar)
+        }
+      }
+    }
+    return {
+      visibleVars: playbook.variables.filter(v => !sMap.has(v)),
+      slugMap: sMap
+    }
+  }, [playbook.variables])
+
   const [values, setValues] = useState<Record<string, string>>(() => {
     const init: Record<string, string> = {}
-    for (const v of playbook.variables) {
+    for (const v of visibleVars) {
       init[v] = ''
     }
     return init
   })
   const [dontAskAgain, setDontAskAgain] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
+  const submittingRef = useRef(false)
   const firstInputRef = useRef<HTMLInputElement>(null)
   const runButtonRef = useRef<HTMLButtonElement>(null)
 
   useEffect(() => {
-    if (playbook.variables.length > 0) {
+    if (visibleVars.length > 0) {
       firstInputRef.current?.focus()
     } else {
       runButtonRef.current?.focus()
     }
-  }, [playbook.variables.length])
+  }, [visibleVars.length])
 
-  const handleRun = () => {
-    if (dontAskAgain) {
-      window.api.getSetting('playbookSkipConfirm').then((existing) => {
-        const current = (existing && typeof existing === 'object' ? existing : {}) as Record<string, boolean>
-        window.api.setSetting('playbookSkipConfirm', { ...current, [playbook.id]: true })
+  const handleRun = useCallback(async () => {
+    if (submittingRef.current) return
+    submittingRef.current = true
+    setSubmitting(true)
+    try {
+      if (dontAskAgain) {
+        window.api.getSetting('playbookSkipConfirm').then((existing) => {
+          const current = (existing && typeof existing === 'object' ? existing : {}) as Record<string, boolean>
+          window.api.setSetting('playbookSkipConfirm', { ...current, [playbook.id]: true })
+        })
+      }
+      const allValues = { ...values }
+      const slugEntries = Array.from(slugMap.entries())
+      const slugResults = await Promise.all(
+        slugEntries.map(([, descVar]) => window.api.generateSlug(values[descVar] || ''))
+      )
+      slugEntries.forEach(([slugVar, descVar], i) => {
+        allValues[slugVar] = slugResults[i] || slugify(values[descVar] || '')
       })
+      onSubmit(allValues)
+    } finally {
+      submittingRef.current = false
+      setSubmitting(false)
     }
-    onSubmit(values)
-  }
+  }, [dontAskAgain, playbook.id, values, slugMap, onSubmit])
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Escape') {
       e.preventDefault()
       onBack()
     }
-    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey) && !submitting) {
       e.preventDefault()
       handleRun()
     }
@@ -69,9 +104,9 @@ export function CommandPalettePlaybookFill({ playbook, onSubmit, onBack }: Playb
       </div>
 
       {/* Variable inputs */}
-      {playbook.variables.length > 0 && (
+      {visibleVars.length > 0 && (
         <div className="px-4 py-3 space-y-3 border-b border-turbo-border">
-          {playbook.variables.map((v, i) => (
+          {visibleVars.map((v, i) => (
             <div key={v}>
               <label className="block text-xs font-medium text-turbo-text-dim mb-1">
                 {camelToTitle(v)}
@@ -101,7 +136,7 @@ export function CommandPalettePlaybookFill({ playbook, onSubmit, onBack }: Playb
 
       {/* Footer */}
       <div className="flex items-center gap-2 px-4 py-3 border-t border-turbo-border">
-        {playbook.variables.length === 0 && (
+        {visibleVars.length === 0 && (
           <label className="flex items-center gap-1.5 cursor-pointer select-none">
             <input
               type="checkbox"
@@ -119,10 +154,12 @@ export function CommandPalettePlaybookFill({ playbook, onSubmit, onBack }: Playb
           <button
             ref={runButtonRef}
             onClick={handleRun}
+            disabled={submitting}
             className="h-7 text-[11px] px-3 rounded-md bg-turbo-accent text-white font-medium
-                       hover:bg-turbo-accent/90 transition-colors"
+                       hover:bg-turbo-accent/90 transition-colors
+                       disabled:opacity-50 disabled:cursor-wait"
           >
-            Run Playbook
+            {submitting ? 'Starting...' : 'Run Playbook'}
           </button>
         </div>
       </div>

@@ -13,6 +13,7 @@ interface PlanSectionProps {
   onInsertLine: (afterLineIndex: number, content: string) => void
   onUpdateBlock: (lineIndex: number, lineCount: number, newContent: string) => void
   onStartTask?: (content: string) => Promise<void>
+  disableStartTask?: boolean
 }
 
 export function PlanSection({
@@ -23,7 +24,8 @@ export function PlanSection({
   onDeleteLine,
   onInsertLine,
   onUpdateBlock,
-  onStartTask
+  onStartTask,
+  disableStartTask
 }: PlanSectionProps) {
   const [collapsed, setCollapsed] = useState(false)
   const { heading, blocks, totalTasks, completedTasks } = section
@@ -114,6 +116,7 @@ export function PlanSection({
                     onDeleteLine={onDeleteLine}
                     onUpdateBlock={onUpdateBlock}
                     onStartTask={onStartTask}
+                    disableStartTask={disableStartTask}
                   />
                 ))}
               </AnimatePresence>

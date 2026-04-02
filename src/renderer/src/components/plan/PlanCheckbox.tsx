@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import { motion } from 'framer-motion'
 import { EditableText } from './EditableText'
 
@@ -10,6 +10,7 @@ interface PlanCheckboxProps {
   onEdit: (newContent: string) => void
   onDelete: () => void
   onStartTask?: () => Promise<void>
+  disabled?: boolean
 }
 
 export function PlanCheckbox({
@@ -19,10 +20,12 @@ export function PlanCheckbox({
   onToggle,
   onEdit,
   onDelete,
-  onStartTask
+  onStartTask,
+  disabled
 }: PlanCheckboxProps) {
   const [running, setRunning] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const runningRef = useRef(false)
 
   useEffect(() => {
     if (!error) return
@@ -32,7 +35,8 @@ export function PlanCheckbox({
 
   const handleBuild = useCallback(async (e: React.MouseEvent) => {
     e.stopPropagation()
-    if (!onStartTask || running) return
+    if (!onStartTask || runningRef.current) return
+    runningRef.current = true
     setRunning(true)
     setError(null)
     try {
@@ -40,9 +44,10 @@ export function PlanCheckbox({
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to start task')
     } finally {
+      runningRef.current = false
       setRunning(false)
     }
-  }, [onStartTask, running])
+  }, [onStartTask])
 
   return (
     <motion.div
@@ -99,7 +104,7 @@ export function PlanCheckbox({
         <div className="relative opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
           <button
             onClick={handleBuild}
-            disabled={running}
+            disabled={running || disabled}
             className="flex items-center gap-1.5 h-6 px-2.5 rounded-md
                        bg-turbo-accent/10 text-turbo-accent text-[11px] font-medium
                        hover:bg-turbo-accent/20 transition-colors border border-turbo-accent/20

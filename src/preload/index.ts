@@ -114,6 +114,9 @@ const api = {
   detectModels: (): Promise<ClaudeModelInfo[]> =>
     ipcRenderer.invoke(IPC.CLAUDE_DETECT_MODELS),
 
+  generateSlug: (text: string): Promise<string | null> =>
+    ipcRenderer.invoke(IPC.CLAUDE_GENERATE_SLUG, text),
+
   // ─── Settings ─────────────────────────────────────────────
 
   getSetting: (key: string): Promise<unknown> =>

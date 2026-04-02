@@ -1,4 +1,4 @@
-import { memo } from 'react'
+import { memo, useState } from 'react'
 import { motion } from 'framer-motion'
 import type { AgentSession, AttentionType } from '../../../../shared/types'
 import { isTerminalStatus } from '../../../../shared/types'

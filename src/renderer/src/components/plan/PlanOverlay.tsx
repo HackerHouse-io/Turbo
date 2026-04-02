@@ -1,4 +1,4 @@
-import { useCallback } from 'react'
+import { useCallback, useState, useRef } from 'react'
 import { motion } from 'framer-motion'
 import { useProjectStore } from '../../stores/useProjectStore'
 import { useSessionStore } from '../../stores/useSessionStore'
@@ -39,26 +39,37 @@ export function PlanOverlay() {
   const progressPct = Math.round(progress * 100)
 
   // ─── Start task in worktree ─────────────────────────────────
+  const [launching, setLaunching] = useState(false)
+  const launchingRef = useRef(false)
+
   const startTask = useCallback(async (taskContent: string) => {
     if (!projectPath) throw new Error('No project selected')
-    const slug = slugify(taskContent)
-    const worktreeInfo = await window.api.createWorktree({ projectPath, slug })
-    const execution = await window.api.startPlaybook({
-      playbookId: 'builtin-build-feature',
-      projectPath: worktreeInfo.path,
-      variables: { featureSlug: slug, featureDescription: taskContent },
-      startFromStep: 1,
-      worktreePath: worktreeInfo.path,
-      worktreeSourceProject: projectPath
-    })
+    if (launchingRef.current) return
+    launchingRef.current = true
+    setLaunching(true)
+    try {
+      const slug = await window.api.generateSlug(taskContent) || slugify(taskContent)
+      const worktreeInfo = await window.api.createWorktree({ projectPath, slug })
+      const execution = await window.api.startPlaybook({
+        playbookId: 'builtin-build-feature',
+        projectPath: worktreeInfo.path,
+        variables: { featureSlug: slug, featureDescription: taskContent },
+        startFromStep: 1,
+        worktreePath: worktreeInfo.path,
+        worktreeSourceProject: projectPath
+      })
 
-    // Navigate directly to the session terminal
-    const activeStep = execution.steps.find(s => s.sessionId)
-    if (activeStep?.sessionId) {
-      selectSession(activeStep.sessionId)
-      setViewMode('detail')
+      // Navigate directly to the session terminal
+      const activeStep = execution.steps.find(s => s.sessionId)
+      if (activeStep?.sessionId) {
+        selectSession(activeStep.sessionId)
+        setViewMode('detail')
+      }
+      closePlanOverlay()
+    } finally {
+      launchingRef.current = false
+      setLaunching(false)
     }
-    closePlanOverlay()
   }, [projectPath, closePlanOverlay, selectSession, setViewMode])
 
   const handleCreatePlan = useCallback(async () => {
@@ -170,6 +181,7 @@ export function PlanOverlay() {
                     onDeleteLine={deleteLine}
                     onUpdateBlock={updateBlock}
                     onStartTask={startTask}
+                    disableStartTask={launching}
                   />
                 ))}
 
@@ -185,6 +197,7 @@ export function PlanOverlay() {
                     onInsertLine={insertLine}
                     onUpdateBlock={updateBlock}
                     onStartTask={startTask}
+                    disableStartTask={launching}
                   />
                 ))}
               </div>

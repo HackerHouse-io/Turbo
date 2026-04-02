@@ -12,6 +12,7 @@ interface PlanBlockRendererProps {
   onDeleteLine: (lineIndex: number) => void
   onUpdateBlock: (lineIndex: number, lineCount: number, newContent: string) => void
   onStartTask?: (content: string) => Promise<void>
+  disableStartTask?: boolean
 }
 
 export const PlanBlockRenderer = forwardRef<HTMLDivElement, PlanBlockRendererProps>(function PlanBlockRenderer({
@@ -20,7 +21,8 @@ export const PlanBlockRenderer = forwardRef<HTMLDivElement, PlanBlockRendererPro
   onEditLine,
   onDeleteLine,
   onUpdateBlock,
-  onStartTask
+  onStartTask,
+  disableStartTask
 }, ref) {
   const content = (() => {
   switch (block.type) {
@@ -37,6 +39,7 @@ export const PlanBlockRenderer = forwardRef<HTMLDivElement, PlanBlockRendererPro
             ? () => onStartTask!(block.content)
             : undefined
           }
+          disabled={disableStartTask}
         />
       )
 
