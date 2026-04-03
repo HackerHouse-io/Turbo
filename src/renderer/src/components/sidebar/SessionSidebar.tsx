@@ -68,9 +68,12 @@ function SessionRow({ session, isSelected, isFocused, onSelect, onFocus, onReque
   const isActive = !isTerminalStatus(session.status)
 
   return (
-    <button
+    <div
+      role="button"
+      tabIndex={0}
       onClick={() => { onSelect(); onFocus() }}
-      className={`w-full flex items-center gap-2.5 px-3 py-2 text-left rounded-lg transition-colors group
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelect(); onFocus() } }}
+      className={`w-full flex items-center gap-2.5 px-3 py-2 text-left rounded-lg transition-colors group cursor-pointer
         ${isFocused ? 'bg-turbo-accent/15 border border-turbo-accent/30' : isSelected ? 'bg-turbo-surface-active' : 'hover:bg-turbo-surface-active/50'}
       `}
     >
@@ -127,7 +130,7 @@ function SessionRow({ session, isSelected, isFocused, onSelect, onFocus, onReque
           </svg>
         </button>
       </div>
-    </button>
+    </div>
   )
 }
 
