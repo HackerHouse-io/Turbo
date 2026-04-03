@@ -30,12 +30,17 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
         window.api.listProjects(),
         window.api.getSetting('defaultProjectsDir') as Promise<string>
       ])
+      let savedProjectId: string | null = null
+      try { savedProjectId = localStorage.getItem('turbo:selectedProjectId') } catch { /* */ }
+      const selectedProjectId = (savedProjectId && projects.some(p => p.id === savedProjectId))
+        ? savedProjectId
+        : (projects.length > 0 ? projects[0].id : null)
+
       set({
         projects,
         defaultProjectsDir: defaultDir || '',
         initialized: true,
-        // Auto-select the first project if any exist
-        selectedProjectId: projects.length > 0 ? projects[0].id : null
+        selectedProjectId
       })
     } catch (err) {
       console.error('Failed to initialize project store:', err)

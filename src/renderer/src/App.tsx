@@ -89,6 +89,23 @@ export default function App() {
 
     window.api.listSessions().then((sessions) => {
       useSessionStore.getState().setSessions(sessions)
+
+      try {
+        const savedSessionId = localStorage.getItem('turbo:selectedSessionId')
+        const savedViewMode = localStorage.getItem('turbo:viewMode')
+        const sessionExists = savedSessionId ? sessions.some(s => s.id === savedSessionId) : false
+
+        if (sessionExists) {
+          useSessionStore.getState().selectSession(savedSessionId!)
+        }
+
+        // Only restore 'detail' if the session still exists, otherwise it would show an empty view
+        if (savedViewMode === 'detail' && sessionExists) {
+          useUIStore.getState().setViewMode('detail')
+        } else if (savedViewMode === 'overview') {
+          useUIStore.getState().setViewMode('overview')
+        }
+      } catch { /* localStorage unavailable */ }
     })
 
     window.api.listPlainTerminals().then((terminals) => {
@@ -101,6 +118,30 @@ export default function App() {
 
     usePlaybookStore.getState().loadPlaybooks()
 
+    const unsubProjectState = useProjectStore.subscribe((state, prev) => {
+      if (state.selectedProjectId !== prev.selectedProjectId) {
+        try {
+          if (state.selectedProjectId) localStorage.setItem('turbo:selectedProjectId', state.selectedProjectId)
+          else localStorage.removeItem('turbo:selectedProjectId')
+        } catch { /* storage unavailable */ }
+      }
+    })
+
+    const unsubViewMode = useUIStore.subscribe((state, prev) => {
+      if (state.viewMode !== prev.viewMode) {
+        try { localStorage.setItem('turbo:viewMode', state.viewMode) } catch { /* storage unavailable */ }
+      }
+    })
+
+    const unsubSessionId = useSessionStore.subscribe((state, prev) => {
+      if (state.selectedSessionId !== prev.selectedSessionId) {
+        try {
+          if (state.selectedSessionId) localStorage.setItem('turbo:selectedSessionId', state.selectedSessionId)
+          else localStorage.removeItem('turbo:selectedSessionId')
+        } catch { /* storage unavailable */ }
+      }
+    })
+
     return () => {
       unsubTerminal()
       unsubPlainTerminal()
@@ -112,6 +153,9 @@ export default function App() {
       unsubRemoved()
       unsubPlaybook()
       unsubNotifClick()
+      unsubProjectState()
+      unsubViewMode()
+      unsubSessionId()
       if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current)
     }
   }, [updateSession, addAttentionItem, removeSession, throttledRefreshProjects])
