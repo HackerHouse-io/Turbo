@@ -514,6 +514,8 @@ export interface TurboSettings {
   gitCustomActions?: GitQuickActionOverride[]
   keybindingOverrides?: KeybindingOverrides
   playbookSkipConfirm?: Record<string, boolean>
+  playbookAutoApprove?: boolean
+  playbookAutoApproveWarningDismissed?: boolean
   githubRepoDefaults?: GitHubRepoDefaults
   [key: string]: unknown
 }

@@ -3,6 +3,7 @@ import { join } from 'path'
 import { v4 as uuid } from 'uuid'
 import type { ClaudeSessionManager } from '../claude/ClaudeSessionManager'
 import type { PlaybookManager } from './PlaybookManager'
+import type { SettingsManager } from '../SettingsManager'
 import { JsonFileStore } from '../JsonFileStore'
 import type {
   PlaybookExecution,
@@ -28,13 +29,15 @@ export class PlaybookExecutor extends EventEmitter {
   private autoAdvanceTimers = new Map<string, ReturnType<typeof setTimeout>>()
   private sessionManager: ClaudeSessionManager
   private playbookManager: PlaybookManager
+  private settingsManager: SettingsManager
   private boundHandleSessionUpdate: (session: AgentSession) => void
   private store: JsonFileStore<PlaybookExecution[]>
 
-  constructor(sessionManager: ClaudeSessionManager, playbookManager: PlaybookManager, userDataPath: string) {
+  constructor(sessionManager: ClaudeSessionManager, playbookManager: PlaybookManager, settingsManager: SettingsManager, userDataPath: string) {
     super()
     this.sessionManager = sessionManager
     this.playbookManager = playbookManager
+    this.settingsManager = settingsManager
     this.store = new JsonFileStore(join(userDataPath, 'playbook-executions.json'))
 
     // Monitor session completions to advance playbook steps
@@ -113,7 +116,7 @@ export class PlaybookExecutor extends EventEmitter {
     const currentStep = exec.steps[exec.currentStepIndex]
     if (!currentStep || !currentStep.sessionId || currentStep.status !== 'running') return
 
-    this.sessionManager.writeToSession(currentStep.sessionId, '/exit\n')
+    this.sessionManager.writeToSession(currentStep.sessionId, '/exit\r')
     exec.currentStepWaiting = false
     this.emitUpdate(exec)
   }
@@ -271,13 +274,19 @@ export class PlaybookExecutor extends EventEmitter {
     exec.currentStepIndex = stepIndex
     this.emitUpdate(exec)
 
+    // When auto-approve is on, force all non-plan steps to auto mode
+    const autoApprove = this.settingsManager.get('playbookAutoApprove') !== false
+    const permissionMode = autoApprove
+      ? (stepDef.permissionMode === 'plan' ? 'plan' : 'auto')
+      : stepDef.permissionMode
+
     // Create session for this step
     try {
       const session = await this.sessionManager.createSession({
         projectPath: exec.projectPath,
         prompt,
         name: `[Playbook] ${exec.playbookName} — ${step.name}`,
-        permissionMode: stepDef.permissionMode,
+        permissionMode,
         effort: stepDef.effort
       })
 
@@ -342,13 +351,15 @@ export class PlaybookExecutor extends EventEmitter {
     } else if (session.status === 'waiting_for_input') {
       const playbook = this.playbookManager.getPlaybook(exec.playbookId)
       const stepDef = playbook?.steps[exec.currentStepIndex]
-      const mode = stepDef?.permissionMode || 'default'
+      const autoApprove = this.settingsManager.get('playbookAutoApprove') !== false
 
-      if (mode === 'auto' || mode === 'plan') {
-        // Safe to auto-advance — these modes never need user interaction
+      if (stepDef?.permissionMode === 'plan') {
+        // Plan steps always pause for user review
+        exec.currentStepWaiting = true
+        this.emitUpdate(exec)
+      } else if (autoApprove || stepDef?.permissionMode === 'auto') {
         this.scheduleAutoAdvance(exec.id, session.id)
       } else {
-        // Default mode — let user decide when to advance
         exec.currentStepWaiting = true
         this.emitUpdate(exec)
       }
@@ -386,7 +397,7 @@ export class PlaybookExecutor extends EventEmitter {
       const step = exec.steps[exec.currentStepIndex]
       if (!step || step.sessionId !== sessionId || step.status !== 'running') return
 
-      this.sessionManager.writeToSession(sessionId, '/exit\n')
+      this.sessionManager.writeToSession(sessionId, '/exit\r')
     }, PLAYBOOK_AUTO_ADVANCE_MS))
   }
 

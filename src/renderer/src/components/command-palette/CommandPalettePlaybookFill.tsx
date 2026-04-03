@@ -36,6 +36,8 @@ export function CommandPalettePlaybookFill({ playbook, onSubmit, onBack }: Playb
     return init
   })
   const [dontAskAgain, setDontAskAgain] = useState(false)
+  const [dontWarnAgain, setDontWarnAgain] = useState(false)
+  const [showAutoApproveWarning, setShowAutoApproveWarning] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const submittingRef = useRef(false)
   const firstInputRef = useRef<HTMLInputElement>(null)
@@ -47,6 +49,14 @@ export function CommandPalettePlaybookFill({ playbook, onSubmit, onBack }: Playb
     } else {
       runButtonRef.current?.focus()
     }
+    Promise.all([
+      window.api.getSetting('playbookAutoApprove'),
+      window.api.getSetting('playbookAutoApproveWarningDismissed')
+    ]).then(([autoApprove, dismissed]) => {
+      if (autoApprove !== false && !dismissed) {
+        setShowAutoApproveWarning(true)
+      }
+    })
   }, [visibleVars.length])
 
   const handleRun = useCallback(async () => {
@@ -59,6 +69,9 @@ export function CommandPalettePlaybookFill({ playbook, onSubmit, onBack }: Playb
           const current = (existing && typeof existing === 'object' ? existing : {}) as Record<string, boolean>
           window.api.setSetting('playbookSkipConfirm', { ...current, [playbook.id]: true })
         })
+      }
+      if (dontWarnAgain) {
+        window.api.setSetting('playbookAutoApproveWarningDismissed', true)
       }
       const allValues = { ...values }
       const slugEntries = Array.from(slugMap.entries())
@@ -73,7 +86,7 @@ export function CommandPalettePlaybookFill({ playbook, onSubmit, onBack }: Playb
       submittingRef.current = false
       setSubmitting(false)
     }
-  }, [dontAskAgain, playbook.id, values, slugMap, onSubmit])
+  }, [dontAskAgain, dontWarnAgain, playbook.id, values, slugMap, onSubmit])
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Escape') {
@@ -133,6 +146,25 @@ export function CommandPalettePlaybookFill({ playbook, onSubmit, onBack }: Playb
         </span>
         <PlaybookStepList steps={playbook.steps} endsWithCommit={playbook.endsWithCommit} truncateAt={80} />
       </div>
+
+      {/* Auto-approve warning */}
+      {showAutoApproveWarning && (
+        <div className="mx-4 mb-2 px-3 py-2 rounded-lg bg-amber-500/10 border border-amber-500/20">
+          <p className="text-[11px] text-amber-400 leading-relaxed">
+            Auto-approve is enabled — Claude will execute commands without asking.
+            Plan steps will still pause for your review.
+          </p>
+          <label className="flex items-center gap-1.5 mt-1.5 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={dontWarnAgain}
+              onChange={e => setDontWarnAgain(e.target.checked)}
+              className="w-3.5 h-3.5 rounded border-turbo-border accent-amber-500"
+            />
+            <span className="text-[10px] text-amber-400/70">Don't show this warning again</span>
+          </label>
+        </div>
+      )}
 
       {/* Footer */}
       <div className="flex items-center gap-2 px-4 py-3 border-t border-turbo-border">

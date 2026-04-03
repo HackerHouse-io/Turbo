@@ -29,6 +29,7 @@ export function SettingsOverlay() {
   const [dataDir, setDataDir] = useState('')
   const [gitOverrides, setGitOverrides] = useState<Record<string, string>>({})
   const [gitCustomActions, setGitCustomActions] = useState<GitQuickActionOverride[]>([])
+  const [playbookAutoApprove, setPlaybookAutoApprove] = useState(true)
 
   useEffect(() => {
     Promise.all([
@@ -42,8 +43,9 @@ export function SettingsOverlay() {
       window.api.getAppPath('userData'),
       window.api.detectModels(),
       window.api.getSetting('gitQuickActionOverrides'),
-      window.api.getSetting('gitCustomActions')
-    ]).then(([model, effort, perm, notif, sound, notifPrefs, dir, userData, detectedModels, gitOvr, gitCust]) => {
+      window.api.getSetting('gitCustomActions'),
+      window.api.getSetting('playbookAutoApprove')
+    ]).then(([model, effort, perm, notif, sound, notifPrefs, dir, userData, detectedModels, gitOvr, gitCust, pbAutoApprove]) => {
       if (model) setDefaultModel(model as string)
       if (effort) setDefaultEffort(effort as EffortLevel)
       if (perm) setDefaultPermissionMode(perm as PermissionMode)
@@ -55,6 +57,7 @@ export function SettingsOverlay() {
       setModels(detectedModels as ClaudeModelInfo[])
       if (gitOvr) setGitOverrides(gitOvr as Record<string, string>)
       if (gitCust) setGitCustomActions(gitCust as GitQuickActionOverride[])
+      if (pbAutoApprove != null) setPlaybookAutoApprove(pbAutoApprove as boolean)
     })
   }, [])
 
@@ -83,6 +86,8 @@ export function SettingsOverlay() {
             onModelChange={v => { setDefaultModel(v); save('defaultModel', v) }}
             onEffortChange={v => { setDefaultEffort(v); save('defaultEffort', v) }}
             onPermissionChange={v => { setDefaultPermissionMode(v); save('defaultPermissionMode', v) }}
+            playbookAutoApprove={playbookAutoApprove}
+            onAutoApproveChange={v => { setPlaybookAutoApprove(v); save('playbookAutoApprove', v) }}
           />
         )
       case 'notifications':
