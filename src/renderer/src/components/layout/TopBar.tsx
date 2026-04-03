@@ -14,6 +14,8 @@ export function TopBar() {
   const projectSelectorOpen = useUIStore(s => s.projectSelectorOpen)
   const toggleProjectSelector = useUIStore(s => s.toggleProjectSelector)
   const toggleNotificationCenter = useUIStore(s => s.toggleNotificationCenter)
+  const gitPanelOpen = useUIStore(s => s.gitPanelOpen)
+  const toggleGitPanel = useUIStore(s => s.toggleGitPanel)
   const rawItems = useSessionStore(s => s.attentionItems)
   const unreadCount = useMemo(() => rawItems.filter(i => !i.dismissed && !i.read).length, [rawItems])
 
@@ -118,6 +120,23 @@ export function TopBar() {
 
       {/* Action buttons */}
       <div className="flex items-center gap-2 ml-auto">
+        {/* Git Panel toggle */}
+        <button
+          onClick={toggleGitPanel}
+          className={`p-1.5 rounded-lg transition-colors ${
+            gitPanelOpen
+              ? 'bg-turbo-accent/10 text-turbo-accent'
+              : 'hover:bg-turbo-surface-active text-turbo-text-muted hover:text-turbo-text'
+          }`}
+          title="Toggle git panel (&#8984;G)"
+        >
+          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+            <circle cx="12" cy="12" r="4" />
+            <line x1="1.05" y1="12" x2="7" y2="12" />
+            <line x1="17.01" y1="12" x2="22.96" y2="12" />
+          </svg>
+        </button>
+
         {/* Settings */}
         <button
           onClick={openSettings}

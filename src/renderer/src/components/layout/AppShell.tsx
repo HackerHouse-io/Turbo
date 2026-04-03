@@ -11,6 +11,7 @@ import { SettingsOverlay } from '../settings/SettingsOverlay'
 import { useUIStore } from '../../stores/useUIStore'
 import { useSessionStore } from '../../stores/useSessionStore'
 import { useKeybindingsStore } from '../../stores/useKeybindingsStore'
+import { useGitActionsStore } from '../../stores/useGitActionsStore'
 import { matchesEvent } from '../../lib/keybindings'
 import { ShortcutsOverlay } from '../shortcuts/ShortcutsOverlay'
 import { ToastContainer } from '../notifications/ToastContainer'
@@ -149,6 +150,30 @@ export function AppShell() {
         useUIStore.getState().toggleShortcutsOverlay()
         return
       }
+      // Git panel toggle: Cmd+G
+      if (e.key === 'g' && e.metaKey && !e.shiftKey) {
+        e.preventDefault()
+        useUIStore.getState().toggleGitPanel()
+        return
+      }
+
+      // Git actions: Cmd+Shift+C/P/L/S — delegate to shared store
+      if (e.metaKey && e.shiftKey) {
+        const ga = useGitActionsStore.getState()
+        if (e.key === 'C' || e.key === 'c') {
+          e.preventDefault(); ga.quickCommit(); return
+        }
+        if (e.key === 'P' || e.key === 'p') {
+          e.preventDefault(); ga.push(); return
+        }
+        if (e.key === 'L' || e.key === 'l') {
+          e.preventDefault(); ga.pull(); return
+        }
+        if (e.key === 'S' || e.key === 's') {
+          e.preventDefault(); ga.shipIt(); return
+        }
+      }
+
       // Escape -> Close overlays (highest z-index first)
       if (e.key === 'Escape') {
         const ui = useUIStore.getState()

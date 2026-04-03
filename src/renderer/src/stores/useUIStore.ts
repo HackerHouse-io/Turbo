@@ -67,6 +67,12 @@ interface UIState {
   sidebarCollapsed: boolean
   toggleSidebar: () => void
 
+  // Git panel
+  gitPanelOpen: boolean
+  openGitPanel: () => void
+  closeGitPanel: () => void
+  toggleGitPanel: () => void
+
   // Global drag-and-drop
   isDragOver: boolean
   setIsDragOver: (v: boolean) => void
@@ -153,6 +159,23 @@ export const useUIStore = create<UIState>((set) => ({
 
   sidebarCollapsed: false,
   toggleSidebar: () => set(s => ({ sidebarCollapsed: !s.sidebarCollapsed })),
+
+  gitPanelOpen: (() => {
+    try { return localStorage.getItem('turbo:gitPanelOpen') !== 'false' } catch { return true }
+  })(),
+  openGitPanel: () => {
+    set({ gitPanelOpen: true })
+    try { localStorage.setItem('turbo:gitPanelOpen', 'true') } catch { /* */ }
+  },
+  closeGitPanel: () => {
+    set({ gitPanelOpen: false })
+    try { localStorage.setItem('turbo:gitPanelOpen', 'false') } catch { /* */ }
+  },
+  toggleGitPanel: () => set(s => {
+    const next = !s.gitPanelOpen
+    try { localStorage.setItem('turbo:gitPanelOpen', String(next)) } catch { /* */ }
+    return { gitPanelOpen: next }
+  }),
 
   isDragOver: false,
   setIsDragOver: (v) => set({ isDragOver: v }),
