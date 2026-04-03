@@ -3,6 +3,7 @@ import { join } from 'path'
 import { v4 as uuid } from 'uuid'
 import { PtyManager } from '../pty/PtyManager'
 import { OutputMonitor } from './OutputMonitor'
+import { TerminalBufferStore } from './TerminalBufferStore'
 import { JsonFileStore } from '../JsonFileStore'
 import type {
   AgentSession,
@@ -42,6 +43,7 @@ export class ClaudeSessionManager extends EventEmitter {
   private gitOpsManager: GitOpsManager
   private gitIdentity: GitIdentityManager
   private store: JsonFileStore<AgentSession[]>
+  private bufferStore: TerminalBufferStore
   private saveTimer: ReturnType<typeof setTimeout> | null = null
   private savePending = false
   private blockUpdateTimers = new Map<string, ReturnType<typeof setTimeout>>()
@@ -54,6 +56,7 @@ export class ClaudeSessionManager extends EventEmitter {
     this.gitIdentity = new GitIdentityManager()
     this.ptyManager = new PtyManager()
     this.store = new JsonFileStore(join(userDataPath, 'session-history.json'))
+    this.bufferStore = new TerminalBufferStore(userDataPath)
     this.setupPtyListeners()
     this.load()
   }
@@ -82,72 +85,10 @@ export class ClaudeSessionManager extends EventEmitter {
 
     this.sessions.set(id, session)
 
-    // Set up output monitor for this session
-    const monitor = new OutputMonitor()
-    this.monitors.set(id, monitor)
-
-    monitor.onStatusChange = (status: AgentStatus, message?: string) => {
-      this.updateSessionStatus(id, status, message)
-    }
-
-    monitor.onBlockCreated = (block: ActivityBlock) => {
-      const s = this.sessions.get(id)
-      if (s) {
-        s.activityBlocks.push(block)
-        // Cap activity blocks to prevent unbounded growth
-        if (s.activityBlocks.length > MAX_ACTIVITY_BLOCKS) {
-          s.activityBlocks = s.activityBlocks.slice(-MAX_ACTIVITY_BLOCKS)
-        }
-        s.lastActivity = block.title
-        s.currentAction = block.title + (block.content ? ': ' + block.content.slice(0, 60) : '')
-        this.emitUpdate(id)
-      }
-    }
-
-    monitor.onBlockUpdated = (block: ActivityBlock) => {
-      const s = this.sessions.get(id)
-      if (s) {
-        const idx = s.activityBlocks.findIndex(b => b.id === block.id)
-        if (idx >= 0) {
-          s.activityBlocks[idx] = block
-          s.currentAction = block.title + (block.content ? ': ' + block.content.slice(0, 60) : '')
-          // Throttle block-update emissions to 200ms
-          if (!this.blockUpdateTimers.has(id)) {
-            this.blockUpdateTimers.set(id, setTimeout(() => {
-              this.blockUpdateTimers.delete(id)
-              this.emitUpdate(id)
-            }, 200))
-          }
-        }
-      }
-    }
-
-    monitor.onAttentionNeeded = (type, message) => {
-      const s = this.sessions.get(id)
-      if (!s || s.status === 'stopped') return
-      // Block 'stuck' alerts on sessions that already reached a terminal state
-      if (type === 'stuck' && isTerminalStatus(s.status)) return
-
-      s.needsAttention = true
-      s.attentionMessage = message
-      s.attentionType = type
-      this.emitUpdate(id)
-
-      const item: AttentionItem = {
-        id: uuid(),
-        sessionId: id,
-        type,
-        title: s.name,
-        message,
-        timestamp: Date.now(),
-        dismissed: false,
-        read: false
-      }
-      this.emit('attention-needed', item)
-    }
+    this.wireMonitor(id)
 
     // Build the command args and env (env is async — resolves git identity)
-    const args = this.buildClaudeArgs(payload)
+    const args = this.buildClaudeArgs(payload, id)
     const env = await this.buildEnv(payload.projectPath)
 
     // Capture git baseline before spawning
@@ -168,6 +109,7 @@ export class ClaudeSessionManager extends EventEmitter {
    */
   async stopSession(sessionId: string): Promise<void> {
     this.ptyManager.kill(sessionId)
+    this.bufferStore.flush(sessionId)
     const session = this.sessions.get(sessionId)
     if (session) {
       session.status = 'stopped'
@@ -220,10 +162,52 @@ export class ClaudeSessionManager extends EventEmitter {
     this.sessions.delete(sessionId)
     this.monitors.delete(sessionId)
     this.gitSnapshots.delete(sessionId)
+    this.bufferStore.remove(sessionId)
     const timer = this.blockUpdateTimers.get(sessionId)
     if (timer) { clearTimeout(timer); this.blockUpdateTimers.delete(sessionId) }
     this.saveNow()
     this.emit('session-removed', sessionId)
+  }
+
+  /**
+   * Read persisted terminal buffer from disk for a session.
+   */
+  readTerminalBuffer(sessionId: string): string | null {
+    return this.bufferStore.read(sessionId)
+  }
+
+  /**
+   * Resume a completed/stopped session using Claude CLI --resume.
+   */
+  async resumeSession(sessionId: string): Promise<AgentSession | null> {
+    const session = this.sessions.get(sessionId)
+    if (!session || !isTerminalStatus(session.status)) return null
+
+    // Reset session state
+    session.status = 'starting'
+    session.completedAt = undefined
+    session.touchedFiles = undefined
+    session.needsAttention = false
+    session.attentionMessage = undefined
+    session.attentionType = undefined
+    session.currentAction = undefined
+    session.lastActivity = 'Resuming agent...'
+
+    this.wireMonitor(sessionId)
+
+    const env = await this.buildEnv(session.projectPath)
+
+    // Capture git baseline
+    this.captureGitSnapshot(sessionId, session.projectPath)
+
+    // Spawn PTY with --resume
+    this.ptyManager.spawn(sessionId, 'claude', ['--resume', sessionId], {
+      cwd: session.projectPath,
+      env
+    })
+
+    this.emitUpdate(sessionId)
+    return session
   }
 
   /**
@@ -238,6 +222,7 @@ export class ClaudeSessionManager extends EventEmitter {
       }
     }
     this.saveNow()
+    this.bufferStore.flushAll()
 
     this.ptyManager.killAll()
     this.monitors.clear()
@@ -265,6 +250,7 @@ export class ClaudeSessionManager extends EventEmitter {
     }
 
     this.enforceHistoryCap()
+    this.bufferStore.pruneOrphans(new Set(this.sessions.keys()))
   }
 
   /** Debounced save — batches rapid mutations into a single async write */
@@ -311,16 +297,82 @@ export class ClaudeSessionManager extends EventEmitter {
     for (const session of completed) {
       if (toRemove <= 0) break
       this.sessions.delete(session.id)
+      this.bufferStore.remove(session.id)
       toRemove--
     }
   }
 
   // ─── Private ────────────────────────────────────────────────
 
+  private wireMonitor(sessionId: string): void {
+    const monitor = new OutputMonitor()
+    this.monitors.set(sessionId, monitor)
+
+    monitor.onStatusChange = (status: AgentStatus, message?: string) => {
+      this.updateSessionStatus(sessionId, status, message)
+    }
+
+    monitor.onBlockCreated = (block: ActivityBlock) => {
+      const s = this.sessions.get(sessionId)
+      if (s) {
+        s.activityBlocks.push(block)
+        if (s.activityBlocks.length > MAX_ACTIVITY_BLOCKS) {
+          s.activityBlocks = s.activityBlocks.slice(-MAX_ACTIVITY_BLOCKS)
+        }
+        s.lastActivity = block.title
+        s.currentAction = block.title + (block.content ? ': ' + block.content.slice(0, 60) : '')
+        this.emitUpdate(sessionId)
+      }
+    }
+
+    monitor.onBlockUpdated = (block: ActivityBlock) => {
+      const s = this.sessions.get(sessionId)
+      if (s) {
+        const idx = s.activityBlocks.findIndex(b => b.id === block.id)
+        if (idx >= 0) {
+          s.activityBlocks[idx] = block
+          s.currentAction = block.title + (block.content ? ': ' + block.content.slice(0, 60) : '')
+          if (!this.blockUpdateTimers.has(sessionId)) {
+            this.blockUpdateTimers.set(sessionId, setTimeout(() => {
+              this.blockUpdateTimers.delete(sessionId)
+              this.emitUpdate(sessionId)
+            }, 200))
+          }
+        }
+      }
+    }
+
+    monitor.onAttentionNeeded = (type, message) => {
+      const s = this.sessions.get(sessionId)
+      if (!s || s.status === 'stopped') return
+      if (type === 'stuck' && isTerminalStatus(s.status)) return
+
+      s.needsAttention = true
+      s.attentionMessage = message
+      s.attentionType = type
+      this.emitUpdate(sessionId)
+
+      const item: AttentionItem = {
+        id: uuid(),
+        sessionId,
+        type,
+        title: s.name,
+        message,
+        timestamp: Date.now(),
+        dismissed: false,
+        read: false
+      }
+      this.emit('attention-needed', item)
+    }
+  }
+
   private setupPtyListeners(): void {
     this.ptyManager.on('data', (id: string, data: string) => {
       // Forward raw data to renderer for xterm.js
       this.emit('terminal-data', id, data)
+
+      // Persist raw output to disk for replay after restart
+      this.bufferStore.append(id, data)
 
       // Feed to output monitor for structured analysis
       const monitor = this.monitors.get(id)
@@ -339,6 +391,7 @@ export class ClaudeSessionManager extends EventEmitter {
     })
 
     this.ptyManager.on('exit', (id: string, code: number) => {
+      this.bufferStore.flush(id)
       const session = this.sessions.get(id)
       // Skip monitor notification if session was manually stopped
       if (session?.status !== 'stopped') {
@@ -423,8 +476,11 @@ export class ClaudeSessionManager extends EventEmitter {
     }
   }
 
-  private buildClaudeArgs(payload: CreateSessionPayload): string[] {
+  private buildClaudeArgs(payload: CreateSessionPayload, sessionId: string): string[] {
     const args: string[] = []
+
+    // Tie Claude CLI session ID to Turbo session ID for resume support
+    args.push('--session-id', sessionId)
 
     if (payload.model) {
       args.push('--model', payload.model)

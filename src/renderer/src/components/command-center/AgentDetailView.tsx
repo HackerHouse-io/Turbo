@@ -4,6 +4,7 @@ import { useUIStore } from '../../stores/useUIStore'
 import { StatusBadge } from '../shared/StatusBadge'
 import { XTermRenderer } from '../terminal/XTermRenderer'
 import { formatElapsed } from '../../lib/format'
+import { isTerminalStatus } from '../../../../shared/types'
 
 interface AgentDetailViewProps {
   sessionId: string
@@ -30,6 +31,11 @@ export function AgentDetailView({ sessionId }: AgentDetailViewProps) {
   const elapsed = formatElapsed(session.startedAt, session.completedAt)
   const isActive = session.status === 'active' || session.status === 'starting'
   const isRunning = isActive || session.status === 'waiting_for_input' || session.status === 'paused'
+  const canResume = isTerminalStatus(session.status)
+
+  const handleResume = async () => {
+    await window.api.resumeSession(sessionId)
+  }
 
   return (
     <motion.div
@@ -66,6 +72,14 @@ export function AgentDetailView({ sessionId }: AgentDetailViewProps) {
         </div>
 
         <div className="flex items-center gap-2">
+          {canResume && (
+            <button
+              onClick={handleResume}
+              className="btn-ghost text-xs text-turbo-accent hover:bg-turbo-accent/10"
+            >
+              Resume
+            </button>
+          )}
           {isRunning && (
             <button
               onClick={() => window.api.stopSession(sessionId)}

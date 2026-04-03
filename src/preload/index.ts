@@ -53,6 +53,9 @@ const api = {
   stopSession: (sessionId: string): Promise<void> =>
     ipcRenderer.invoke(IPC.SESSION_STOP, sessionId),
 
+  resumeSession: (sessionId: string): Promise<AgentSession | null> =>
+    ipcRenderer.invoke(IPC.SESSION_RESUME, sessionId),
+
   removeSession: (sessionId: string): Promise<void> =>
     ipcRenderer.invoke(IPC.SESSION_REMOVE, sessionId),
 
@@ -63,6 +66,9 @@ const api = {
     ipcRenderer.invoke(IPC.SESSION_GET, sessionId),
 
   // ─── Terminal I/O ─────────────────────────────────────────
+
+  readTerminalBuffer: (sessionId: string): Promise<string | null> =>
+    ipcRenderer.invoke(IPC.TERMINAL_BUFFER_READ, sessionId),
 
   sendTerminalInput: (sessionId: string, data: string): void =>
     ipcRenderer.send(IPC.TERMINAL_INPUT, sessionId, data),

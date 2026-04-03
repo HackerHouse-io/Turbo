@@ -16,6 +16,7 @@ import { substituteTemplateVariables } from '../../shared/templateVars'
 import { PLAYBOOK_HISTORY_MAX } from '../../shared/constants'
 
 const PLAYBOOK_AUTO_ADVANCE_MS = 1500
+const WAITING_DEBOUNCE_MS = 3000
 
 /**
  * PlaybookExecutor: Orchestrates multi-step playbook execution.
@@ -27,6 +28,7 @@ export class PlaybookExecutor extends EventEmitter {
   private executions = new Map<string, PlaybookExecution>()
   private sessionToExecution = new Map<string, string>()
   private autoAdvanceTimers = new Map<string, ReturnType<typeof setTimeout>>()
+  private waitingDebounceTimers = new Map<string, ReturnType<typeof setTimeout>>()
   private sessionManager: ClaudeSessionManager
   private playbookManager: PlaybookManager
   private settingsManager: SettingsManager
@@ -88,6 +90,7 @@ export class PlaybookExecutor extends EventEmitter {
     if (!exec || exec.status !== 'running') return
 
     this.cancelAutoAdvance(executionId)
+    this.cancelWaitingDebounce(executionId)
     exec.status = 'paused'
     this.emitUpdate(exec)
   }
@@ -126,6 +129,7 @@ export class PlaybookExecutor extends EventEmitter {
     if (!exec || isTerminalStatus(exec.status)) return
 
     this.cancelAutoAdvance(executionId)
+    this.cancelWaitingDebounce(executionId)
 
     // Stop current session
     const currentStep = exec.steps[exec.currentStepIndex]
@@ -163,6 +167,7 @@ export class PlaybookExecutor extends EventEmitter {
     if (!exec) return
 
     this.cancelAutoAdvance(executionId)
+    this.cancelWaitingDebounce(executionId)
 
     // Stop if still running
     if (exec.status === 'running' || exec.status === 'paused') {
@@ -319,6 +324,7 @@ export class PlaybookExecutor extends EventEmitter {
 
     if (session.status === 'completed') {
       this.cancelAutoAdvance(exec.id)
+      this.cancelWaitingDebounce(exec.id)
       exec.currentStepWaiting = false
       currentStep.status = 'completed'
       currentStep.completedAt = Date.now()
@@ -354,23 +360,24 @@ export class PlaybookExecutor extends EventEmitter {
       const autoApprove = this.settingsManager.get('playbookAutoApprove') !== false
 
       if (stepDef?.permissionMode === 'plan') {
-        // Plan steps always pause for user review
-        exec.currentStepWaiting = true
-        this.emitUpdate(exec)
+        // Plan steps always pause for user review — debounce to avoid false positives
+        this.scheduleWaitingDebounce(exec.id)
       } else if (autoApprove || stepDef?.permissionMode === 'auto') {
         this.scheduleAutoAdvance(exec.id, session.id)
       } else {
-        exec.currentStepWaiting = true
-        this.emitUpdate(exec)
+        // Debounce to ensure Claude is truly waiting, not just between tool calls
+        this.scheduleWaitingDebounce(exec.id)
       }
     } else if (session.status === 'active') {
       this.cancelAutoAdvance(exec.id)
+      this.cancelWaitingDebounce(exec.id)
       if (exec.currentStepWaiting) {
         exec.currentStepWaiting = false
         this.emitUpdate(exec)
       }
     } else if (session.status === 'error' || session.status === 'stopped') {
       this.cancelAutoAdvance(exec.id)
+      this.cancelWaitingDebounce(exec.id)
       exec.currentStepWaiting = false
       currentStep.status = 'failed'
       currentStep.completedAt = Date.now()
@@ -406,6 +413,34 @@ export class PlaybookExecutor extends EventEmitter {
     if (timer) {
       clearTimeout(timer)
       this.autoAdvanceTimers.delete(executionId)
+    }
+  }
+
+  private scheduleWaitingDebounce(executionId: string): void {
+    this.cancelWaitingDebounce(executionId)
+    this.waitingDebounceTimers.set(executionId, setTimeout(() => {
+      this.waitingDebounceTimers.delete(executionId)
+      const exec = this.executions.get(executionId)
+      if (!exec || exec.status !== 'running') return
+
+      const currentStep = exec.steps[exec.currentStepIndex]
+      if (!currentStep || currentStep.status !== 'running') return
+
+      const session = currentStep.sessionId
+        ? this.sessionManager.getSession(currentStep.sessionId)
+        : null
+      if (!session || session.status !== 'waiting_for_input') return
+
+      exec.currentStepWaiting = true
+      this.emitUpdate(exec)
+    }, WAITING_DEBOUNCE_MS))
+  }
+
+  private cancelWaitingDebounce(executionId: string): void {
+    const timer = this.waitingDebounceTimers.get(executionId)
+    if (timer) {
+      clearTimeout(timer)
+      this.waitingDebounceTimers.delete(executionId)
     }
   }
 

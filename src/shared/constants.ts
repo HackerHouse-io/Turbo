@@ -14,6 +14,7 @@ export const IPC = {
   TERMINAL_DATA: 'terminal:data',
   TERMINAL_RESIZE: 'terminal:resize',
   TERMINAL_INPUT: 'terminal:input',
+  TERMINAL_BUFFER_READ: 'terminal:buffer:read',
 
   // Events (main → renderer)
   SESSION_UPDATED: 'session:updated',

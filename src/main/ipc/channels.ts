@@ -155,6 +155,14 @@ export function registerIpcHandlers(opts: IpcHandlerOptions): void {
     sessionManager.resizeSession(payload.sessionId, payload.cols, payload.rows)
   })
 
+  ipcMain.handle(IPC.TERMINAL_BUFFER_READ, async (_e, sessionId: string) => {
+    return sessionManager.readTerminalBuffer(sessionId)
+  })
+
+  ipcMain.handle(IPC.SESSION_RESUME, async (_e, sessionId: string) => {
+    return sessionManager.resumeSession(sessionId)
+  })
+
   // ─── Dialog ─────────────────────────────────────────────────
 
   ipcMain.handle(IPC.DIALOG_OPEN_FOLDER, async () => {

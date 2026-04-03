@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react'
 import { Terminal } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import { WebLinksAddon } from '@xterm/addon-web-links'
-import { getTerminalBuffer } from '../../lib/terminalBuffer'
+import { getTerminalBuffer, appendTerminalData } from '../../lib/terminalBuffer'
 import '@xterm/xterm/css/xterm.css'
 
 interface XTermRendererProps {
@@ -88,6 +88,14 @@ export function XTermRenderer({ terminalId, mode = 'session' }: XTermRendererPro
       const buffered = getTerminalBuffer(terminalId)
       if (buffered) {
         terminal.write(buffered)
+      } else if (mode === 'session') {
+        // No in-memory buffer — try loading persisted buffer from disk
+        window.api.readTerminalBuffer(terminalId).then((persisted) => {
+          if (persisted && termRef.current) {
+            appendTerminalData(terminalId, persisted)
+            termRef.current.write(persisted)
+          }
+        }).catch(() => { /* buffer replay failed, non-fatal */ })
       }
 
       // Send initial resize
