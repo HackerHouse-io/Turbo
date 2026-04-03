@@ -125,16 +125,16 @@ export function InlinePrompt() {
 
   if (!selectedProject) return null
 
-  const isExpanded = isFocused || prompt.length > 0 || attachments.length > 0
 
   return (
     <div className="w-full max-w-5xl mx-auto">
       {/* Prompt card */}
       <div
-        className={`relative rounded-2xl transition-all duration-200 overflow-visible
+        className={`relative rounded-2xl overflow-visible bg-turbo-surface border-2
+          transition-[border-color,box-shadow] duration-150
           ${isFocused
-            ? 'bg-turbo-surface border-2 border-turbo-accent/40 shadow-lg shadow-turbo-accent/5'
-            : 'bg-turbo-surface border-2 border-turbo-border/30 hover:border-turbo-border/50'}
+            ? 'border-turbo-accent/40 shadow-lg shadow-turbo-accent/5'
+            : 'border-turbo-border/30 hover:border-turbo-border/50'}
         `}
       >
         {/* Intent chips row — inside the card */}
@@ -188,11 +188,11 @@ export function InlinePrompt() {
           onFocus={() => setIsFocused(true)}
           onBlur={() => setIsFocused(false)}
           placeholder={`What do you want to ${intent.id === DEFAULT_INTENT_ID ? 'work on' : intent.label.toLowerCase()}?`}
-          rows={isExpanded ? 4 : 2}
+          rows={2}
           disabled={isSubmitting}
           className="w-full px-5 pt-2 pb-1 bg-transparent text-[13px] leading-relaxed text-turbo-text
                      placeholder:text-turbo-text-muted/40 resize-none
-                     focus:outline-none disabled:opacity-50 transition-all"
+                     focus:outline-none disabled:opacity-50"
         />
 
         {/* Attachments */}
