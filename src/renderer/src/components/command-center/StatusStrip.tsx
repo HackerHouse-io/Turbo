@@ -1,12 +1,10 @@
 import { useMemo } from 'react'
 import { useSessionCounts } from '../../stores/useSessionStore'
-import { usePlaybookStore } from '../../stores/usePlaybookStore'
 import { useUIStore } from '../../stores/useUIStore'
 import { useNerveCenterData } from '../../hooks/useNerveCenterData'
 import { usePlanData } from '../../hooks/usePlanData'
 import { formatCost } from '../../lib/format'
 import { BranchSwitcher } from './BranchSwitcher'
-import { PaletteIcon } from '../command-palette/PaletteIcon'
 import { RunButton } from './RunButton'
 import { XcodeButton } from './XcodeButton'
 
@@ -16,22 +14,12 @@ interface StatusStripProps {
 
 export function StatusStrip({ projectPath }: StatusStripProps) {
   const stats = useSessionCounts(projectPath)
-  const playbookExecutions = usePlaybookStore(s => s.executions)
   const openPlanOverlay = useUIStore(s => s.openPlanOverlay)
 
   const { git, refresh } = useNerveCenterData(projectPath)
   const { plan, found } = usePlanData(projectPath)
 
-  // Active playbook for this project
-  const activePlaybook = useMemo(() => {
-    const all = Object.values(playbookExecutions)
-    return all.find(r =>
-      r.status !== 'completed' && r.status !== 'stopped' && r.status !== 'failed' &&
-      (!projectPath || r.projectPath === projectPath)
-    )
-  }, [playbookExecutions, projectPath])
-
-  // Plan progress ring (memoized to avoid recalculating SVG math every render)
+  // Plan progress ring
   const { planProgress, planPct, circumference, strokeDashoffset } = useMemo(() => {
     const progress = found && plan && plan.totalTasks > 0
       ? plan.completedTasks / plan.totalTasks
@@ -76,20 +64,6 @@ export function StatusStrip({ projectPath }: StatusStripProps) {
           <span className="text-turbo-text-muted">
             {stats.tokens.toLocaleString()} tokens · {formatCost(stats.cost)}
           </span>
-        )}
-
-        {/* Active playbook pill */}
-        {activePlaybook && (
-          <button
-            onClick={() => {/* playbook detail is opened from list */}}
-            className="inline-flex items-center gap-1.5 text-turbo-text-dim hover:text-turbo-text transition-colors"
-          >
-            <PaletteIcon icon="playbook" className="w-3 h-3 text-turbo-accent" />
-            <span className="truncate max-w-[120px]">{activePlaybook.playbookName}</span>
-            <span className="text-turbo-text-muted">
-              {activePlaybook.currentStepIndex + 1}/{activePlaybook.steps.length}
-            </span>
-          </button>
         )}
 
         {/* Plan progress ring */}

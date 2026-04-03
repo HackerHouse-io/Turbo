@@ -11,8 +11,8 @@ export type AgentStatus =
 
 const TERMINAL_STATUSES = new Set<string>(['completed', 'error', 'stopped', 'failed'])
 
-/** True when a session or playbook execution has reached a final state */
-export function isTerminalStatus(status: AgentStatus | PlaybookExecutionStatus): boolean {
+/** True when a session has reached a final state */
+export function isTerminalStatus(status: AgentStatus): boolean {
   return TERMINAL_STATUSES.has(status)
 }
 
@@ -166,6 +166,8 @@ export interface CreateSessionPayload {
   effort?: EffortLevel
   model?: string
   attachments?: AttachmentInfo[]
+  print?: boolean                 // Run in -p mode (exits after response)
+  resumeSessionId?: string        // Resume a previous session with --resume
 }
 
 export interface ClaudeModelInfo {
@@ -274,65 +276,6 @@ export interface GitCommitEntry {
   hash: string          // short hash
   message: string       // first line
   relativeTime: string  // e.g. "2 hours ago"
-}
-
-// ─── Playbooks ──────────────────────────────────────────────
-
-export interface PlaybookStepDefinition {
-  name: string
-  prompt: string                  // Supports {{variable}} syntax
-  permissionMode?: PermissionMode
-  effort?: EffortLevel
-}
-
-export interface Playbook {
-  id: string
-  name: string
-  description: string
-  icon: string
-  steps: PlaybookStepDefinition[]
-  variables: string[]             // Auto-extracted from step prompts
-  builtIn: boolean
-  endsWithCommit: boolean         // If true, playbook enters awaiting_commit after last step
-}
-
-export type PlaybookStepStatus = 'pending' | 'running' | 'completed' | 'failed' | 'skipped'
-
-export interface PlaybookStepState {
-  index: number
-  name: string
-  status: PlaybookStepStatus
-  sessionId?: string
-  startedAt?: number
-  completedAt?: number
-  error?: string
-}
-
-export type PlaybookExecutionStatus = 'running' | 'paused' | 'awaiting_commit' | 'completed' | 'failed' | 'stopped'
-
-export interface PlaybookExecution {
-  id: string
-  playbookId: string
-  playbookName: string
-  projectPath: string
-  status: PlaybookExecutionStatus
-  steps: PlaybookStepState[]
-  currentStepIndex: number
-  currentStepWaiting?: boolean
-  startedAt: number
-  completedAt?: number
-  variables: Record<string, string>
-  worktreePath?: string
-  worktreeSourceProject?: string
-}
-
-export interface StartPlaybookPayload {
-  playbookId: string
-  projectPath: string
-  variables: Record<string, string>
-  startFromStep?: number
-  worktreePath?: string
-  worktreeSourceProject?: string
 }
 
 // ─── Worktree ────────────────────────────────────────────────
@@ -513,9 +456,7 @@ export interface TurboSettings {
   gitQuickActionOverrides?: Record<string, string>
   gitCustomActions?: GitQuickActionOverride[]
   keybindingOverrides?: KeybindingOverrides
-  playbookSkipConfirm?: Record<string, boolean>
-  playbookAutoApprove?: boolean
-  playbookAutoApproveWarningDismissed?: boolean
+  defaultIntent?: string
   githubRepoDefaults?: GitHubRepoDefaults
   [key: string]: unknown
 }

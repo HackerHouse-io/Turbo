@@ -3,7 +3,6 @@ import { AppShell } from './components/layout/AppShell'
 import { useSessionStore } from './stores/useSessionStore'
 import { useProjectStore } from './stores/useProjectStore'
 import { useGitIdentityStore } from './stores/useGitIdentityStore'
-import { usePlaybookStore } from './stores/usePlaybookStore'
 import { useTerminalStore } from './stores/useTerminalStore'
 import { useUIStore } from './stores/useUIStore'
 import { useKeybindingsStore } from './stores/useKeybindingsStore'
@@ -78,13 +77,8 @@ export default function App() {
       clearTerminalBuffer(sessionId)
     })
 
-    const unsubPlaybook = window.api.onPlaybookUpdated((execution) => {
-      usePlaybookStore.getState().updateExecution(execution)
-    })
-
     const unsubNotifClick = window.api.onNotificationClick((sessionId) => {
       useSessionStore.getState().selectSession(sessionId)
-      useUIStore.getState().setViewMode('detail')
     })
 
     window.api.listSessions().then((sessions) => {
@@ -92,18 +86,10 @@ export default function App() {
 
       try {
         const savedSessionId = localStorage.getItem('turbo:selectedSessionId')
-        const savedViewMode = localStorage.getItem('turbo:viewMode')
         const sessionExists = savedSessionId ? sessions.some(s => s.id === savedSessionId) : false
 
         if (sessionExists) {
           useSessionStore.getState().selectSession(savedSessionId!)
-        }
-
-        // Only restore 'detail' if the session still exists, otherwise it would show an empty view
-        if (savedViewMode === 'detail' && sessionExists) {
-          useUIStore.getState().setViewMode('detail')
-        } else if (savedViewMode === 'overview') {
-          useUIStore.getState().setViewMode('overview')
         }
       } catch { /* localStorage unavailable */ }
     })
@@ -112,24 +98,12 @@ export default function App() {
       useTerminalStore.getState().setTerminals(terminals)
     })
 
-    window.api.listPlaybookExecutions().then((executions) => {
-      usePlaybookStore.getState().setExecutions(executions)
-    })
-
-    usePlaybookStore.getState().loadPlaybooks()
-
     const unsubProjectState = useProjectStore.subscribe((state, prev) => {
       if (state.selectedProjectId !== prev.selectedProjectId) {
         try {
           if (state.selectedProjectId) localStorage.setItem('turbo:selectedProjectId', state.selectedProjectId)
           else localStorage.removeItem('turbo:selectedProjectId')
         } catch { /* storage unavailable */ }
-      }
-    })
-
-    const unsubViewMode = useUIStore.subscribe((state, prev) => {
-      if (state.viewMode !== prev.viewMode) {
-        try { localStorage.setItem('turbo:viewMode', state.viewMode) } catch { /* storage unavailable */ }
       }
     })
 
@@ -151,10 +125,8 @@ export default function App() {
       unsubSession()
       unsubAttention()
       unsubRemoved()
-      unsubPlaybook()
       unsubNotifClick()
       unsubProjectState()
-      unsubViewMode()
       unsubSessionId()
       if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current)
     }

@@ -4,12 +4,9 @@ import { useUIStore } from '../../stores/useUIStore'
 import { useSessionStore } from '../../stores/useSessionStore'
 import { useProjectStore, selectProjectPath } from '../../stores/useProjectStore'
 import { useTerminalStore } from '../../stores/useTerminalStore'
-import { useCommandPaletteData } from './useCommandPaletteData'
-import { CommandPalettePlaybookFill } from './CommandPalettePlaybookFill'
 import { PaletteIcon } from './PaletteIcon'
 import { runInTerminalDrawer, resolveGitCommand } from '../../lib/runInTerminalDrawer'
 import { useGitQuickActions } from '../../hooks/useGitQuickActions'
-import type { Playbook } from '../../../../shared/types'
 
 // ─── Types ───────────────────────────────────────────────────
 
@@ -18,18 +15,16 @@ interface CommandItem {
   label: string
   description?: string
   icon: string
-  section: 'recent' | 'projects' | 'playbooks' | 'git' | 'tasks' | 'actions'
+  section: 'projects' | 'git' | 'tasks' | 'actions'
   action: () => void
   keywords?: string[]
 }
 
-const SECTION_ORDER: CommandItem['section'][] = ['recent', 'projects', 'playbooks', 'git', 'tasks', 'actions']
+const SECTION_ORDER: CommandItem['section'][] = ['projects', 'git', 'tasks', 'actions']
 const SECTION_LABELS: Record<CommandItem['section'], string> = {
-  recent: 'Recent Prompts',
   projects: 'Switch Project',
-  playbooks: 'Playbooks',
   git: 'Git Actions',
-  tasks: 'Active Tasks',
+  tasks: 'Sessions',
   actions: 'Actions'
 }
 
@@ -64,28 +59,20 @@ function PaletteShell({ onClose, children }: { onClose: () => void; children: Re
 export function CommandPalette() {
   const [query, setQuery] = useState('')
   const [selectedIndex, setSelectedIndex] = useState(0)
-  const [fillPlaybook, setFillPlaybook] = useState<Playbook | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const closeCommandPalette = useUIStore(s => s.closeCommandPalette)
   const selectSession = useSessionStore(s => s.selectSession)
-  const setViewMode = useUIStore(s => s.setViewMode)
+  const focusSession = useSessionStore(s => s.focusSession)
+  const pinSession = useSessionStore(s => s.pinSession)
   const sessionsRecord = useSessionStore(s => s.sessions)
   const sessions = useMemo(() => Object.values(sessionsRecord), [sessionsRecord])
   const selectedProjectPath = useProjectStore(selectProjectPath)
   const projects = useProjectStore(s => s.projects)
   const selectedProjectId = useProjectStore(s => s.selectedProjectId)
-  const { playbooks, models, loading } = useCommandPaletteData()
   const gitActions = useGitQuickActions()
 
   useEffect(() => {
     inputRef.current?.focus()
-
-    // Hydrate playbook fill from pending playbook (set by detail overlay Run)
-    const pendingPlaybook = useUIStore.getState().pendingPlaybookFill
-    if (pendingPlaybook) {
-      setFillPlaybook(pendingPlaybook)
-      useUIStore.setState({ pendingPlaybookFill: null })
-    }
   }, [])
 
   // ─── Git action handler ────────────────────────────────────
@@ -95,14 +82,6 @@ export function CommandPalette() {
     closeCommandPalette()
     const resolved = await resolveGitCommand(selectedProjectPath, command, aiCommit)
     await runInTerminalDrawer(selectedProjectPath, resolved)
-  }, [selectedProjectPath, closeCommandPalette])
-
-  // ─── Playbook handler ───────────────────────────────────────
-
-  const handleStartPlaybook = useCallback(async (playbookId: string, variables: Record<string, string>) => {
-    if (!selectedProjectPath) return
-    await window.api.startPlaybook({ playbookId, projectPath: selectedProjectPath, variables })
-    closeCommandPalette()
   }, [selectedProjectPath, closeCommandPalette])
 
   // ─── Open terminal helper ──────────────────────────────────
@@ -142,25 +121,6 @@ export function CommandPalette() {
       })
     }
 
-    // Playbooks
-    for (const r of playbooks) {
-      items.push({
-        id: `playbook-${r.id}`,
-        label: r.name,
-        description: r.description,
-        icon: r.icon,
-        section: 'playbooks',
-        action: () => {
-          if (r.variables.length === 0) {
-            handleStartPlaybook(r.id, {})
-          } else {
-            setFillPlaybook(r)
-          }
-        },
-        keywords: [r.description, ...r.steps.map(s => s.name)]
-      })
-    }
-
     // Git Actions
     for (const g of gitActions) {
       items.push({
@@ -174,7 +134,7 @@ export function CommandPalette() {
       })
     }
 
-    // Active Tasks
+    // Sessions
     for (const s of sessions) {
       items.push({
         id: `session-${s.id}`,
@@ -185,26 +145,14 @@ export function CommandPalette() {
         action: () => {
           closeCommandPalette()
           selectSession(s.id)
-          setViewMode('detail')
+          pinSession(s.id)
+          focusSession(s.id)
         },
         keywords: [s.status, s.projectPath]
       })
     }
 
     // Actions
-    items.push({
-      id: 'action-project-overview',
-      label: 'Project Overview',
-      description: 'View all projects at a glance',
-      icon: 'eye',
-      section: 'actions',
-      action: () => {
-        closeCommandPalette()
-        useUIStore.getState().setViewMode('overview')
-      },
-      keywords: ['overview', 'all projects', 'multi', 'dashboard', 'grid', 'projects']
-    })
-
     items.push({
       id: 'action-settings',
       label: 'Settings',
@@ -215,7 +163,7 @@ export function CommandPalette() {
         closeCommandPalette()
         useUIStore.getState().openSettings()
       },
-      keywords: ['settings', 'preferences', 'config', 'options', 'defaults', 'notifications']
+      keywords: ['settings', 'preferences', 'config']
     })
 
     items.push({
@@ -228,7 +176,7 @@ export function CommandPalette() {
         closeCommandPalette()
         useUIStore.getState().openTimeline()
       },
-      keywords: ['timeline', 'gantt', 'sessions', 'chart', 'history', 'status']
+      keywords: ['timeline', 'sessions', 'history']
     })
 
     items.push({
@@ -238,7 +186,7 @@ export function CommandPalette() {
       icon: 'terminal',
       section: 'actions',
       action: () => openTerminalAction('shell'),
-      keywords: ['terminal', 'shell', 'bash', 'zsh', 'console']
+      keywords: ['terminal', 'shell', 'bash', 'zsh']
     })
 
     items.push({
@@ -248,7 +196,7 @@ export function CommandPalette() {
       icon: 'bolt',
       section: 'actions',
       action: () => openTerminalAction('claude'),
-      keywords: ['claude', 'code', 'repl', 'interactive', 'ai', 'agent']
+      keywords: ['claude', 'code', 'interactive', 'ai']
     })
 
     items.push({
@@ -261,24 +209,11 @@ export function CommandPalette() {
         closeCommandPalette()
         useUIStore.getState().openTerminalWorkspace()
       },
-      keywords: ['workspace', 'terminals', 'panes', 'split']
-    })
-
-    items.push({
-      id: 'action-recent-commits',
-      label: 'Recent Commits',
-      description: 'View recent git commits',
-      icon: 'git-commit',
-      section: 'actions',
-      action: () => {
-        closeCommandPalette()
-        useUIStore.getState().openTimeline()
-      },
-      keywords: ['commits', 'git', 'history', 'log']
+      keywords: ['workspace', 'terminals', 'panes']
     })
 
     return items
-  }, [projects, selectedProjectId, playbooks, gitActions, sessions, selectedProjectPath, handleGitAction, handleStartPlaybook, openTerminalAction, closeCommandPalette, selectSession, setViewMode])
+  }, [projects, selectedProjectId, gitActions, sessions, selectedProjectPath, handleGitAction, openTerminalAction, closeCommandPalette, selectSession, focusSession, pinSession])
 
   // ─── Filtering ─────────────────────────────────────────────
 
@@ -294,7 +229,7 @@ export function CommandPalette() {
 
   const clampedIndex = Math.min(selectedIndex, Math.max(filtered.length - 1, 0))
 
-  // ─── Grouped by section (single pass) ─────────────────────
+  // ─── Grouped by section ───────────────────────────────────
 
   const grouped = useMemo(() => {
     const bySection = new Map<CommandItem['section'], { item: CommandItem; globalIndex: number }[]>()
@@ -336,22 +271,6 @@ export function CommandPalette() {
     }
   }
 
-  // ─── Playbook fill mode ──────────────────────────────────────
-
-  if (fillPlaybook) {
-    return (
-      <PaletteShell onClose={closeCommandPalette}>
-        <CommandPalettePlaybookFill
-          playbook={fillPlaybook}
-          onSubmit={(variables) => handleStartPlaybook(fillPlaybook.id, variables)}
-          onBack={() => setFillPlaybook(null)}
-        />
-      </PaletteShell>
-    )
-  }
-
-  // ─── Search mode ───────────────────────────────────────────
-
   return (
     <PaletteShell onClose={closeCommandPalette}>
       {/* Search input */}
@@ -363,7 +282,7 @@ export function CommandPalette() {
           value={query}
           onChange={e => { setQuery(e.target.value); setSelectedIndex(0) }}
           onKeyDown={handleKeyDown}
-          placeholder="Search commands, projects, playbooks..."
+          placeholder="Search commands, projects, sessions..."
           className="flex-1 bg-transparent text-sm text-turbo-text placeholder:text-turbo-text-muted
                      focus:outline-none"
         />
@@ -372,9 +291,7 @@ export function CommandPalette() {
 
       {/* Results grouped by section */}
       <div className="max-h-80 overflow-y-auto py-1">
-        {loading ? (
-          <div className="px-4 py-6 text-center text-sm text-turbo-text-muted">Loading...</div>
-        ) : grouped.length === 0 ? (
+        {grouped.length === 0 ? (
           <div className="px-4 py-6 text-center text-sm text-turbo-text-muted">
             No results found
           </div>

@@ -18,9 +18,6 @@ import type {
   GitCommitPayload,
   GitExecPayload,
   GitPreset,
-  StartPlaybookPayload,
-  PlaybookExecution,
-  Playbook,
   PlanSavePayload,
   CreatePlainTerminalPayload,
   PlainTerminal,
@@ -35,8 +32,6 @@ import { SettingsManager } from '../SettingsManager'
 import { GitIdentityManager } from '../git/GitIdentityManager'
 import { GitOpsManager } from '../git/GitOpsManager'
 import { GitPresetManager } from '../git/GitPresetManager'
-import { PlaybookManager } from '../playbooks/PlaybookManager'
-import { PlaybookExecutor } from '../playbooks/PlaybookExecutor'
 import { PlanFileManager } from '../plan/PlanFileManager'
 import { PlainTerminalManager } from '../terminal/PlainTerminalManager'
 import { WorktreeManager } from '../git/WorktreeManager'
@@ -73,8 +68,6 @@ interface IpcHandlerOptions {
   gitIdentityManager: GitIdentityManager
   gitOpsManager: GitOpsManager
   gitPresetManager: GitPresetManager
-  playbookManager: PlaybookManager
-  playbookExecutor: PlaybookExecutor
   planFileManager: PlanFileManager
   plainTerminalManager: PlainTerminalManager
   worktreeManager: WorktreeManager
@@ -95,8 +88,6 @@ export function registerIpcHandlers(opts: IpcHandlerOptions): void {
     gitIdentityManager,
     gitOpsManager,
     gitPresetManager,
-    playbookManager,
-    playbookExecutor,
     planFileManager,
     plainTerminalManager,
     worktreeManager,
@@ -420,56 +411,6 @@ export function registerIpcHandlers(opts: IpcHandlerOptions): void {
     gitPresetManager.deletePreset(presetId)
   })
 
-  // ─── Playbooks ────────────────────────────────────────────────
-
-  ipcMain.handle(IPC.PLAYBOOK_LIST, async () => {
-    return playbookManager.listPlaybooks()
-  })
-
-  ipcMain.handle(IPC.PLAYBOOK_START, async (_e, payload: StartPlaybookPayload) => {
-    return playbookExecutor.startPlaybook(payload)
-  })
-
-  ipcMain.handle(IPC.PLAYBOOK_PAUSE, async (_e, executionId: string) => {
-    playbookExecutor.pausePlaybook(executionId)
-  })
-
-  ipcMain.handle(IPC.PLAYBOOK_RESUME, async (_e, executionId: string) => {
-    playbookExecutor.resumePlaybook(executionId)
-  })
-
-  ipcMain.handle(IPC.PLAYBOOK_STOP, async (_e, executionId: string) => {
-    playbookExecutor.stopPlaybook(executionId)
-  })
-
-  ipcMain.handle(IPC.PLAYBOOK_DISMISS, async (_e, executionId: string) => {
-    playbookExecutor.dismissPlaybook(executionId)
-  })
-
-  ipcMain.handle(IPC.PLAYBOOK_EXECUTIONS, async () => {
-    return playbookExecutor.listExecutions()
-  })
-
-  ipcMain.handle(IPC.PLAYBOOK_REMOVE, async (_e, executionId: string) => {
-    playbookExecutor.removeExecution(executionId)
-  })
-
-  ipcMain.handle(IPC.PLAYBOOK_ADVANCE_STEP, async (_e, executionId: string) => {
-    playbookExecutor.advanceStep(executionId)
-  })
-
-  ipcMain.handle(IPC.PLAYBOOK_SAVE, async (_e, playbook: Playbook) => {
-    return playbookManager.savePlaybook(playbook)
-  })
-
-  ipcMain.handle(IPC.PLAYBOOK_DELETE, async (_e, id: string) => {
-    playbookManager.deletePlaybook(id)
-  })
-
-  ipcMain.handle(IPC.PLAYBOOK_DUPLICATE, async (_e, id: string) => {
-    return playbookManager.duplicatePlaybook(id)
-  })
-
   // ─── Plan ─────────────────────────────────────────────────
 
   ipcMain.handle(IPC.PLAN_READ, async (_e, projectPath: string) => {
@@ -597,7 +538,6 @@ export function registerIpcHandlers(opts: IpcHandlerOptions): void {
   forward(sessionManager, 'terminal-data', IPC.TERMINAL_DATA)
   forward(sessionManager, 'attention-needed', IPC.ATTENTION_NEW)
   forward(sessionManager, 'session-removed', IPC.SESSION_REMOVED)
-  forward(playbookExecutor, 'playbook-updated', IPC.PLAYBOOK_UPDATED)
   forward(plainTerminalManager, 'terminal-data', IPC.PLAIN_TERMINAL_DATA)
   forward(plainTerminalManager, 'terminal-exit', IPC.PLAIN_TERMINAL_EXIT)
   forward(plainTerminalManager, 'terminal-created', IPC.PLAIN_TERMINAL_CREATED)

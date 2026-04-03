@@ -10,7 +10,8 @@ export function NotificationRow({ item }: { item: AttentionItem }) {
   const handleClick = () => {
     useSessionStore.getState().markItemRead(item.id)
     useSessionStore.getState().selectSession(item.sessionId)
-    useUIStore.getState().setViewMode('detail')
+    useSessionStore.getState().pinSession(item.sessionId)
+    useSessionStore.getState().focusSession(item.sessionId)
     useUIStore.getState().closeNotificationCenter()
   }
 

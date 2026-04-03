@@ -7,8 +7,6 @@ import { SettingsManager } from './SettingsManager'
 import { GitIdentityManager } from './git/GitIdentityManager'
 import { GitOpsManager } from './git/GitOpsManager'
 import { GitPresetManager } from './git/GitPresetManager'
-import { PlaybookManager } from './playbooks/PlaybookManager'
-import { PlaybookExecutor } from './playbooks/PlaybookExecutor'
 import { PlanFileManager } from './plan/PlanFileManager'
 import { PlainTerminalManager } from './terminal/PlainTerminalManager'
 import { WorktreeManager } from './git/WorktreeManager'
@@ -24,8 +22,6 @@ let sessionManager: ClaudeSessionManager
 let promptHistoryManager: PromptHistoryManager
 let gitOpsManager: GitOpsManager
 let gitPresetManager: GitPresetManager
-let playbookManager: PlaybookManager
-let playbookExecutor: PlaybookExecutor
 let planFileManager: PlanFileManager
 let plainTerminalManager: PlainTerminalManager
 let notificationManager: NotificationManager
@@ -110,8 +106,6 @@ app.whenReady().then(() => {
   sessionManager = new ClaudeSessionManager(settingsManager, projectManager, gitOpsManager, app.getPath('userData'))
   promptHistoryManager = new PromptHistoryManager(app.getPath('userData'))
   gitPresetManager = new GitPresetManager(app.getPath('userData'))
-  playbookManager = new PlaybookManager(app.getPath('userData'))
-  playbookExecutor = new PlaybookExecutor(sessionManager, playbookManager, settingsManager, app.getPath('userData'))
   planFileManager = new PlanFileManager()
   plainTerminalManager = new PlainTerminalManager()
   const worktreeManager = new WorktreeManager()
@@ -129,8 +123,6 @@ app.whenReady().then(() => {
     gitIdentityManager,
     gitOpsManager,
     gitPresetManager,
-    playbookManager,
-    playbookExecutor,
     planFileManager,
     plainTerminalManager,
     worktreeManager,
@@ -168,6 +160,5 @@ app.on('window-all-closed', () => {
 app.on('before-quit', () => {
   plainTerminalManager?.dispose()
   planFileManager?.dispose()
-  playbookExecutor?.dispose()
   sessionManager?.dispose()
 })

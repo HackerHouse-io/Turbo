@@ -78,23 +78,6 @@ export const IPC = {
   GIT_PRESETS_SAVE: 'git:presets:save',
   GIT_PRESETS_DELETE: 'git:presets:delete',
 
-  // Playbooks
-  PLAYBOOK_LIST: 'playbook:list',
-  PLAYBOOK_START: 'playbook:start',
-  PLAYBOOK_PAUSE: 'playbook:pause',
-  PLAYBOOK_RESUME: 'playbook:resume',
-  PLAYBOOK_STOP: 'playbook:stop',
-  PLAYBOOK_DISMISS: 'playbook:dismiss',
-  PLAYBOOK_EXECUTIONS: 'playbook:executions',
-  PLAYBOOK_REMOVE: 'playbook:remove',
-  PLAYBOOK_SAVE: 'playbook:save',
-  PLAYBOOK_DELETE: 'playbook:delete',
-  PLAYBOOK_DUPLICATE: 'playbook:duplicate',
-  PLAYBOOK_ADVANCE_STEP: 'playbook:advance-step',
-
-  // Events (main → renderer)
-  PLAYBOOK_UPDATED: 'playbook:updated',
-
   // Plan
   PLAN_READ: 'plan:read',
   PLAN_SAVE: 'plan:save',
@@ -137,7 +120,6 @@ export const IPC = {
 
 export const PROMPT_HISTORY_MAX = 50
 export const SESSION_HISTORY_MAX = 200
-export const PLAYBOOK_HISTORY_MAX = 100
 export const MAX_ACTIVITY_BLOCKS = 200
 export const MAX_PERSISTED_BLOCKS = 50
 

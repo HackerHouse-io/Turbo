@@ -48,7 +48,8 @@ function formatTickLabel(ms: number): string {
 export function SessionTimeline() {
   const closeTimeline = useUIStore(s => s.closeTimeline)
   const selectSession = useSessionStore(s => s.selectSession)
-  const setViewMode = useUIStore(s => s.setViewMode)
+  const pinSession = useSessionStore(s => s.pinSession)
+  const focusSession = useSessionStore(s => s.focusSession)
   const sessionsRecord = useSessionStore(s => s.sessions)
 
   const selectedProjectId = useProjectStore(s => s.selectedProjectId)
@@ -97,9 +98,10 @@ export function SessionTimeline() {
 
   const handleSessionClick = useCallback((sessionId: string) => {
     selectSession(sessionId)
-    setViewMode('detail')
+    pinSession(sessionId)
+    focusSession(sessionId)
     closeTimeline()
-  }, [selectSession, setViewMode, closeTimeline])
+  }, [selectSession, pinSession, focusSession, closeTimeline])
 
   return (
     <motion.div

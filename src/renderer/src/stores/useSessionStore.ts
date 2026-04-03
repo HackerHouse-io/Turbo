@@ -6,12 +6,17 @@ interface SessionState {
   sessions: Record<string, AgentSession>
   attentionItems: AttentionItem[]
   selectedSessionId: string | null
+  focusedSessionId: string | null      // Which terminal pane is focused
+  pinnedSessionIds: string[]           // Sessions pinned to terminal grid
 
   // Actions
   setSessions: (sessions: AgentSession[]) => void
   updateSession: (session: AgentSession) => void
   removeSession: (sessionId: string) => void
   selectSession: (sessionId: string | null) => void
+  focusSession: (sessionId: string | null) => void
+  pinSession: (sessionId: string) => void
+  unpinSession: (sessionId: string) => void
   addAttentionItem: (item: AttentionItem) => void
   dismissAttentionItem: (itemId: string) => void
   markItemRead: (itemId: string) => void
@@ -25,6 +30,8 @@ export const useSessionStore = create<SessionState>((set) => ({
   sessions: {},
   attentionItems: [],
   selectedSessionId: null,
+  focusedSessionId: null,
+  pinnedSessionIds: [],
 
   setSessions: (sessions) => {
     const record: Record<string, AgentSession> = {}
@@ -82,6 +89,23 @@ export const useSessionStore = create<SessionState>((set) => ({
 
   selectSession: (sessionId) => {
     set({ selectedSessionId: sessionId })
+  },
+
+  focusSession: (sessionId) => {
+    set({ focusedSessionId: sessionId })
+  },
+
+  pinSession: (sessionId) => {
+    set(state => {
+      if (state.pinnedSessionIds.includes(sessionId)) return state
+      return { pinnedSessionIds: [...state.pinnedSessionIds, sessionId].slice(0, 4) }
+    })
+  },
+
+  unpinSession: (sessionId) => {
+    set(state => ({
+      pinnedSessionIds: state.pinnedSessionIds.filter(id => id !== sessionId)
+    }))
   },
 
   addAttentionItem: (item) => {

@@ -54,9 +54,6 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     const ui = useUIStore.getState()
     ui.closeTerminalWorkspace()
     ui.closeTimeline()
-    if (ui.viewMode === 'overview') {
-      ui.setViewMode('dashboard')
-    }
     set({ selectedProjectId: projectId })
   },
 

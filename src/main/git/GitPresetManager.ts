@@ -1,7 +1,6 @@
 import { v4 as uuid } from 'uuid'
 import { join } from 'path'
 import type { GitPreset } from '../../shared/types'
-import { extractTemplateVariables } from '../../shared/templateVars'
 import { JsonFileStore } from '../JsonFileStore'
 
 const BUILT_IN_PRESETS: Omit<GitPreset, 'id'>[] = [
@@ -71,7 +70,7 @@ export class GitPresetManager {
     const saved: GitPreset = {
       ...preset,
       id: preset.id || uuid(),
-      variables: extractTemplateVariables(preset.commands)
+      variables: []
     }
     if (existing >= 0) {
       this.presets[existing] = saved

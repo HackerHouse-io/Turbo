@@ -11,8 +11,6 @@ export function ProjectSelector() {
   const selectProject = useProjectStore(s => s.selectProject)
   const addProjectFromPath = useProjectStore(s => s.addProjectFromPath)
   const closeProjectSelector = useUIStore(s => s.closeProjectSelector)
-  const viewMode = useUIStore(s => s.viewMode)
-  const setViewMode = useUIStore(s => s.setViewMode)
   const sessionsRecord = useSessionStore(s => s.sessions)
   const ref = useRef<HTMLDivElement>(null)
 
@@ -68,14 +66,10 @@ export function ProjectSelector() {
       <div className="py-1 border-b border-turbo-border">
         <button
           onClick={() => {
-            setViewMode('overview')
             closeProjectSelector()
           }}
-          className={`w-full flex items-center gap-2 px-3 py-2 text-sm text-left transition-colors ${
-            viewMode === 'overview'
-              ? 'bg-turbo-accent/10 text-turbo-text'
-              : 'text-turbo-text-dim hover:bg-turbo-surface-hover'
-          }`}
+          className="w-full flex items-center gap-2 px-3 py-2 text-sm text-left transition-colors
+                     text-turbo-text-dim hover:bg-turbo-surface-hover"
         >
           <PaletteIcon icon="grid" className="w-3.5 h-3.5" />
           All Projects

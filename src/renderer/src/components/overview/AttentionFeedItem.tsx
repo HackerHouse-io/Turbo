@@ -20,7 +20,8 @@ export function AttentionFeedItem({ item, project }: AttentionFeedItemProps) {
   const handleView = () => {
     useSessionStore.getState().markItemRead(item.id)
     useSessionStore.getState().selectSession(item.sessionId)
-    useUIStore.getState().setViewMode('detail')
+    useSessionStore.getState().pinSession(item.sessionId)
+    useSessionStore.getState().focusSession(item.sessionId)
   }
 
   const handleDismiss = () => {

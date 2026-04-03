@@ -480,10 +480,21 @@ export class ClaudeSessionManager extends EventEmitter {
     const args: string[] = []
 
     // Tie Claude CLI session ID to Turbo session ID for resume support
-    args.push('--session-id', sessionId)
+    // Skip when resuming — the resumed session already has an ID
+    if (!payload.resumeSessionId) {
+      args.push('--session-id', sessionId)
+    }
 
     if (payload.model) {
       args.push('--model', payload.model)
+    }
+
+    if (payload.print) {
+      args.push('-p')
+    }
+
+    if (payload.resumeSessionId) {
+      args.push('--resume', payload.resumeSessionId)
     }
 
     if (payload.permissionMode && payload.permissionMode !== 'default') {

@@ -1,14 +1,10 @@
 import { useEffect, useRef, memo } from 'react'
 import { AnimatePresence } from 'framer-motion'
 import { TopBar } from './TopBar'
-import { CommandCenter } from '../command-center/CommandCenter'
-import { AgentDetailView } from '../command-center/AgentDetailView'
-import { ProjectOverview } from '../overview/ProjectOverview'
+import { SplitLayout } from './SplitLayout'
 import { CommandPalette } from '../command-palette/CommandPalette'
 import { TerminalDrawer } from '../terminal/TerminalDrawer'
 import { TerminalWorkspace } from '../terminal/TerminalWorkspace'
-import { PlaybookDetailOverlay } from '../playbooks/PlaybookDetailOverlay'
-import { PlaybookEditorOverlay } from '../playbooks/PlaybookEditorOverlay'
 import { PlanOverlay } from '../plan/PlanOverlay'
 import { SessionTimeline } from '../timeline/SessionTimeline'
 import { SettingsOverlay } from '../settings/SettingsOverlay'
@@ -21,30 +17,9 @@ import { ToastContainer } from '../notifications/ToastContainer'
 import { NotificationCenter } from '../notifications/NotificationCenter'
 import { CreateProjectOverlay } from '../project/CreateProjectOverlay'
 
-// ─── Main Content (only re-renders on viewMode / selectedSession changes) ───
-
-const MainContent = memo(function MainContent() {
-  const viewMode = useUIStore(s => s.viewMode)
-  const selectedSessionId = useSessionStore(s => s.selectedSessionId)
-
-  return (
-    <main className="flex-1 overflow-hidden">
-      {viewMode === 'overview' ? (
-        <ProjectOverview />
-      ) : viewMode === 'dashboard' || !selectedSessionId ? (
-        <CommandCenter />
-      ) : (
-        <AgentDetailView sessionId={selectedSessionId} />
-      )}
-    </main>
-  )
-})
-
 // ─── Overlays (each subscribes only to its own boolean) ─────────
 
 const Overlays = memo(function Overlays() {
-  const playbookDetail = useUIStore(s => s.playbookDetail)
-  const playbookEditorState = useUIStore(s => s.playbookEditorState)
   const planOverlayOpen = useUIStore(s => s.planOverlayOpen)
   const terminalWorkspaceOpen = useUIStore(s => s.terminalWorkspaceOpen)
   const timelineOpen = useUIStore(s => s.timelineOpen)
@@ -57,8 +32,6 @@ const Overlays = memo(function Overlays() {
 
   return (
     <>
-      {playbookDetail && <PlaybookDetailOverlay playbook={playbookDetail} />}
-      {playbookEditorState && <PlaybookEditorOverlay />}
       {planOverlayOpen && <PlanOverlay />}
       {terminalWorkspaceOpen && <TerminalWorkspace />}
       {timelineOpen && <SessionTimeline />}
@@ -128,7 +101,7 @@ export function AppShell() {
     }
   }, [])
 
-  // Global keyboard shortcuts — reads fresh state via getState() so no reactive deps needed
+  // Global keyboard shortcuts
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
       const kb = useKeybindingsStore.getState()
@@ -150,11 +123,6 @@ export function AppShell() {
         const ui = useUIStore.getState()
         if (ui.settingsOpen) ui.closeSettings()
         else ui.openSettings()
-        return
-      }
-      if (matchesEvent(kb.getShortcut('toggleOverview'), e)) {
-        e.preventDefault()
-        useUIStore.getState().toggleOverview()
         return
       }
       if (matchesEvent(kb.getShortcut('toggleTimeline'), e)) {
@@ -181,10 +149,9 @@ export function AppShell() {
         useUIStore.getState().toggleShortcutsOverlay()
         return
       }
-      // Escape -> Close overlays (highest z-index first) — stays hardcoded
+      // Escape -> Close overlays (highest z-index first)
       if (e.key === 'Escape') {
         const ui = useUIStore.getState()
-        const session = useSessionStore.getState()
         if (ui.createProjectOverlayOpen) {
           ui.closeCreateProjectOverlay()
         } else if (ui.shortcutsOverlayOpen) {
@@ -193,27 +160,18 @@ export function AppShell() {
           ui.closeNotificationCenter()
         } else if (ui.settingsOpen) {
           ui.closeSettings()
-        } else if (ui.playbookEditorState) {
-          ui.closePlaybookEditor()
         } else if (ui.planOverlayOpen) {
           ui.closePlanOverlay()
         } else if (ui.terminalWorkspaceOpen) {
           ui.closeTerminalWorkspace()
         } else if (ui.timelineOpen) {
           ui.closeTimeline()
-        } else if (ui.playbookDetail) {
-          ui.closePlaybookDetail()
         } else if (ui.projectSelectorOpen) {
           ui.closeProjectSelector()
         } else if (ui.commandPaletteOpen) {
           ui.closeCommandPalette()
         } else if (ui.terminalDrawerOpen) {
           ui.closeTerminalDrawer()
-        } else if (ui.viewMode === 'overview') {
-          ui.setViewMode('dashboard')
-        } else if (session.selectedSessionId) {
-          session.selectSession(null)
-          ui.setViewMode('dashboard')
         }
       }
     }
@@ -230,7 +188,9 @@ export function AppShell() {
       {/* Top bar */}
       <TopBar />
 
-      <MainContent />
+      {/* Split layout: sidebar + terminal grid + prompt */}
+      <SplitLayout />
+
       <Overlays />
 
       {/* Global file drop overlay */}
@@ -243,7 +203,7 @@ export function AppShell() {
                   d="M18.375 12.739l-7.693 7.693a4.5 4.5 0 01-6.364-6.364l10.94-10.94A3 3 0 1119.5 7.372L8.552 18.32m.009-.01l-.01.01m5.699-9.941l-7.81 7.81a1.5 1.5 0 002.112 2.13" />
               </svg>
               <span className="text-sm text-turbo-accent font-medium">Drop files to attach</span>
-              <span className="text-xs text-turbo-text-muted">Images, code, documents — anything</span>
+              <span className="text-xs text-turbo-text-muted">Images, code, documents</span>
             </div>
           </div>
         </div>

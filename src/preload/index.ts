@@ -20,9 +20,6 @@ import type {
   GitExecPayload,
   ClaudeModelInfo,
   GitPreset,
-  Playbook,
-  PlaybookExecution,
-  StartPlaybookPayload,
   PlanReadResult,
   PlanSavePayload,
   PlanSaveResult,
@@ -193,44 +190,6 @@ const api = {
   deleteGitPreset: (presetId: string): Promise<void> =>
     ipcRenderer.invoke(IPC.GIT_PRESETS_DELETE, presetId),
 
-  // ─── Playbooks ────────────────────────────────────────────
-
-  listPlaybooks: (): Promise<Playbook[]> =>
-    ipcRenderer.invoke(IPC.PLAYBOOK_LIST),
-
-  savePlaybook: (playbook: Playbook): Promise<Playbook> =>
-    ipcRenderer.invoke(IPC.PLAYBOOK_SAVE, playbook),
-
-  deletePlaybook: (playbookId: string): Promise<void> =>
-    ipcRenderer.invoke(IPC.PLAYBOOK_DELETE, playbookId),
-
-  duplicatePlaybook: (playbookId: string): Promise<Playbook> =>
-    ipcRenderer.invoke(IPC.PLAYBOOK_DUPLICATE, playbookId),
-
-  startPlaybook: (payload: StartPlaybookPayload): Promise<PlaybookExecution> =>
-    ipcRenderer.invoke(IPC.PLAYBOOK_START, payload),
-
-  pausePlaybook: (executionId: string): Promise<void> =>
-    ipcRenderer.invoke(IPC.PLAYBOOK_PAUSE, executionId),
-
-  resumePlaybook: (executionId: string): Promise<void> =>
-    ipcRenderer.invoke(IPC.PLAYBOOK_RESUME, executionId),
-
-  stopPlaybook: (executionId: string): Promise<void> =>
-    ipcRenderer.invoke(IPC.PLAYBOOK_STOP, executionId),
-
-  dismissPlaybook: (executionId: string): Promise<void> =>
-    ipcRenderer.invoke(IPC.PLAYBOOK_DISMISS, executionId),
-
-  listPlaybookExecutions: (): Promise<PlaybookExecution[]> =>
-    ipcRenderer.invoke(IPC.PLAYBOOK_EXECUTIONS),
-
-  removePlaybookExecution: (executionId: string): Promise<void> =>
-    ipcRenderer.invoke(IPC.PLAYBOOK_REMOVE, executionId),
-
-  advancePlaybookStep: (executionId: string): Promise<void> =>
-    ipcRenderer.invoke(IPC.PLAYBOOK_ADVANCE_STEP, executionId),
-
   // ─── Plan ──────────────────────────────────────────────────
 
   planRead: (projectPath: string): Promise<PlanReadResult> =>
@@ -359,12 +318,6 @@ const api = {
     const handler = (_: Electron.IpcRendererEvent, sessionId: string) => callback(sessionId)
     ipcRenderer.on(IPC.SESSION_REMOVED, handler)
     return () => ipcRenderer.removeListener(IPC.SESSION_REMOVED, handler)
-  },
-
-  onPlaybookUpdated: (callback: (execution: PlaybookExecution) => void) => {
-    const handler = (_: Electron.IpcRendererEvent, execution: PlaybookExecution) => callback(execution)
-    ipcRenderer.on(IPC.PLAYBOOK_UPDATED, handler)
-    return () => ipcRenderer.removeListener(IPC.PLAYBOOK_UPDATED, handler)
   },
 
   onNotificationClick: (callback: (sessionId: string) => void) => {

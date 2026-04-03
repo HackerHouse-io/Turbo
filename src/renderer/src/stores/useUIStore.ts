@@ -1,5 +1,4 @@
 import { create } from 'zustand'
-import type { Playbook } from '../../../shared/types'
 import { useTerminalStore } from './useTerminalStore'
 import { useProjectStore } from './useProjectStore'
 
@@ -10,9 +9,7 @@ type TerminalDrawerTarget =
 interface UIState {
   // Command palette
   commandPaletteOpen: boolean
-  pendingPlaybookFill: Playbook | null
   openCommandPalette: () => void
-  openCommandPaletteWithPlaybook: (playbook: Playbook) => void
   closeCommandPalette: () => void
   toggleCommandPalette: () => void
 
@@ -22,27 +19,12 @@ interface UIState {
   closeProjectSelector: () => void
   toggleProjectSelector: () => void
 
-  // Terminal drawer
+  // Terminal drawer (fallback for plain terminals)
   terminalDrawerOpen: boolean
   terminalDrawerTarget: TerminalDrawerTarget | null
   openTerminalDrawer: (sessionId: string) => void
   openPlainTerminalDrawer: (terminalId: string) => void
   closeTerminalDrawer: () => void
-
-  // View mode
-  viewMode: 'dashboard' | 'detail' | 'overview'
-  setViewMode: (mode: 'dashboard' | 'detail' | 'overview') => void
-  toggleOverview: () => void
-
-  // Playbook detail overlay
-  playbookDetail: Playbook | null
-  openPlaybookDetail: (playbook: Playbook) => void
-  closePlaybookDetail: () => void
-
-  // Playbook editor overlay
-  playbookEditorState: { playbook: Playbook | null; mode: 'create' | 'edit' | 'duplicate' } | null
-  openPlaybookEditor: (playbook: Playbook | null, mode: 'create' | 'edit' | 'duplicate') => void
-  closePlaybookEditor: () => void
 
   // Plan overlay
   planOverlayOpen: boolean
@@ -81,6 +63,10 @@ interface UIState {
   openCreateProjectOverlay: () => void
   closeCreateProjectOverlay: () => void
 
+  // Sidebar collapsed
+  sidebarCollapsed: boolean
+  toggleSidebar: () => void
+
   // Global drag-and-drop
   isDragOver: boolean
   setIsDragOver: (v: boolean) => void
@@ -91,10 +77,8 @@ interface UIState {
 
 export const useUIStore = create<UIState>((set) => ({
   commandPaletteOpen: false,
-  pendingPlaybookFill: null,
   openCommandPalette: () => set({ commandPaletteOpen: true }),
-  openCommandPaletteWithPlaybook: (playbook) => set({ commandPaletteOpen: true, pendingPlaybookFill: playbook }),
-  closeCommandPalette: () => set({ commandPaletteOpen: false, pendingPlaybookFill: null }),
+  closeCommandPalette: () => set({ commandPaletteOpen: false }),
   toggleCommandPalette: () => set(s => ({ commandPaletteOpen: !s.commandPaletteOpen })),
 
   projectSelectorOpen: false,
@@ -111,18 +95,6 @@ export const useUIStore = create<UIState>((set) => ({
   closeTerminalDrawer: () =>
     set({ terminalDrawerOpen: false, terminalDrawerTarget: null }),
 
-  viewMode: 'dashboard',
-  setViewMode: (mode) => set({ viewMode: mode }),
-  toggleOverview: () => set(s => ({ viewMode: s.viewMode === 'overview' ? 'dashboard' : 'overview' })),
-
-  playbookDetail: null,
-  openPlaybookDetail: (playbook) => set({ playbookDetail: playbook }),
-  closePlaybookDetail: () => set({ playbookDetail: null }),
-
-  playbookEditorState: null,
-  openPlaybookEditor: (playbook, mode) => set({ playbookEditorState: { playbook, mode } }),
-  closePlaybookEditor: () => set({ playbookEditorState: null }),
-
   planOverlayOpen: false,
   openPlanOverlay: () => set({ planOverlayOpen: true }),
   closePlanOverlay: () => set({ planOverlayOpen: false }),
@@ -133,7 +105,6 @@ export const useUIStore = create<UIState>((set) => ({
     if (workspaceId) {
       termStore.setActiveWorkspace(workspaceId)
     } else {
-      // Open first workspace for current project, or create one (seeded with a shell)
       const projStore = useProjectStore.getState()
       const proj = projStore.projects.find(p => p.id === projStore.selectedProjectId) || projStore.projects[0]
       if (proj?.path) {
@@ -145,7 +116,6 @@ export const useUIStore = create<UIState>((set) => ({
         } else {
           const newId = termStore.createWorkspace(proj.path)
           termStore.setActiveWorkspace(newId)
-          // Seed the new workspace with a shell terminal
           window.api.createPlainTerminal({ projectPath: proj.path, type: 'shell' }).then(terminal => {
             if (terminal) termStore.addTerminalToWorkspace(newId, terminal.id)
           })
@@ -181,13 +151,19 @@ export const useUIStore = create<UIState>((set) => ({
   openCreateProjectOverlay: () => set({ createProjectOverlayOpen: true }),
   closeCreateProjectOverlay: () => set({ createProjectOverlayOpen: false }),
 
+  sidebarCollapsed: false,
+  toggleSidebar: () => set(s => ({ sidebarCollapsed: !s.sidebarCollapsed })),
+
   isDragOver: false,
   setIsDragOver: (v) => set({ isDragOver: v }),
   pendingDropPaths: [],
   setPendingDropPaths: (paths) => set({ pendingDropPaths: paths }),
   consumeDropPaths: () => {
-    const paths = useUIStore.getState().pendingDropPaths
-    set({ pendingDropPaths: [] })
+    let paths: string[] = []
+    set(state => {
+      paths = state.pendingDropPaths
+      return { pendingDropPaths: [] }
+    })
     return paths
   }
 }))

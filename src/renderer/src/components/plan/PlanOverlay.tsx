@@ -9,10 +9,10 @@ import { PlanTableOfContents } from './PlanTableOfContents'
 import { PlanBlockRenderer } from './PlanBlockRenderer'
 import { PlanEmptyState, PLAN_GENERATION_PROMPT } from './PlanEmptyState'
 import { slugify } from '../../../../shared/utils'
+import { getIntent, buildSessionPayload } from '../../../../shared/intents'
 
 export function PlanOverlay() {
   const closePlanOverlay = useUIStore(s => s.closePlanOverlay)
-  const setViewMode = useUIStore(s => s.setViewMode)
   const selectSession = useSessionStore(s => s.selectSession)
   const selectedProjectId = useProjectStore(s => s.selectedProjectId)
   const projects = useProjectStore(s => s.projects)
@@ -50,27 +50,18 @@ export function PlanOverlay() {
     try {
       const slug = await window.api.generateSlug(taskContent) || slugify(taskContent)
       const worktreeInfo = await window.api.createWorktree({ projectPath, slug })
-      const execution = await window.api.startPlaybook({
-        playbookId: 'builtin-build-feature',
-        projectPath: worktreeInfo.path,
-        variables: { featureSlug: slug, featureDescription: taskContent },
-        startFromStep: 1,
-        worktreePath: worktreeInfo.path,
-        worktreeSourceProject: projectPath
-      })
+      const payload = buildSessionPayload(getIntent('build'), taskContent, worktreeInfo.path)
+      const session = await window.api.createSession(payload)
 
-      // Navigate directly to the session terminal
-      const activeStep = execution.steps.find(s => s.sessionId)
-      if (activeStep?.sessionId) {
-        selectSession(activeStep.sessionId)
-        setViewMode('detail')
+      if (session) {
+        selectSession(session.id)
       }
       closePlanOverlay()
     } finally {
       launchingRef.current = false
       setLaunching(false)
     }
-  }, [projectPath, closePlanOverlay, selectSession, setViewMode])
+  }, [projectPath, closePlanOverlay, selectSession])
 
   const handleCreatePlan = useCallback(async () => {
     if (!projectPath) return

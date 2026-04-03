@@ -1,5 +1,4 @@
 import { SettingRow, SettingSectionHeader } from '../SettingRow'
-import { ToggleSwitch } from '../../shared/ToggleSwitch'
 import { EFFORT_LEVELS, PERMISSION_MODES } from '../../../../../shared/constants'
 import type { ClaudeModelInfo, EffortLevel, PermissionMode } from '../../../../../shared/types'
 
@@ -8,16 +7,14 @@ interface SectionGeneralProps {
   defaultModel: string
   defaultEffort: EffortLevel
   defaultPermissionMode: PermissionMode
-  playbookAutoApprove: boolean
   onModelChange: (v: string) => void
   onEffortChange: (v: EffortLevel) => void
   onPermissionChange: (v: PermissionMode) => void
-  onAutoApproveChange: (v: boolean) => void
 }
 
 export function SectionGeneral({
-  models, defaultModel, defaultEffort, defaultPermissionMode, playbookAutoApprove,
-  onModelChange, onEffortChange, onPermissionChange, onAutoApproveChange
+  models, defaultModel, defaultEffort, defaultPermissionMode,
+  onModelChange, onEffortChange, onPermissionChange
 }: SectionGeneralProps) {
   return (
     <div className="space-y-6">
@@ -79,16 +76,6 @@ export function SectionGeneral({
             ))}
           </div>
         </SettingRow>
-      </div>
-
-      {/* Playbooks */}
-      <div>
-        <SettingSectionHeader title="Playbooks" description="Settings for playbook execution" />
-        <div className="rounded-lg border border-turbo-border bg-turbo-bg/50 divide-y divide-turbo-border">
-          <SettingRow label="Auto-approve permissions" description="Run all playbook steps with automatic tool approval (plan steps still pause for review)">
-            <ToggleSwitch checked={playbookAutoApprove} onChange={onAutoApproveChange} />
-          </SettingRow>
-        </div>
       </div>
     </div>
   )
