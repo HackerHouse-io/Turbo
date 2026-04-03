@@ -9,11 +9,12 @@ import { PlanTableOfContents } from './PlanTableOfContents'
 import { PlanBlockRenderer } from './PlanBlockRenderer'
 import { PlanEmptyState, PLAN_GENERATION_PROMPT } from './PlanEmptyState'
 import { slugify } from '../../../../shared/utils'
-import { getIntent, buildSessionPayload } from '../../../../shared/intents'
+import { buildPlanTaskPayload } from '../../../../shared/intents'
 
 export function PlanOverlay() {
   const closePlanOverlay = useUIStore(s => s.closePlanOverlay)
-  const selectSession = useSessionStore(s => s.selectSession)
+  const pinSession = useSessionStore(s => s.pinSession)
+  const focusSession = useSessionStore(s => s.focusSession)
   const selectedProjectId = useProjectStore(s => s.selectedProjectId)
   const projects = useProjectStore(s => s.projects)
   const selectedProject = projects.find(p => p.id === selectedProjectId)
@@ -38,7 +39,7 @@ export function PlanOverlay() {
   const progress = plan ? (plan.totalTasks > 0 ? plan.completedTasks / plan.totalTasks : 0) : 0
   const progressPct = Math.round(progress * 100)
 
-  // ─── Start task in worktree ─────────────────────────────────
+  // ─── Start task: create branch + session in current project ─
   const [launching, setLaunching] = useState(false)
   const launchingRef = useRef(false)
 
@@ -49,19 +50,19 @@ export function PlanOverlay() {
     setLaunching(true)
     try {
       const slug = await window.api.generateSlug(taskContent) || slugify(taskContent)
-      const worktreeInfo = await window.api.createWorktree({ projectPath, slug })
-      const payload = buildSessionPayload(getIntent('build'), taskContent, worktreeInfo.path)
+      await window.api.gitExec({ projectPath, commands: [`checkout -b feat/${slug}`] })
+
+      const payload = buildPlanTaskPayload(taskContent, projectPath)
       const session = await window.api.createSession(payload)
 
-      if (session) {
-        selectSession(session.id)
-      }
+      pinSession(session.id)
+      focusSession(session.id)
       closePlanOverlay()
     } finally {
       launchingRef.current = false
       setLaunching(false)
     }
-  }, [projectPath, closePlanOverlay, selectSession])
+  }, [projectPath, closePlanOverlay, pinSession, focusSession])
 
   const handleCreatePlan = useCallback(async () => {
     if (!projectPath) return

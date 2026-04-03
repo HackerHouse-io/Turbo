@@ -134,3 +134,36 @@ export function buildSessionPayload(
     attachments
   }
 }
+
+const PLAN_TASK_INTENT: Intent = {
+  id: 'plan-task',
+  label: 'Plan & Build',
+  icon: 'bolt',
+  description: 'Plan then implement a PLAN.md task',
+  permissionMode: 'auto',
+  effort: 'high',
+  print: false,
+  color: '#22c55e',
+  wrapPrompt: (task) =>
+    `You are implementing a task from this project's PLAN.md roadmap.
+
+## Task
+${task}
+
+## Before writing any code
+1. Read PLAN.md — understand where this task fits and what's already done
+2. Explore the codebase — find relevant files, patterns, and recent git history
+3. Identify reusable code, types, and utilities
+4. Present a clear implementation plan:
+   - Files to create/modify (with paths)
+   - Key changes in each file
+   - Edge cases and testing approach
+5. Flag any risks or ambiguities
+
+## Then
+Ask me to approve the plan. After I approve, implement it following codebase conventions. Keep changes minimal and focused.`
+}
+
+export function buildPlanTaskPayload(taskContent: string, projectPath: string): CreateSessionPayload {
+  return buildSessionPayload(PLAN_TASK_INTENT, taskContent, projectPath)
+}
