@@ -73,6 +73,11 @@ interface UIState {
   closeGitPanel: () => void
   toggleGitPanel: () => void
 
+  // View mode
+  viewMode: 'main' | 'overview'
+  showOverview: () => void
+  hideOverview: () => void
+
   // Global drag-and-drop
   isDragOver: boolean
   setIsDragOver: (v: boolean) => void
@@ -176,6 +181,10 @@ export const useUIStore = create<UIState>((set) => ({
     try { localStorage.setItem('turbo:gitPanelOpen', String(next)) } catch { /* */ }
     return { gitPanelOpen: next }
   }),
+
+  viewMode: 'main',
+  showOverview: () => set(s => s.viewMode === 'overview' ? s : { viewMode: 'overview' }),
+  hideOverview: () => set(s => s.viewMode === 'main' ? s : { viewMode: 'main' }),
 
   isDragOver: false,
   setIsDragOver: (v) => set({ isDragOver: v }),

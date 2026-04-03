@@ -22,6 +22,7 @@ export function AttentionFeedItem({ item, project }: AttentionFeedItemProps) {
     useSessionStore.getState().selectSession(item.sessionId)
     useSessionStore.getState().pinSession(item.sessionId)
     useSessionStore.getState().focusSession(item.sessionId)
+    useUIStore.getState().hideOverview()
   }
 
   const handleDismiss = () => {

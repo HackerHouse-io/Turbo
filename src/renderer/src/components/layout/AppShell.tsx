@@ -17,6 +17,7 @@ import { ShortcutsOverlay } from '../shortcuts/ShortcutsOverlay'
 import { ToastContainer } from '../notifications/ToastContainer'
 import { NotificationCenter } from '../notifications/NotificationCenter'
 import { CreateProjectOverlay } from '../project/CreateProjectOverlay'
+import { ProjectOverview } from '../overview/ProjectOverview'
 
 // ─── Overlays (each subscribes only to its own boolean) ─────────
 
@@ -52,6 +53,7 @@ const Overlays = memo(function Overlays() {
 export function AppShell() {
   // ─── Global drag-and-drop ─────────────────────────────────
   const dragCounterRef = useRef(0)
+  const viewMode = useUIStore(s => s.viewMode)
   const isDragOver = useUIStore(s => s.isDragOver)
 
   useEffect(() => {
@@ -197,6 +199,8 @@ export function AppShell() {
           ui.closeCommandPalette()
         } else if (ui.terminalDrawerOpen) {
           ui.closeTerminalDrawer()
+        } else if (ui.viewMode === 'overview') {
+          ui.hideOverview()
         }
       }
     }
@@ -213,8 +217,8 @@ export function AppShell() {
       {/* Top bar */}
       <TopBar />
 
-      {/* Split layout: sidebar + terminal grid + prompt */}
-      <SplitLayout />
+      {/* Main content */}
+      {viewMode === 'overview' ? <ProjectOverview /> : <SplitLayout />}
 
       <Overlays />
 

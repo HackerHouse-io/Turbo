@@ -54,6 +54,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     const ui = useUIStore.getState()
     ui.closeTerminalWorkspace()
     ui.closeTimeline()
+    ui.hideOverview()
     set({ selectedProjectId: projectId })
   },
 
