@@ -1,4 +1,5 @@
 import { useMemo, useCallback, useState } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
 import { useSessionStore, useProjectSessions } from '../../stores/useSessionStore'
 import { useProjectStore, selectProjectPath } from '../../stores/useProjectStore'
 import { useUIStore } from '../../stores/useUIStore'
@@ -8,18 +9,63 @@ import type { AgentSession } from '../../../../shared/types'
 import { STATUS_DOT_COLORS, STATUS_ANIMATED } from '../../lib/sessionStatus'
 import { formatElapsed } from '../../lib/format'
 
+// ─── Delete Confirmation Alert ──────────────────────────────────
+
+function DeleteAlert({ sessionName, onConfirm, onCancel }: {
+  sessionName: string
+  onConfirm: () => void
+  onCancel: () => void
+}) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, height: 0 }}
+      animate={{ opacity: 1, height: 'auto' }}
+      exit={{ opacity: 0, height: 0 }}
+      transition={{ duration: 0.2, ease: 'easeOut' }}
+      className="overflow-hidden"
+    >
+      <div className="mx-2 my-1 px-3 py-3 rounded-lg bg-red-500/10 border border-red-500/20">
+        <p className="text-[11px] text-turbo-text mb-0.5">
+          Delete <span className="font-semibold">{sessionName}</span>?
+        </p>
+        <p className="text-[11px] text-turbo-text-dim mb-3">
+          This will permanently remove the session and its history.
+        </p>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={onConfirm}
+            className="flex-1 h-7 rounded-md text-[11px] font-medium bg-red-500 text-white
+                       hover:bg-red-600 active:scale-[0.97] transition-all"
+          >
+            Delete
+          </button>
+          <button
+            onClick={onCancel}
+            className="flex-1 h-7 rounded-md text-[11px] font-medium bg-turbo-surface border border-turbo-border
+                       text-turbo-text-dim hover:bg-turbo-surface-active transition-colors"
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+    </motion.div>
+  )
+}
+
 // ─── Session Row ────────────────────────────────────────────────
 
-function SessionRow({ session, isSelected, isFocused, onSelect, onFocus }: {
+function SessionRow({ session, isSelected, isFocused, onSelect, onFocus, onRequestDelete }: {
   session: AgentSession
   isSelected: boolean
   isFocused: boolean
   onSelect: () => void
   onFocus: () => void
+  onRequestDelete: () => void
 }) {
   const elapsed = formatElapsed(session.startedAt, session.completedAt)
   const colorClass = STATUS_DOT_COLORS[session.status]
   const pulse = STATUS_ANIMATED[session.status]
+  const isActive = !isTerminalStatus(session.status)
 
   return (
     <button
@@ -46,25 +92,41 @@ function SessionRow({ session, isSelected, isFocused, onSelect, onFocus }: {
         )}
       </div>
 
-      <span className="text-[10px] text-turbo-text-muted flex-shrink-0 tabular-nums">
+      <span className="text-[10px] text-turbo-text-muted flex-shrink-0 tabular-nums group-hover:hidden">
         {elapsed}
       </span>
 
-      {!isTerminalStatus(session.status) && (
+      {/* Hover actions */}
+      <div className="hidden group-hover:flex items-center gap-0.5 flex-shrink-0">
+        {isActive && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation()
+              window.api.stopSession(session.id)
+            }}
+            className="w-5 h-5 flex items-center justify-center rounded
+                       text-turbo-text-muted hover:text-amber-400 hover:bg-amber-500/10 transition-colors"
+            title="Stop session"
+          >
+            <svg className="w-3 h-3" viewBox="0 0 24 24" fill="currentColor">
+              <rect x="6" y="6" width="12" height="12" rx="1" />
+            </svg>
+          </button>
+        )}
         <button
           onClick={(e) => {
             e.stopPropagation()
-            window.api.stopSession(session.id)
+            onRequestDelete()
           }}
-          className="opacity-0 group-hover:opacity-100 flex-shrink-0 w-4 h-4 flex items-center justify-center
-                     text-turbo-text-muted hover:text-red-400 transition-all"
-          title="Stop"
+          className="w-5 h-5 flex items-center justify-center rounded
+                     text-turbo-text-muted hover:text-red-400 hover:bg-red-500/10 transition-colors"
+          title="Delete session"
         >
-          <svg className="w-3 h-3" viewBox="0 0 24 24" fill="currentColor">
-            <rect x="6" y="6" width="12" height="12" rx="1" />
+          <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
           </svg>
         </button>
-      )}
+      </div>
     </button>
   )
 }
@@ -117,16 +179,17 @@ export function SessionSidebar() {
   const selectSession = useSessionStore(s => s.selectSession)
   const focusSession = useSessionStore(s => s.focusSession)
   const pinSession = useSessionStore(s => s.pinSession)
+  const unpinSession = useSessionStore(s => s.unpinSession)
   const sidebarCollapsed = useUIStore(s => s.sidebarCollapsed)
   const toggleSidebar = useUIStore(s => s.toggleSidebar)
 
-  // Workspaces for current project
   const workspaces = useTerminalStore(s => s.workspaces)
   const createWorkspace = useTerminalStore(s => s.createWorkspace)
   const addTerminalToWorkspace = useTerminalStore(s => s.addTerminalToWorkspace)
   const openTerminalWorkspace = useUIStore(s => s.openTerminalWorkspace)
 
   const [termMenuOpen, setTermMenuOpen] = useState(false)
+  const [deletingSessionId, setDeletingSessionId] = useState<string | null>(null)
 
   const projectWorkspaces = useMemo(() =>
     Object.values(workspaces)
@@ -151,10 +214,20 @@ export function SessionSidebar() {
     pinSession(sessionId)
   }, [selectSession, pinSession])
 
+  const handleDelete = useCallback((sessionId: string) => {
+    // Stop if still active, unpin from grid, remove from store + database
+    const session = useSessionStore.getState().sessions[sessionId]
+    if (session && !isTerminalStatus(session.status)) {
+      window.api.stopSession(sessionId)
+    }
+    unpinSession(sessionId)
+    window.api.removeSession(sessionId)
+    setDeletingSessionId(null)
+  }, [unpinSession])
+
   const handleNewTerminal = useCallback(async (type: 'shell' | 'claude') => {
     if (!selectedProjectPath) return
     setTermMenuOpen(false)
-    // Reuse first workspace or create one
     let wsId = projectWorkspaces.length > 0 ? projectWorkspaces[0].id : null
     if (!wsId) {
       wsId = createWorkspace(selectedProjectPath)
@@ -193,7 +266,6 @@ export function SessionSidebar() {
             </button>
           ))}
         </div>
-        {/* Collapsed terminal icon */}
         {projectWorkspaces.length > 0 && (
           <button
             onClick={() => openTerminalWorkspace()}
@@ -209,11 +281,34 @@ export function SessionSidebar() {
     )
   }
 
+  // ─── Helper to render a session row + its delete alert ────
+
+  const renderSession = (s: AgentSession) => (
+    <div key={s.id}>
+      <SessionRow
+        session={s}
+        isSelected={selectedSessionId === s.id}
+        isFocused={focusedSessionId === s.id}
+        onSelect={() => handleSelect(s.id)}
+        onFocus={() => focusSession(s.id)}
+        onRequestDelete={() => setDeletingSessionId(s.id)}
+      />
+      <AnimatePresence>
+        {deletingSessionId === s.id && (
+          <DeleteAlert
+            sessionName={s.name}
+            onConfirm={() => handleDelete(s.id)}
+            onCancel={() => setDeletingSessionId(null)}
+          />
+        )}
+      </AnimatePresence>
+    </div>
+  )
+
   // ─── Expanded state ───────────────────────────────────────
 
   return (
     <div className="w-60 flex-shrink-0 border-r border-turbo-border/40 bg-turbo-bg flex flex-col">
-      {/* Header */}
       <div className="flex items-center justify-between px-3 pt-3 pb-2">
         <h2 className="text-xs font-semibold text-turbo-text-muted uppercase tracking-wider">Sessions</h2>
         <button
@@ -227,20 +322,10 @@ export function SessionSidebar() {
         </button>
       </div>
 
-      {/* Session list */}
-      <div className="flex-1 overflow-y-auto px-2 pb-2 space-y-0.5">
+      <div className="flex-1 overflow-y-auto px-2 pb-2">
         {active.length > 0 && (
           <div className="space-y-0.5">
-            {active.map(s => (
-              <SessionRow
-                key={s.id}
-                session={s}
-                isSelected={selectedSessionId === s.id}
-                isFocused={focusedSessionId === s.id}
-                onSelect={() => handleSelect(s.id)}
-                onFocus={() => focusSession(s.id)}
-              />
-            ))}
+            {active.map(renderSession)}
           </div>
         )}
 
@@ -249,20 +334,13 @@ export function SessionSidebar() {
         )}
 
         {completed.length > 0 && (
-          <div className="space-y-0.5">
+          <div>
             <p className="text-[10px] text-turbo-text-muted/60 uppercase tracking-wider px-3 py-1">
               Recent
             </p>
-            {completed.slice(0, 20).map(s => (
-              <SessionRow
-                key={s.id}
-                session={s}
-                isSelected={selectedSessionId === s.id}
-                isFocused={focusedSessionId === s.id}
-                onSelect={() => handleSelect(s.id)}
-                onFocus={() => focusSession(s.id)}
-              />
-            ))}
+            <div className="space-y-0.5">
+              {completed.slice(0, 20).map(renderSession)}
+            </div>
           </div>
         )}
 

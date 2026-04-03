@@ -6,10 +6,11 @@ import { isTerminalStatus } from '../../../../shared/types'
 import type { AgentSession } from '../../../../shared/types'
 import { STATUS_DOT_COLORS, STATUS_LABELS } from '../../lib/sessionStatus'
 
-function TerminalPane({ session, isFocused, onFocus }: {
+function TerminalPane({ session, isFocused, onFocus, onClose }: {
   session: AgentSession
   isFocused: boolean
   onFocus: () => void
+  onClose: () => void
 }) {
   const isActive = !isTerminalStatus(session.status)
 
@@ -20,7 +21,7 @@ function TerminalPane({ session, isFocused, onFocus }: {
         ${isFocused ? 'border-turbo-accent/50' : 'border-turbo-border/30 hover:border-turbo-border/60'}
       `}
     >
-      <div className={`flex items-center gap-2 px-3 py-1.5 flex-shrink-0
+      <div className={`flex items-center gap-2 px-3 py-1.5 flex-shrink-0 group/header
         ${isFocused ? 'bg-turbo-accent/10' : 'bg-turbo-surface/50'}
       `}>
         <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${STATUS_DOT_COLORS[session.status]}`} />
@@ -36,7 +37,7 @@ function TerminalPane({ session, isFocused, onFocus }: {
               e.stopPropagation()
               window.api.stopSession(session.id)
             }}
-            className="w-4 h-4 flex items-center justify-center rounded text-turbo-text-muted hover:text-red-400 transition-colors"
+            className="w-5 h-5 flex items-center justify-center rounded hover:bg-red-500/15 text-turbo-text-muted hover:text-red-400 transition-colors"
             title="Stop session"
           >
             <svg className="w-3 h-3" viewBox="0 0 24 24" fill="currentColor">
@@ -44,6 +45,20 @@ function TerminalPane({ session, isFocused, onFocus }: {
             </svg>
           </button>
         )}
+        <button
+          onClick={(e) => {
+            e.stopPropagation()
+            onClose()
+          }}
+          className="w-5 h-5 flex items-center justify-center rounded
+                     text-turbo-text-muted/40 hover:text-turbo-text hover:bg-white/[0.06]
+                     opacity-0 group-hover/header:opacity-100 transition-all"
+          title="Close pane"
+        >
+          <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
       </div>
 
       <div className="flex-1 min-h-0">
@@ -56,6 +71,7 @@ function TerminalPane({ session, isFocused, onFocus }: {
 export function TerminalGrid() {
   const focusedSessionId = useSessionStore(s => s.focusedSessionId)
   const focusSession = useSessionStore(s => s.focusSession)
+  const unpinSession = useSessionStore(s => s.unpinSession)
   const projectPath = useProjectStore(selectProjectPath)
 
   // Derive visible sessions with useShallow to avoid re-renders on unrelated session changes
@@ -107,6 +123,7 @@ export function TerminalGrid() {
           session={session}
           isFocused={focusedSessionId === session.id}
           onFocus={() => focusSession(session.id)}
+          onClose={() => unpinSession(session.id)}
         />
       ))}
     </div>
