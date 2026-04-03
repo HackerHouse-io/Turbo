@@ -51,7 +51,7 @@ function TerminalPane({ session, isFocused, onFocus, onClose }: {
             onClose()
           }}
           className="w-5 h-5 flex items-center justify-center rounded
-                     text-turbo-text-muted/40 hover:text-turbo-text hover:bg-white/[0.06]
+                     text-turbo-text-muted hover:text-turbo-text hover:bg-white/[0.06]
                      opacity-0 group-hover/header:opacity-100 transition-all"
           title="Close pane"
         >
@@ -100,7 +100,7 @@ export function TerminalGrid() {
             </svg>
           </div>
           <p className="text-sm text-turbo-text-dim mb-1">No active sessions</p>
-          <p className="text-xs text-turbo-text-muted/60">
+          <p className="text-xs text-turbo-text-muted">
             Type what you want to work on below and hit <kbd className="kbd text-[10px] px-1 py-0.5">&#8984;&#8617;</kbd>
           </p>
         </div>

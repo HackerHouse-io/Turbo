@@ -110,7 +110,7 @@ export function SessionList({ sessions }: { sessions: AgentSession[] }) {
         </div>
       ) : (
         <div className="flex items-center gap-3 h-10 text-xs text-turbo-text-muted">
-          <PaletteIcon icon="terminal" className="w-3.5 h-3.5 text-turbo-text-muted/50" />
+          <PaletteIcon icon="terminal" className="w-3.5 h-3.5 text-turbo-text-muted" />
           No active sessions — type a task below
         </div>
       )}

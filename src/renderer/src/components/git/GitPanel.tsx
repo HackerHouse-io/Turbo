@@ -42,7 +42,7 @@ function ActionButton({ label, shortcut, icon, color, loading, disabled, onClick
         {loading ? <Spinner /> : icon}
       </span>
       <span className="flex-1 text-left">{label}</span>
-      <kbd className="text-[9px] opacity-40 font-mono">{shortcut}</kbd>
+      <kbd className="text-[9px] opacity-70 font-mono">{shortcut}</kbd>
     </button>
   )
 }
@@ -151,7 +151,7 @@ function Step({ num, text, accent }: { num: number; text: string; accent: boolea
 
 export function GitPanel() {
   const projectPath = useProjectStore(selectProjectPath)
-  const { git, commits } = useNerveCenterData(projectPath)
+  const { git, commits, refresh } = useNerveCenterData(projectPath)
   const quickCommit = useGitActionsStore(s => s.quickCommit)
   const push = useGitActionsStore(s => s.push)
   const pull = useGitActionsStore(s => s.pull)
@@ -231,12 +231,12 @@ export function GitPanel() {
                 </span>
               )}
               {git.dirty === 0 && git.staged === 0 && (
-                <span className="text-turbo-text-muted/50">Clean</span>
+                <span className="text-turbo-text-muted">Clean</span>
               )}
             </div>
           </>
         ) : (
-          <p className="text-xs text-turbo-text-muted/50">Not a git repo</p>
+          <p className="text-xs text-turbo-text-muted">Not a git repo</p>
         )}
       </div>
 
@@ -330,10 +330,10 @@ export function GitPanel() {
             <div className="space-y-1.5">
               {commits.map(c => (
                 <div key={c.hash} className="flex items-start gap-2">
-                  <code className="text-[10px] text-turbo-accent/60 font-mono flex-shrink-0 mt-px">{c.hash}</code>
+                  <code className="text-[10px] text-turbo-accent font-mono flex-shrink-0 mt-px">{c.hash}</code>
                   <div className="flex-1 min-w-0">
                     <p className="text-[11px] text-turbo-text-dim truncate">{c.message}</p>
-                    <p className="text-[10px] text-turbo-text-muted/40">{c.relativeTime}</p>
+                    <p className="text-[10px] text-turbo-text-muted">{c.relativeTime}</p>
                   </div>
                 </div>
               ))}
@@ -379,7 +379,7 @@ export function GitPanel() {
                       </div>
                     ))}
                     {changedFiles.length === 0 && (
-                      <p className="text-[10px] text-turbo-text-muted/40 py-1">No changes</p>
+                      <p className="text-[10px] text-turbo-text-muted py-1">No changes</p>
                     )}
                   </div>
                 </motion.div>

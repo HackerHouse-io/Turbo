@@ -148,7 +148,7 @@ export function SessionTimeline() {
         {sessions.length === 0 ? (
           /* Empty state */
           <div className="h-full flex flex-col items-center justify-center gap-4">
-            <PaletteIcon icon="clock" className="w-10 h-10 text-turbo-text-muted/40" />
+            <PaletteIcon icon="clock" className="w-10 h-10 text-turbo-text-muted" />
             <p className="text-sm text-turbo-text-muted">No sessions yet</p>
             <p className="text-xs text-turbo-text-muted">Start a task to see the timeline</p>
           </div>

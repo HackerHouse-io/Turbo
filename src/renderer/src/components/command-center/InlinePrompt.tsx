@@ -5,7 +5,8 @@ import { useUIStore } from '../../stores/useUIStore'
 import { useGitIdentityStore } from '../../stores/useGitIdentityStore'
 import { AttachmentChip } from './AttachmentChip'
 import { BUILT_IN_INTENTS, getIntent, buildSessionPayload, DEFAULT_INTENT_ID } from '../../../../shared/intents'
-import type { ClaudeModelInfo, AttachmentInfo } from '../../../../shared/types'
+import { EFFORT_LEVELS, PERMISSION_MODES } from '../../../../shared/constants'
+import type { ClaudeModelInfo, AttachmentInfo, PermissionMode, EffortLevel } from '../../../../shared/types'
 
 export function InlinePrompt() {
   const [prompt, setPrompt] = useState('')
@@ -14,6 +15,8 @@ export function InlinePrompt() {
   const [model, setModel] = useState('sonnet')
   const [selectedIntentId, setSelectedIntentId] = useState(DEFAULT_INTENT_ID)
   const [attachments, setAttachments] = useState<AttachmentInfo[]>([])
+  const [permissionMode, setPermissionMode] = useState<PermissionMode>('default')
+  const [effort, setEffort] = useState<EffortLevel>('medium')
   const [isFocused, setIsFocused] = useState(false)
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const selectedProjectId = useProjectStore(s => s.selectedProjectId)
@@ -38,6 +41,12 @@ export function InlinePrompt() {
       if (savedIntent && typeof savedIntent === 'string') setSelectedIntentId(savedIntent)
     })
   }, [])
+
+  useEffect(() => {
+    const i = getIntent(selectedIntentId)
+    setPermissionMode(i.permissionMode)
+    setEffort(i.effort)
+  }, [selectedIntentId])
 
   useEffect(() => {
     if (pendingDropPaths.length === 0) return
@@ -81,6 +90,8 @@ export function InlinePrompt() {
         model,
         attachments.length > 0 ? attachments : undefined
       )
+      payload.permissionMode = permissionMode
+      payload.effort = effort
       const session = await window.api.createSession(payload)
       pinSession(session.id)
       focusSession(session.id)
@@ -91,7 +102,7 @@ export function InlinePrompt() {
     } finally {
       setIsSubmitting(false)
     }
-  }, [prompt, attachments, selectedProject, selectedIntentId, model, pinSession, focusSession])
+  }, [prompt, attachments, selectedProject, selectedIntentId, model, permissionMode, effort, pinSession, focusSession])
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
@@ -149,7 +160,7 @@ export function InlinePrompt() {
                 className={`flex-shrink-0 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-150
                   ${isActive
                     ? 'text-white shadow-sm scale-[1.02]'
-                    : 'text-turbo-text-muted/70 hover:text-turbo-text hover:bg-white/[0.04]'
+                    : 'text-turbo-text-muted hover:text-turbo-text hover:bg-white/[0.04]'
                   }
                 `}
                 style={isActive ? { backgroundColor: i.color } : undefined}
@@ -191,7 +202,7 @@ export function InlinePrompt() {
           rows={2}
           disabled={isSubmitting}
           className="w-full px-5 pt-2 pb-1 bg-transparent text-[13px] leading-relaxed text-turbo-text
-                     placeholder:text-turbo-text-muted/40 resize-none
+                     placeholder:text-turbo-text-muted resize-none
                      focus:outline-none disabled:opacity-50"
         />
 
@@ -212,7 +223,7 @@ export function InlinePrompt() {
               disabled={isSubmitting}
               title="Attach files"
               className="h-7 w-7 flex items-center justify-center rounded-lg
-                         text-turbo-text-muted/50 hover:text-turbo-text hover:bg-white/[0.06]
+                         text-turbo-text-muted hover:text-turbo-text hover:bg-white/[0.06]
                          disabled:opacity-30 transition-colors"
             >
               <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
@@ -220,18 +231,43 @@ export function InlinePrompt() {
                   d="M18.375 12.739l-7.693 7.693a4.5 4.5 0 01-6.364-6.364l10.94-10.94A3 3 0 1119.5 7.372L8.552 18.32m.009-.01l-.01.01m5.699-9.941l-7.81 7.81a1.5 1.5 0 002.112 2.13" />
               </svg>
             </button>
-            {intent.id !== DEFAULT_INTENT_ID && (
-              <span
-                className="text-[11px] font-medium px-2 py-0.5 rounded-md"
-                style={{ color: intent.color, backgroundColor: intent.color + '15' }}
-              >
-                {intent.print ? 'read-only' : intent.permissionMode === 'auto' ? 'auto-accept' : 'interactive'}
-              </span>
-            )}
+            {/* Permission mode pills */}
+            <div className="h-6 flex items-center rounded-md border border-turbo-border/30 overflow-hidden">
+              {PERMISSION_MODES.map(pm => (
+                <button
+                  key={pm.value}
+                  onClick={() => setPermissionMode(pm.value)}
+                  className={`h-full px-2 text-[10px] font-medium transition-colors ${
+                    permissionMode === pm.value
+                      ? 'bg-turbo-accent/20 text-turbo-accent'
+                      : 'text-turbo-text-dim hover:text-turbo-text hover:bg-white/[0.06]'
+                  }`}
+                >
+                  {pm.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Effort pills */}
+            <div className="h-6 flex items-center rounded-md border border-turbo-border/30 overflow-hidden">
+              {EFFORT_LEVELS.map(e => (
+                <button
+                  key={e.value}
+                  onClick={() => setEffort(e.value)}
+                  className={`h-full px-2 text-[10px] font-medium transition-colors ${
+                    effort === e.value
+                      ? 'bg-turbo-accent/20 text-turbo-accent'
+                      : 'text-turbo-text-dim hover:text-turbo-text hover:bg-white/[0.06]'
+                  }`}
+                >
+                  {e.label}
+                </button>
+              ))}
+            </div>
           </div>
 
           <div className="flex items-center gap-2.5">
-            <kbd className="kbd text-[10px] h-6 flex items-center px-1.5 text-turbo-text-muted/40">&#8984;&#8617;</kbd>
+            <kbd className="kbd text-[10px] h-6 flex items-center px-1.5 text-turbo-text-muted">&#8984;&#8617;</kbd>
             <button
               onClick={handleSubmit}
               disabled={(!prompt.trim() && attachments.length === 0) || isSubmitting}

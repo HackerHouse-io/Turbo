@@ -204,7 +204,7 @@ export function TerminalWorkspace() {
           {panes.length === 0 ? (
             /* Empty state */
             <div className="h-full flex flex-col items-center justify-center gap-4">
-              <PaletteIcon icon="terminal" className="w-10 h-10 text-turbo-text-muted/40" />
+              <PaletteIcon icon="terminal" className="w-10 h-10 text-turbo-text-muted" />
               <p className="text-sm text-turbo-text-muted">No terminals open</p>
               <div className="flex items-center gap-3">
                 <button

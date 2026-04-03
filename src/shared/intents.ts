@@ -30,7 +30,7 @@ export const BUILT_IN_INTENTS: Intent[] = [
     icon: 'bolt',
     description: 'Implement a feature with auto-accept',
     permissionMode: 'auto',
-    effort: 'max',
+    effort: 'high',
     print: false,
     color: '#22c55e',
     wrapPrompt: (p) =>

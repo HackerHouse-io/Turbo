@@ -214,7 +214,7 @@ function WorkspaceCard({ workspace, terminals }: {
           className={`flex items-center gap-1.5 text-[10px] transition-colors ${
             canAdd
               ? 'text-turbo-text-muted hover:text-turbo-text-dim cursor-pointer'
-              : 'text-turbo-text-muted/40 cursor-not-allowed'
+              : 'text-turbo-text-muted cursor-not-allowed'
           }`}
         >
           <PaletteIcon icon="plus" className="w-3 h-3" />

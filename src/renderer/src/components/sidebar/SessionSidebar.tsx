@@ -152,12 +152,12 @@ function WorkspaceRow({ workspace }: { workspace: Workspace }) {
       className="w-full flex items-center gap-2.5 px-3 py-2 text-left rounded-lg transition-colors
                  hover:bg-turbo-surface-active/50 group"
     >
-      <svg className="w-3.5 h-3.5 text-turbo-text-muted/60 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
+      <svg className="w-3.5 h-3.5 text-turbo-text-muted flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 7.5l3 2.25-3 2.25m4.5 0h3m-9 8.25h13.5A2.25 2.25 0 0021 18V6a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 6v12a2.25 2.25 0 002.25 2.25z" />
       </svg>
       <div className="flex-1 min-w-0">
         <div className="text-xs font-medium text-turbo-text truncate">{workspace.name}</div>
-        <div className="text-[10px] text-turbo-text-muted/50">{summary}</div>
+        <div className="text-[10px] text-turbo-text-muted">{summary}</div>
       </div>
       <span className="text-[10px] text-turbo-accent opacity-0 group-hover:opacity-100 transition-opacity">
         Open
@@ -335,7 +335,7 @@ export function SessionSidebar() {
 
         {completed.length > 0 && (
           <div>
-            <p className="text-[10px] text-turbo-text-muted/60 uppercase tracking-wider px-3 py-1">
+            <p className="text-[10px] text-turbo-text-muted uppercase tracking-wider px-3 py-1">
               Recent
             </p>
             <div className="space-y-0.5">
@@ -346,8 +346,8 @@ export function SessionSidebar() {
 
         {sessions.length === 0 && (
           <div className="flex flex-col items-center justify-center py-12 text-center">
-            <p className="text-xs text-turbo-text-muted/60">No sessions yet</p>
-            <p className="text-[10px] text-turbo-text-muted/40 mt-1">Type below to start</p>
+            <p className="text-xs text-turbo-text-muted">No sessions yet</p>
+            <p className="text-[10px] text-turbo-text-muted mt-1">Type below to start</p>
           </div>
         )}
       </div>
@@ -399,7 +399,7 @@ export function SessionSidebar() {
             <WorkspaceRow key={ws.id} workspace={ws} />
           ))}
           {projectWorkspaces.length === 0 && (
-            <p className="text-[10px] text-turbo-text-muted/40 px-3 py-2">
+            <p className="text-[10px] text-turbo-text-muted px-3 py-2">
               No terminals open
             </p>
           )}
