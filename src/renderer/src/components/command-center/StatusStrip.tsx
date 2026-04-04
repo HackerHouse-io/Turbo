@@ -6,7 +6,6 @@ import { usePlanData } from '../../hooks/usePlanData'
 import { formatCost } from '../../lib/format'
 import { BranchSwitcher } from './BranchSwitcher'
 import { RunButton } from './RunButton'
-import { XcodeButton } from './XcodeButton'
 
 interface StatusStripProps {
   projectPath: string | undefined
@@ -54,7 +53,6 @@ export function StatusStrip({ projectPath }: StatusStripProps) {
           <span className="text-turbo-text-muted">Ready</span>
         )}
         <RunButton projectPath={projectPath} />
-        <XcodeButton projectPath={projectPath} />
       </div>
 
       {/* Right: contextual info */}

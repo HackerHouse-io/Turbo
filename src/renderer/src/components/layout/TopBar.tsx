@@ -7,6 +7,7 @@ import { useProjectStore } from '../../stores/useProjectStore'
 import { useGitIdentityStore } from '../../stores/useGitIdentityStore'
 import { ProjectSelector } from '../project/ProjectSelector'
 import { GitIdentitySelector } from '../git/GitIdentitySelector'
+import { XcodeButton } from '../command-center/XcodeButton'
 
 export function TopBar() {
   const openCommandPalette = useUIStore(s => s.openCommandPalette)
@@ -120,6 +121,9 @@ export function TopBar() {
 
       {/* Action buttons */}
       <div className="flex items-center gap-2 ml-auto">
+        {/* Open in Xcode (only visible for Xcode projects) */}
+        <XcodeButton projectPath={selectedProject?.path} />
+
         {/* Git Panel toggle */}
         <button
           onClick={toggleGitPanel}

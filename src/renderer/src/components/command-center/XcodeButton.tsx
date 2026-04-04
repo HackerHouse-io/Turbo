@@ -37,15 +37,19 @@ export function XcodeButton({ projectPath }: XcodeButtonProps) {
   return (
     <button
       onClick={handleClick}
-      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium
-                 bg-blue-500/15 text-blue-400 border border-blue-500/30
-                 hover:bg-blue-500/25 transition-colors"
+      className="inline-flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-xs font-medium
+                 bg-blue-500/10 text-blue-400 border border-blue-500/25
+                 hover:bg-blue-500/20 hover:border-blue-500/40 transition-colors cursor-pointer"
       title={tooltip}
     >
-      <svg width="10" height="10" viewBox="0 0 16 16" fill="currentColor">
-        <path d="M7.2 0L5.6 4H1.6L4.8 6.4L3.6 10.8L7.2 8L10.8 10.8L9.6 6.4L12.8 4H8.8L7.2 0Z" transform="translate(0.8, 0.5) scale(0.95)" />
+      <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+        <rect x="3" y="3" width="18" height="18" rx="4" />
+        <path d="M8 12h8M12 8v8" strokeLinecap="round" />
       </svg>
-      Xcode
+      <span>Xcode</span>
+      {info.platform && (
+        <span className="text-blue-400/60">{info.platform}</span>
+      )}
     </button>
   )
 }
