@@ -1,5 +1,7 @@
 import { EventEmitter } from 'events'
 import { join } from 'path'
+import { execFile } from 'child_process'
+import { promisify } from 'util'
 import { v4 as uuid } from 'uuid'
 import { PtyManager } from '../pty/PtyManager'
 import { OutputMonitor } from './OutputMonitor'
@@ -19,6 +21,8 @@ import type { GitOpsManager } from '../git/GitOpsManager'
 import type { SettingsManager } from '../SettingsManager'
 import type { ProjectManager } from '../ProjectManager'
 import type { GitIdentity } from '../../shared/types'
+
+const execFileAsync = promisify(execFile)
 
 /**
  * ClaudeSessionManager: Core orchestrator for Claude Code CLI sessions.
@@ -47,6 +51,7 @@ export class ClaudeSessionManager extends EventEmitter {
   private saveTimer: ReturnType<typeof setTimeout> | null = null
   private savePending = false
   private blockUpdateTimers = new Map<string, ReturnType<typeof setTimeout>>()
+  private titleAbortControllers = new Map<string, AbortController>()
 
   constructor(settingsManager: SettingsManager, projectManager: ProjectManager, gitOpsManager: GitOpsManager, userDataPath: string) {
     super()
@@ -100,6 +105,11 @@ export class ClaudeSessionManager extends EventEmitter {
       env
     })
 
+    // Fire async AI title generation (non-blocking)
+    if (!payload.name && payload.prompt) {
+      this.generateSmartTitle(id, payload.prompt)
+    }
+
     this.emitUpdate(id)
     return session
   }
@@ -108,6 +118,7 @@ export class ClaudeSessionManager extends EventEmitter {
    * Stop (kill) a session.
    */
   async stopSession(sessionId: string): Promise<void> {
+    this.abortTitleGeneration(sessionId)
     this.ptyManager.kill(sessionId)
     this.bufferStore.flush(sessionId)
     const session = this.sessions.get(sessionId)
@@ -159,6 +170,7 @@ export class ClaudeSessionManager extends EventEmitter {
    * Remove a completed/stopped session from tracking.
    */
   removeSession(sessionId: string): void {
+    this.abortTitleGeneration(sessionId)
     this.sessions.delete(sessionId)
     this.monitors.delete(sessionId)
     this.gitSnapshots.delete(sessionId)
@@ -229,6 +241,8 @@ export class ClaudeSessionManager extends EventEmitter {
     this.gitSnapshots.clear()
     this.blockUpdateTimers.forEach(t => clearTimeout(t))
     this.blockUpdateTimers.clear()
+    this.titleAbortControllers.forEach(ac => ac.abort())
+    this.titleAbortControllers.clear()
   }
 
   // ─── Persistence ────────────────────────────────────────────
@@ -561,5 +575,36 @@ export class ClaudeSessionManager extends EventEmitter {
     const clean = prompt.replace(/\s+/g, ' ').trim()
     if (clean.length <= 40) return clean
     return clean.slice(0, 37) + '...'
+  }
+
+  private async generateSmartTitle(sessionId: string, prompt: string): Promise<void> {
+    const ac = new AbortController()
+    this.titleAbortControllers.set(sessionId, ac)
+    try {
+      const titlePrompt = `Generate a concise descriptive title (3-6 words, no quotes) for this coding task. Output ONLY the title, nothing else.\n\nTask: ${prompt}`
+      const result = await execFileAsync('claude', ['-p', titlePrompt], {
+        timeout: 30_000,
+        maxBuffer: 256 * 1024,
+        signal: ac.signal
+      })
+      const cleaned = result.stdout.trim().replace(/^["'`]|["'`]$/g, '')
+      const session = this.sessions.get(sessionId)
+      if (session && cleaned) {
+        session.name = cleaned
+        this.emitUpdate(sessionId)
+      }
+    } catch {
+      // Silently keep truncated prompt as fallback
+    } finally {
+      this.titleAbortControllers.delete(sessionId)
+    }
+  }
+
+  private abortTitleGeneration(sessionId: string): void {
+    const ac = this.titleAbortControllers.get(sessionId)
+    if (ac) {
+      ac.abort()
+      this.titleAbortControllers.delete(sessionId)
+    }
   }
 }

@@ -52,6 +52,7 @@ export const IPC = {
   // Claude CLI
   CLAUDE_DETECT_MODELS: 'claude:detect-models',
   CLAUDE_GENERATE_SLUG: 'claude:generate-slug',
+  CLAUDE_GENERATE_SESSION_TITLE: 'claude:generate-session-title',
 
   // Prompt History
   PROMPT_HISTORY_LIST: 'prompt:history:list',

@@ -304,6 +304,20 @@ export function registerIpcHandlers(opts: IpcHandlerOptions): void {
     }
   })
 
+  ipcMain.handle(IPC.CLAUDE_GENERATE_SESSION_TITLE, async (_e, prompt: string) => {
+    try {
+      const titlePrompt = `Generate a concise descriptive title (3-6 words, no quotes) for this coding task. Output ONLY the title, nothing else.\n\nTask: ${prompt}`
+      const result = await execFileAsync('claude', ['-p', titlePrompt], {
+        timeout: 30_000,
+        maxBuffer: 256 * 1024
+      })
+      const cleaned = result.stdout.trim().replace(/^["'`]|["'`]$/g, '')
+      return cleaned || null
+    } catch {
+      return null
+    }
+  })
+
   // ─── Settings ───────────────────────────────────────────────
 
   ipcMain.handle(IPC.SETTINGS_GET, async (_e, key: string) => {
