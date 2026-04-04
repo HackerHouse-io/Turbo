@@ -7,6 +7,7 @@ import { AttachmentChip } from './AttachmentChip'
 import { BUILT_IN_INTENTS, getIntent, buildSessionPayload, DEFAULT_INTENT_ID } from '../../../../shared/intents'
 import { EFFORT_LEVELS, PERMISSION_MODES } from '../../../../shared/constants'
 import { slugify } from '../../../../shared/utils'
+import { useDropZone } from '../../hooks/useDropZone'
 import type { ClaudeModelInfo, AttachmentInfo, PermissionMode, EffortLevel } from '../../../../shared/types'
 
 export function InlinePrompt() {
@@ -159,6 +160,8 @@ export function InlinePrompt() {
     if (valid.length > 0) setAttachments(prev => [...prev, ...valid])
   }
 
+  const { isDragOver: isPromptDragOver, dropProps: promptDropProps } = useDropZone({ onDrop: addAttachments })
+
   if (!selectedProject) return null
 
 
@@ -166,13 +169,21 @@ export function InlinePrompt() {
     <div className="w-full max-w-5xl mx-auto">
       {/* Prompt card */}
       <div
+        {...promptDropProps}
         className={`relative rounded-2xl overflow-visible bg-turbo-surface border-2
           transition-[border-color,box-shadow] duration-150
-          ${isFocused
-            ? 'border-turbo-accent/40 shadow-lg shadow-turbo-accent/5'
-            : 'border-turbo-border/30 hover:border-turbo-border/50'}
+          ${isPromptDragOver
+            ? 'border-turbo-accent/50 shadow-lg shadow-turbo-accent/10'
+            : isFocused
+              ? 'border-turbo-accent/40 shadow-lg shadow-turbo-accent/5'
+              : 'border-turbo-border/30 hover:border-turbo-border/50'}
         `}
       >
+        {isPromptDragOver && (
+          <div className="absolute inset-0 z-10 bg-turbo-accent/10 border-2 border-dashed border-turbo-accent/50 rounded-2xl flex items-center justify-center pointer-events-none">
+            <span className="text-xs font-medium text-turbo-accent">Drop files to attach</span>
+          </div>
+        )}
         {/* Intent chips row — inside the card */}
         <div className="flex items-center gap-1 px-5 pt-4 pb-1">
           {BUILT_IN_INTENTS.map(i => {

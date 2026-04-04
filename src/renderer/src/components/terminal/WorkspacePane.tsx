@@ -1,7 +1,10 @@
+import { useCallback } from 'react'
 import type { PlainTerminal } from '../../../../shared/types'
 import { useTerminalStore } from '../../stores/useTerminalStore'
 import { XTermRenderer } from './XTermRenderer'
 import { PaletteIcon } from '../command-palette/PaletteIcon'
+import { useDropZone } from '../../hooks/useDropZone'
+import { shellQuote } from '../../lib/format'
 
 interface WorkspacePaneProps {
   terminal: PlainTerminal
@@ -17,10 +20,17 @@ export function WorkspacePane({ terminal }: WorkspacePaneProps) {
     window.api.killPlainTerminal(terminal.id)
   }
 
+  const handleFileDrop = useCallback((paths: string[]) => {
+    window.api.sendPlainTerminalInput(terminal.id, paths.map(shellQuote).join(' '))
+  }, [terminal.id])
+
+  const { isDragOver, dropProps } = useDropZone({ onDrop: handleFileDrop })
+
   return (
     <div
-      className="flex flex-col h-full overflow-hidden bg-turbo-bg"
+      className="relative flex flex-col h-full overflow-hidden bg-turbo-bg"
       onClick={() => setFocusedPane(terminal.id)}
+      {...dropProps}
     >
       {/* Compact header */}
       <div className={`flex items-center gap-2 px-3 py-1.5 border-b flex-shrink-0 transition-colors ${
@@ -48,6 +58,14 @@ export function WorkspacePane({ terminal }: WorkspacePaneProps) {
       <div className="flex-1 overflow-hidden">
         <XTermRenderer terminalId={terminal.id} mode="plain" />
       </div>
+
+      {isDragOver && (
+        <div className="absolute inset-0 z-10 bg-turbo-accent/10 border-2 border-dashed border-turbo-accent/50 rounded-lg flex items-center justify-center pointer-events-none">
+          <span className="text-xs font-medium text-turbo-accent bg-turbo-bg/80 px-3 py-1.5 rounded-lg">
+            Drop to paste path
+          </span>
+        </div>
+      )}
     </div>
   )
 }

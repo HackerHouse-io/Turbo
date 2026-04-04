@@ -1,4 +1,4 @@
-import { useEffect, useRef, memo } from 'react'
+import { useEffect, memo } from 'react'
 import { AnimatePresence } from 'framer-motion'
 import { TopBar } from './TopBar'
 import { SplitLayout } from './SplitLayout'
@@ -51,40 +51,16 @@ const Overlays = memo(function Overlays() {
 // ─── App Shell ──────────────────────────────────────────────────
 
 export function AppShell() {
-  // ─── Global drag-and-drop ─────────────────────────────────
-  const dragCounterRef = useRef(0)
+  // ─── Global drag-and-drop (fallback for drops outside React drop zones) ───
   const viewMode = useUIStore(s => s.viewMode)
-  const isDragOver = useUIStore(s => s.isDragOver)
 
   useEffect(() => {
-    const onDragEnter = (e: DragEvent) => {
-      e.preventDefault()
-      e.stopPropagation()
-      dragCounterRef.current++
-      if (e.dataTransfer?.types.includes('Files')) {
-        useUIStore.getState().setIsDragOver(true)
-      }
-    }
     const onDragOver = (e: DragEvent) => {
       e.preventDefault()
-      e.stopPropagation()
       if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy'
-    }
-    const onDragLeave = (e: DragEvent) => {
-      e.preventDefault()
-      e.stopPropagation()
-      dragCounterRef.current--
-      if (dragCounterRef.current <= 0) {
-        dragCounterRef.current = 0
-        useUIStore.getState().setIsDragOver(false)
-      }
     }
     const onDrop = (e: DragEvent) => {
       e.preventDefault()
-      e.stopPropagation()
-      dragCounterRef.current = 0
-      useUIStore.getState().setIsDragOver(false)
-
       const files = Array.from(e.dataTransfer?.files || [])
       const paths = files.map(f => window.api.getPathForFile(f)).filter(Boolean)
       if (paths.length > 0) {
@@ -92,14 +68,10 @@ export function AppShell() {
       }
     }
 
-    document.addEventListener('dragenter', onDragEnter)
     document.addEventListener('dragover', onDragOver)
-    document.addEventListener('dragleave', onDragLeave)
     document.addEventListener('drop', onDrop)
     return () => {
-      document.removeEventListener('dragenter', onDragEnter)
       document.removeEventListener('dragover', onDragOver)
-      document.removeEventListener('dragleave', onDragLeave)
       document.removeEventListener('drop', onDrop)
     }
   }, [])
@@ -221,22 +193,6 @@ export function AppShell() {
       {viewMode === 'overview' ? <ProjectOverview /> : <SplitLayout />}
 
       <Overlays />
-
-      {/* Global file drop overlay */}
-      {isDragOver && (
-        <div className="fixed inset-0 z-[200] bg-turbo-bg/80 flex items-center justify-center pointer-events-none">
-          <div className="border-2 border-dashed border-turbo-accent/60 rounded-2xl px-12 py-10 bg-turbo-surface/80">
-            <div className="flex flex-col items-center gap-3">
-              <svg className="w-8 h-8 text-turbo-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                <path strokeLinecap="round" strokeLinejoin="round"
-                  d="M18.375 12.739l-7.693 7.693a4.5 4.5 0 01-6.364-6.364l10.94-10.94A3 3 0 1119.5 7.372L8.552 18.32m.009-.01l-.01.01m5.699-9.941l-7.81 7.81a1.5 1.5 0 002.112 2.13" />
-              </svg>
-              <span className="text-sm text-turbo-accent font-medium">Drop files to attach</span>
-              <span className="text-xs text-turbo-text-muted">Images, code, documents</span>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   )
 }

@@ -1,3 +1,4 @@
+import { useCallback } from 'react'
 import { XTermRenderer } from './XTermRenderer'
 import { useSessionStore } from '../../stores/useSessionStore'
 import { useProjectStore, selectProjectPath } from '../../stores/useProjectStore'
@@ -5,6 +6,8 @@ import { useShallow } from 'zustand/react/shallow'
 import { isTerminalStatus } from '../../../../shared/types'
 import type { AgentSession } from '../../../../shared/types'
 import { STATUS_DOT_COLORS, STATUS_LABELS } from '../../lib/sessionStatus'
+import { useDropZone } from '../../hooks/useDropZone'
+import { shellQuote } from '../../lib/format'
 
 function TerminalPane({ session, isFocused, onFocus, onClose }: {
   session: AgentSession
@@ -14,10 +17,17 @@ function TerminalPane({ session, isFocused, onFocus, onClose }: {
 }) {
   const isActive = !isTerminalStatus(session.status)
 
+  const handleFileDrop = useCallback((paths: string[]) => {
+    window.api.sendTerminalInput(session.id, paths.map(shellQuote).join(' '))
+  }, [session.id])
+
+  const { isDragOver, dropProps } = useDropZone({ onDrop: handleFileDrop })
+
   return (
     <div
       onClick={onFocus}
-      className={`flex flex-col rounded-lg overflow-hidden border transition-colors
+      {...dropProps}
+      className={`relative flex flex-col rounded-lg overflow-hidden border transition-colors
         ${isFocused ? 'border-turbo-accent/50' : 'border-turbo-border/30 hover:border-turbo-border/60'}
       `}
     >
@@ -64,6 +74,14 @@ function TerminalPane({ session, isFocused, onFocus, onClose }: {
       <div className="flex-1 min-h-0">
         <XTermRenderer terminalId={session.id} mode="session" />
       </div>
+
+      {isDragOver && (
+        <div className="absolute inset-0 z-10 bg-turbo-accent/10 border-2 border-dashed border-turbo-accent/50 rounded-lg flex items-center justify-center pointer-events-none">
+          <span className="text-xs font-medium text-turbo-accent bg-turbo-bg/80 px-3 py-1.5 rounded-lg">
+            Drop to paste path
+          </span>
+        </div>
+      )}
     </div>
   )
 }
