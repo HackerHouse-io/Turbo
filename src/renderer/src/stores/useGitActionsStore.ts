@@ -1,5 +1,7 @@
 import { create } from 'zustand'
 import { useProjectStore } from './useProjectStore'
+import { runInTerminalDrawer, resolveGitCommand } from '../lib/runInTerminalDrawer'
+import { GIT_AI_MESSAGE_PLACEHOLDER } from '../../../shared/constants'
 import type { AgentSession } from '../../../shared/types'
 
 type ActionName = 'commit' | 'push' | 'pull' | 'ship'
@@ -29,6 +31,9 @@ function getProjectPath(): string | undefined {
   const proj = s.projects.find(p => p.id === s.selectedProjectId)
   return proj?.path
 }
+
+const withBranchEcho = (cmd: string) =>
+  `echo "Branch: $(git branch --show-current)" && ${cmd}`
 
 async function stageAndCommit(path: string): Promise<string> {
   const stageResult = await window.api.gitStageAll(path)
@@ -101,24 +106,24 @@ export const useGitActionsStore = create<GitActionsState>(() => ({
   quickCommit: () => runAction('commit', async () => {
     const path = getProjectPath()
     if (!path) return
-    const message = await stageAndCommit(path)
-    useGitActionsStore.setState({ lastMessage: message })
+    const cmd = await resolveGitCommand(
+      path,
+      withBranchEcho(`git add -A && git commit -m '${GIT_AI_MESSAGE_PLACEHOLDER}'`),
+      true
+    )
+    await runInTerminalDrawer(path, cmd)
   }),
 
   push: () => runAction('push', async () => {
     const path = getProjectPath()
     if (!path) return
-    const result = await window.api.gitPush(path)
-    if (!result.success) throw new Error(result.stderr || 'Push failed')
-    useGitActionsStore.setState({ lastMessage: 'Pushed successfully' })
+    await runInTerminalDrawer(path, withBranchEcho('git push'))
   }),
 
   pull: () => runAction('pull', async () => {
     const path = getProjectPath()
     if (!path) return
-    const result = await window.api.gitPullRebase(path)
-    if (!result.success) throw new Error(result.stderr || 'Pull failed')
-    useGitActionsStore.setState({ lastMessage: 'Pulled & rebased' })
+    await runInTerminalDrawer(path, withBranchEcho('git pull --rebase'))
   }),
 
   shipIt: () => runAction('ship', async () => {
@@ -128,6 +133,14 @@ export const useGitActionsStore = create<GitActionsState>(() => ({
 
     setState({ lastPRUrl: null, shipProgress: 'Checking branch...' })
 
+    const terminalId = await runInTerminalDrawer(path, 'echo "=== Ship It Pipeline on branch: $(git branch --show-current) ==="')
+    const echo = (msg: string) => {
+      if (terminalId) {
+        const safe = msg.replace(/'/g, "'\\''")
+        window.api.sendPlainTerminalInput(terminalId, `echo '${safe}'\n`)
+      }
+    }
+
     try {
       const branch = await window.api.gitGetBranch(path)
       if (branch === 'main' || branch === 'master') {
@@ -135,19 +148,23 @@ export const useGitActionsStore = create<GitActionsState>(() => ({
       }
 
       setState({ shipProgress: 'Committing changes...' })
+      echo('Step 1: Staging & committing with AI message...')
       await stageAndCommit(path)
 
       setState({ shipProgress: 'Pushing to remote...' })
+      echo('Step 2: Pushing to remote...')
       const pushResult = await window.api.gitPushUpstream(path, branch)
       if (!pushResult.success) throw new Error(pushResult.stderr || 'Push failed')
 
       setState({ shipProgress: 'Merging main...' })
+      echo('Step 3: Merging latest main into branch...')
       const mergeResult = await window.api.gitMergeMain(path)
 
       if (!mergeResult.success) {
         const conflicts = await window.api.gitConflictFiles(path)
         if (conflicts.length > 0) {
           setState({ shipProgress: 'Resolving merge conflicts...' })
+          echo('Step 4: Resolving merge conflicts via AI agent...')
 
           const conflictPrompt = `There are merge conflicts in the following files that need to be resolved.
 For each conflicted file, resolve the conflict by keeping ALL changes from both sides — preserve every feature from both branches.
@@ -179,18 +196,24 @@ Do NOT remove any functionality from either side of the conflict.`
       }
 
       setState({ shipProgress: 'Pushing merge...' })
+      echo('Pushing merge...')
       const pushMerge = await window.api.gitPushUpstream(path, branch)
       if (!pushMerge.success && !pushMerge.stderr.includes('Everything up-to-date')) {
         throw new Error(pushMerge.stderr || 'Push after merge failed')
       }
 
       setState({ shipProgress: 'Creating pull request...' })
+      echo('Step 5: Creating pull request with AI description...')
       const prInfo = await window.api.gitAIPRDescription(path)
       const prResult = await window.api.gitCreatePR(path, prInfo.title, prInfo.body)
 
       if (!prResult.success) throw new Error(prResult.message || 'PR creation failed')
 
+      echo(`Done! PR created: ${prInfo.title}`)
       setState({ lastMessage: `PR created: ${prInfo.title}`, lastPRUrl: prResult.url || null })
+    } catch (err: unknown) {
+      echo(`ERROR: ${(err as Error).message}`)
+      throw err
     } finally {
       setState({ shipProgress: null })
     }

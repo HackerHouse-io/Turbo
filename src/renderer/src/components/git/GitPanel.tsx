@@ -5,6 +5,7 @@ import { useGitIdentityStore } from '../../stores/useGitIdentityStore'
 import { useNerveCenterData } from '../../hooks/useNerveCenterData'
 import { useGitActionsStore } from '../../stores/useGitActionsStore'
 import { BranchSwitcher } from '../command-center/BranchSwitcher'
+import { runInTerminalDrawer } from '../../lib/runInTerminalDrawer'
 
 // ─── Spinner ────────────────────────────────────────────────────
 
@@ -213,6 +214,23 @@ export function GitPanel() {
     setFilesExpanded(v => !v)
   }, [filesExpanded, projectPath])
 
+  const handleShowCommit = useCallback((hash: string) => {
+    if (!projectPath) return
+    runInTerminalDrawer(projectPath, `git show ${hash}`)
+  }, [projectPath])
+
+  const handleShowFileDiff = useCallback((file: string, status: string) => {
+    if (!projectPath) return
+    const safe = file.replace(/'/g, "'\\''")
+    const cmd = status === '?' ? `cat '${safe}'` : `git diff -- '${safe}'`
+    runInTerminalDrawer(projectPath, cmd)
+  }, [projectPath])
+
+  const handleShowStatus = useCallback(() => {
+    if (!projectPath) return
+    runInTerminalDrawer(projectPath, 'git status')
+  }, [projectPath])
+
   const anyLoading = loading.commit || loading.push || loading.pull || loading.ship
   const hasChanges = git && (git.dirty > 0 || git.staged > 0)
 
@@ -227,7 +245,11 @@ export function GitPanel() {
               branch={git.branch}
               onRefresh={refresh}
             />
-            <div className="flex items-center gap-3 mt-2 text-[11px]">
+            <button
+              onClick={handleShowStatus}
+              className="flex items-center gap-3 mt-2 text-[11px] cursor-pointer
+                         hover:opacity-80 transition-opacity w-full"
+            >
               {git.dirty > 0 && (
                 <span className="flex items-center gap-1 text-amber-400">
                   <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
@@ -243,7 +265,7 @@ export function GitPanel() {
               {git.dirty === 0 && git.staged === 0 && (
                 <span className="text-turbo-text-muted">Clean</span>
               )}
-            </div>
+            </button>
           </>
         ) : (
           <p className="text-xs text-turbo-text-muted">Not a git repo</p>
@@ -355,28 +377,8 @@ export function GitPanel() {
         )}
       </AnimatePresence>
 
-      {/* Recent commits */}
+      {/* Changed files (expandable) */}
       <div className="flex-1 overflow-y-auto">
-        {commits.length > 0 && (
-          <div className="px-3 pt-3 pb-1">
-            <h3 className="text-[10px] font-semibold text-turbo-text-muted uppercase tracking-wider mb-2">
-              Recent
-            </h3>
-            <div className="space-y-1.5">
-              {commits.map(c => (
-                <div key={c.hash} className="flex items-start gap-2">
-                  <code className="text-[10px] text-turbo-accent font-mono flex-shrink-0 mt-px">{c.hash}</code>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[11px] text-turbo-text-dim truncate">{c.message}</p>
-                    <p className="text-[10px] text-turbo-text-muted">{c.relativeTime}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Changed files (expandable) */}
         {hasChanges && (
           <div className="px-3 pt-3 pb-2">
             <button
@@ -401,7 +403,12 @@ export function GitPanel() {
                 >
                   <div className="mt-1.5 space-y-0.5">
                     {changedFiles.map((f, i) => (
-                      <div key={i} className="flex items-center gap-2 text-[11px] py-0.5">
+                      <button
+                        key={i}
+                        onClick={() => handleShowFileDiff(f.file, f.status)}
+                        className="flex items-center gap-2 text-[11px] py-0.5 w-full text-left rounded
+                                   hover:bg-turbo-surface-active cursor-pointer transition-colors px-1"
+                      >
                         <span className={`font-mono text-[10px] w-4 text-center flex-shrink-0 ${
                           f.status === 'M' ? 'text-amber-400'
                           : f.status === 'A' || f.status === '?' ? 'text-emerald-400'
@@ -411,7 +418,7 @@ export function GitPanel() {
                           {f.status === '?' ? 'N' : f.status}
                         </span>
                         <span className="text-turbo-text-dim truncate">{f.file}</span>
-                      </div>
+                      </button>
                     ))}
                     {changedFiles.length === 0 && (
                       <p className="text-[10px] text-turbo-text-muted py-1">No changes</p>
@@ -420,6 +427,31 @@ export function GitPanel() {
                 </motion.div>
               )}
             </AnimatePresence>
+          </div>
+        )}
+
+        {/* Recent commits */}
+        {commits.length > 0 && (
+          <div className="px-3 pt-3 pb-2">
+            <h3 className="text-[10px] font-semibold text-turbo-text-muted uppercase tracking-wider mb-2">
+              Recent Commits
+            </h3>
+            <div className="space-y-1">
+              {commits.map(c => (
+                <button
+                  key={c.hash}
+                  onClick={() => handleShowCommit(c.hash)}
+                  className="flex items-start gap-2 w-full text-left rounded px-1 py-0.5
+                             hover:bg-turbo-surface-active cursor-pointer transition-colors"
+                >
+                  <code className="text-[10px] text-turbo-accent font-mono flex-shrink-0 mt-px">{c.hash}</code>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[11px] text-turbo-text-dim truncate">{c.message}</p>
+                    <p className="text-[10px] text-turbo-text-muted">{c.relativeTime}</p>
+                  </div>
+                </button>
+              ))}
+            </div>
           </div>
         )}
       </div>
