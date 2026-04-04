@@ -272,16 +272,43 @@ export function registerIpcHandlers(opts: IpcHandlerOptions): void {
     projectManager.setRunCommand(projectId, command, source, sourceMtime)
   })
 
-  ipcMain.handle(IPC.PROJECT_DETECT_RUN_COMMAND, async (_e, projectPath: string) => {
-    // Tier 1: file-based (async for xcodebuild)
+  async function detectFull(projectPath: string): Promise<{ command: string; source: string; sourceMtime?: number } | null> {
     const fileResult = await detectRunCommand(projectPath)
     if (fileResult) return fileResult
-
-    // Tier 2: Claude AI
     const aiResult = await detectRunCommandWithClaude(projectPath)
-    if (aiResult) return { ...aiResult, source: 'claude', sourceMtime: undefined }
-
+    if (aiResult) return { ...aiResult, source: 'claude' }
     return null
+  }
+
+  ipcMain.handle(IPC.PROJECT_DETECT_RUN_COMMAND, async (_e, projectPath: string) => {
+    return detectFull(projectPath)
+  })
+
+  ipcMain.handle(IPC.PROJECT_GET_OR_DETECT_RUN_COMMAND, async (_e, projectPath: string) => {
+    const project = projectManager.getProjectByPath(projectPath)
+
+    if (project?.runCommand) {
+      const { runCommandSource: source, runCommandSourceMtime: cachedMtime } = project
+
+      if (cachedMtime !== undefined && source) {
+        try {
+          const fileStat = await stat(join(projectPath, source))
+          if (fileStat.mtimeMs === cachedMtime) {
+            return { command: project.runCommand, source, cached: true }
+          }
+        } catch {
+          // Source file gone — fall through to re-detect
+        }
+      } else {
+        return { command: project.runCommand, source: source || 'claude', cached: true }
+      }
+    }
+
+    const result = await detectFull(projectPath)
+    if (result && project) {
+      projectManager.setRunCommand(project.id, result.command, result.source, result.sourceMtime)
+    }
+    return result ? { command: result.command, source: result.source, cached: false } : null
   })
 
   // ─── Claude CLI ─────────────────────────────────────────────

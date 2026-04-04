@@ -29,6 +29,7 @@ export const IPC = {
   PROJECT_SELECT: 'project:select',
   PROJECT_SET_RUN_COMMAND: 'project:set-run-command',
   PROJECT_DETECT_RUN_COMMAND: 'project:detect-run-command',
+  PROJECT_GET_OR_DETECT_RUN_COMMAND: 'project:get-or-detect-run-command',
 
   // Dialog
   DIALOG_OPEN_FOLDER: 'dialog:open-folder',

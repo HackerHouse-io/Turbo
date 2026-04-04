@@ -112,6 +112,9 @@ const api = {
   detectRunCommand: (projectPath: string): Promise<{ command: string; source: string; sourceMtime?: number } | null> =>
     ipcRenderer.invoke(IPC.PROJECT_DETECT_RUN_COMMAND, projectPath),
 
+  getOrDetectRunCommand: (projectPath: string): Promise<{ command: string; source: string; cached: boolean } | null> =>
+    ipcRenderer.invoke(IPC.PROJECT_GET_OR_DETECT_RUN_COMMAND, projectPath),
+
   // ─── Claude CLI ───────────────────────────────────────────
 
   detectModels: (): Promise<ClaudeModelInfo[]> =>

@@ -1,26 +1,10 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useTerminalStore } from '../../stores/useTerminalStore'
 import { useUIStore } from '../../stores/useUIStore'
-import { shellQuote } from '../../lib/format'
 
 interface RunButtonProps {
   projectPath: string | undefined
 }
-
-const RUN_PROMPT = [
-  'Analyze this project and run it in development mode. Follow these rules:',
-  '- For iOS/macOS apps (.xcodeproj, .xcworkspace): build with xcodebuild and launch the iOS Simulator',
-  '- For React Native: use npx react-native run-ios or run-android',
-  '- For Flutter: use flutter run',
-  '- For web/Node.js projects: install deps if needed, then start the dev server (npm run dev, npm start, etc.)',
-  '- For Python projects: activate venv if present, install deps, run the main entry point',
-  '- For Go/Rust/C++ projects: build and run',
-  '- For Docker projects: docker compose up',
-  '- If there are multiple runnable targets, pick the most common dev workflow',
-  '- Do NOT ask me questions, just run it',
-].join(' ')
-
-const CLAUDE_CMD = `claude --permission-mode auto --model sonnet --effort medium ${shellQuote(RUN_PROMPT)}`
 
 export function RunButton({ projectPath }: RunButtonProps) {
   const [isLaunching, setIsLaunching] = useState(false)
@@ -82,6 +66,14 @@ export function RunButton({ projectPath }: RunButtonProps) {
     const gen = ++generationRef.current
 
     try {
+      const result = await window.api.getOrDetectRunCommand(projectPath)
+      if (!result || gen !== generationRef.current) {
+        if (!result) console.warn('RunButton: no run command detected for', projectPath)
+        launchingRef.current = false
+        setIsLaunching(false)
+        return
+      }
+
       const terminal = await window.api.createPlainTerminal({ projectPath, type: 'shell' })
       if (!terminal || gen !== generationRef.current) {
         launchingRef.current = false
@@ -95,10 +87,10 @@ export function RunButton({ projectPath }: RunButtonProps) {
 
       // Wait for shell init before sending the command
       sendTimerRef.current = setTimeout(() => {
-        window.api.sendPlainTerminalInput(terminal.id, CLAUDE_CMD + '\n')
+        window.api.sendPlainTerminalInput(terminal.id, result.command + '\n')
       }, 400)
     } catch (err) {
-      console.error('RunButton: failed to create terminal', err)
+      console.error('RunButton: failed to run project', err)
     } finally {
       if (gen === generationRef.current) {
         launchingRef.current = false
@@ -153,7 +145,7 @@ export function RunButton({ projectPath }: RunButtonProps) {
                  bg-emerald-500/10 text-emerald-400 border border-emerald-500/25
                  hover:bg-emerald-500/20 hover:border-emerald-500/40 transition-colors cursor-pointer
                  disabled:opacity-50 disabled:cursor-wait"
-      title="Run project with Claude"
+      title="Run project"
     >
       {isLaunching ? (
         <>
