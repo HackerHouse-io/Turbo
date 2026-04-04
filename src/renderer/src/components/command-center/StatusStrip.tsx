@@ -5,7 +5,6 @@ import { useNerveCenterData } from '../../hooks/useNerveCenterData'
 import { usePlanData } from '../../hooks/usePlanData'
 import { formatCost } from '../../lib/format'
 import { BranchSwitcher } from './BranchSwitcher'
-import { RunButton } from './RunButton'
 
 interface StatusStripProps {
   projectPath: string | undefined
@@ -52,7 +51,6 @@ export function StatusStrip({ projectPath }: StatusStripProps) {
         {stats.active === 0 && stats.waiting === 0 && stats.error === 0 && stats.done === 0 && (
           <span className="text-turbo-text-muted">Ready</span>
         )}
-        <RunButton projectPath={projectPath} />
       </div>
 
       {/* Right: contextual info */}

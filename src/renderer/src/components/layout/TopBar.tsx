@@ -8,6 +8,7 @@ import { useGitIdentityStore } from '../../stores/useGitIdentityStore'
 import { ProjectSelector } from '../project/ProjectSelector'
 import { GitIdentitySelector } from '../git/GitIdentitySelector'
 import { XcodeButton } from '../command-center/XcodeButton'
+import { RunButton } from '../command-center/RunButton'
 
 export function TopBar() {
   const openCommandPalette = useUIStore(s => s.openCommandPalette)
@@ -121,6 +122,9 @@ export function TopBar() {
 
       {/* Action buttons */}
       <div className="flex items-center gap-2 ml-auto">
+        {/* Run project with Claude */}
+        <RunButton projectPath={selectedProject?.path} />
+
         {/* Open in Xcode (only visible for Xcode projects) */}
         <XcodeButton projectPath={selectedProject?.path} />
 
