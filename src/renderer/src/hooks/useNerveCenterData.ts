@@ -131,5 +131,10 @@ export function useNerveCenterData(projectPath: string | undefined): NerveCenter
     return () => document.removeEventListener('visibilitychange', handler)
   }, [fetchData])
 
-  return { git, commits, changedFiles, loading, error, refresh: fetchData }
+  const forceRefresh = useCallback(() => {
+    lastFetchRef.current = 0
+    fetchData()
+  }, [fetchData])
+
+  return { git, commits, changedFiles, loading, error, refresh: fetchData, forceRefresh }
 }

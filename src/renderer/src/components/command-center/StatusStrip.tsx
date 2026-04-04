@@ -14,7 +14,7 @@ export function StatusStrip({ projectPath }: StatusStripProps) {
   const stats = useSessionCounts(projectPath)
   const openPlanOverlay = useUIStore(s => s.openPlanOverlay)
 
-  const { git, refresh } = useNerveCenterData(projectPath)
+  const { git, forceRefresh } = useNerveCenterData(projectPath)
   const { plan, found } = usePlanData(projectPath)
 
   // Plan progress ring
@@ -98,7 +98,7 @@ export function StatusStrip({ projectPath }: StatusStripProps) {
             <BranchSwitcher
               projectPath={projectPath!}
               branch={git.branch}
-              onRefresh={refresh}
+              onRefresh={forceRefresh}
             />
             {git.dirty > 0 && (
               <span className="inline-flex items-center gap-1 text-turbo-text-muted">

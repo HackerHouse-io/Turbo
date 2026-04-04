@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { PaletteIcon } from '../command-palette/PaletteIcon'
+import { useGitActionsStore } from '../../stores/useGitActionsStore'
 
 interface BranchSwitcherProps {
   projectPath: string
@@ -13,6 +14,7 @@ export function BranchSwitcher({ projectPath, branch, onRefresh }: BranchSwitche
   const [branches, setBranches] = useState<string[]>([])
   const [switching, setSwitching] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
+  const setError = useGitActionsStore(s => s.setError)
 
   // Close on outside click
   useEffect(() => {
@@ -44,13 +46,18 @@ export function BranchSwitcher({ projectPath, branch, onRefresh }: BranchSwitche
     }
     setSwitching(true)
     try {
-      await window.api.gitExec({ projectPath, commands: [`git checkout ${target}`] })
+      const result = await window.api.gitExec({ projectPath, commands: [`git checkout ${target}`] })
+      if (!result.success) {
+        const stderr = result.steps[0]?.stderr || 'Branch switch failed'
+        setError(stderr.trim())
+        return
+      }
       onRefresh()
     } finally {
       setSwitching(false)
       setOpen(false)
     }
-  }, [projectPath, branch, onRefresh])
+  }, [projectPath, branch, onRefresh, setError])
 
   return (
     <div className="relative" ref={ref}>

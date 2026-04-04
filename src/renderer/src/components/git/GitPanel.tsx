@@ -154,7 +154,7 @@ function Step({ num, text, accent }: { num: number; text: string; accent: boolea
 
 export function GitPanel() {
   const projectPath = useProjectStore(selectProjectPath)
-  const { git, commits, changedFiles, refresh } = useNerveCenterData(projectPath)
+  const { git, commits, changedFiles, refresh, forceRefresh } = useNerveCenterData(projectPath)
   const [spinning, setSpinning] = useState(false)
   const spinTimer = useRef<ReturnType<typeof setTimeout>>()
 
@@ -241,7 +241,7 @@ export function GitPanel() {
                 <BranchSwitcher
                   projectPath={projectPath!}
                   branch={git.branch}
-                  onRefresh={refresh}
+                  onRefresh={forceRefresh}
                 />
               </div>
               <button
