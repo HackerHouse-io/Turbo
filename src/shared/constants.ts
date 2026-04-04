@@ -115,7 +115,20 @@ export const IPC = {
 
   // Xcode
   XCODE_DETECT_PROJECT: 'xcode:detect-project',
-  XCODE_OPEN_PROJECT: 'xcode:open-project'
+  XCODE_OPEN_PROJECT: 'xcode:open-project',
+
+  // Git Operations (Ship It pipeline)
+  GIT_GET_BRANCH: 'git:get-branch',
+  GIT_PUSH_UPSTREAM: 'git:push-upstream',
+  GIT_FETCH_ORIGIN: 'git:fetch-origin',
+  GIT_MERGE_MAIN: 'git:merge-main',
+  GIT_CONFLICT_FILES: 'git:conflict-files',
+  GIT_ABORT_MERGE: 'git:abort-merge',
+  GIT_AI_PR_DESCRIPTION: 'git:ai-pr-description',
+  GIT_CREATE_PR: 'git:create-pr',
+
+  // Shell
+  SHELL_OPEN_EXTERNAL: 'shell:open-external'
 } as const
 
 export const PROMPT_HISTORY_MAX = 50

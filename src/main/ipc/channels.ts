@@ -397,6 +397,54 @@ export function registerIpcHandlers(opts: IpcHandlerOptions): void {
     return gitOpsManager.getStatus(projectPath)
   })
 
+  // ─── Git Ship It Pipeline ────────────────────────────────
+
+  ipcMain.handle(IPC.GIT_GET_BRANCH, async (_e, projectPath: string) => {
+    return gitOpsManager.getCurrentBranch(projectPath)
+  })
+
+  ipcMain.handle(IPC.GIT_PUSH_UPSTREAM, async (_e, projectPath: string, branch: string) => {
+    const identity = await resolveIdentityFor(projectPath)
+    return gitOpsManager.pushWithUpstream(projectPath, branch, identity)
+  })
+
+  ipcMain.handle(IPC.GIT_FETCH_ORIGIN, async (_e, projectPath: string) => {
+    return gitOpsManager.fetchOrigin(projectPath)
+  })
+
+  ipcMain.handle(IPC.GIT_MERGE_MAIN, async (_e, projectPath: string) => {
+    const [defaultBranch, , identity] = await Promise.all([
+      gitOpsManager.detectDefaultBranch(projectPath),
+      gitOpsManager.fetchOrigin(projectPath),
+      resolveIdentityFor(projectPath)
+    ])
+    return gitOpsManager.mergeMain(projectPath, defaultBranch, identity)
+  })
+
+  ipcMain.handle(IPC.GIT_CONFLICT_FILES, async (_e, projectPath: string) => {
+    return gitOpsManager.getConflictedFiles(projectPath)
+  })
+
+  ipcMain.handle(IPC.GIT_ABORT_MERGE, async (_e, projectPath: string) => {
+    return gitOpsManager.abortMerge(projectPath)
+  })
+
+  ipcMain.handle(IPC.GIT_AI_PR_DESCRIPTION, async (_e, projectPath: string, defaultBranch?: string) => {
+    const base = defaultBranch || await gitOpsManager.detectDefaultBranch(projectPath)
+    return gitOpsManager.generateAIPRDescription(projectPath, base)
+  })
+
+  ipcMain.handle(IPC.GIT_CREATE_PR, async (_e, projectPath: string, title: string, body: string, defaultBranch?: string) => {
+    const base = defaultBranch || await gitOpsManager.detectDefaultBranch(projectPath)
+    return gitOpsManager.createPR(projectPath, title, body, base)
+  })
+
+  // ─── Shell ─────────────────────────────────────────────────
+
+  ipcMain.handle(IPC.SHELL_OPEN_EXTERNAL, async (_e, url: string) => {
+    shell.openExternal(url)
+  })
+
   // ─── Git Presets ───────────────────────────────────────────
 
   ipcMain.handle(IPC.GIT_PRESETS_LIST, async () => {

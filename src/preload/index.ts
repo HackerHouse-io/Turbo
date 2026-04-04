@@ -179,6 +179,35 @@ const api = {
   gitStatus: (projectPath: string): Promise<GitCommandResult> =>
     ipcRenderer.invoke(IPC.GIT_STATUS, projectPath),
 
+  // ─── Git Ship It Pipeline ────────────────────────────────
+
+  gitGetBranch: (projectPath: string): Promise<string> =>
+    ipcRenderer.invoke(IPC.GIT_GET_BRANCH, projectPath),
+
+  gitPushUpstream: (projectPath: string, branch: string): Promise<GitCommandResult> =>
+    ipcRenderer.invoke(IPC.GIT_PUSH_UPSTREAM, projectPath, branch),
+
+  gitFetchOrigin: (projectPath: string): Promise<GitCommandResult> =>
+    ipcRenderer.invoke(IPC.GIT_FETCH_ORIGIN, projectPath),
+
+  gitMergeMain: (projectPath: string): Promise<GitCommandResult> =>
+    ipcRenderer.invoke(IPC.GIT_MERGE_MAIN, projectPath),
+
+  gitConflictFiles: (projectPath: string): Promise<string[]> =>
+    ipcRenderer.invoke(IPC.GIT_CONFLICT_FILES, projectPath),
+
+  gitAbortMerge: (projectPath: string): Promise<GitCommandResult> =>
+    ipcRenderer.invoke(IPC.GIT_ABORT_MERGE, projectPath),
+
+  gitAIPRDescription: (projectPath: string, defaultBranch?: string): Promise<{ title: string; body: string }> =>
+    ipcRenderer.invoke(IPC.GIT_AI_PR_DESCRIPTION, projectPath, defaultBranch),
+
+  gitCreatePR: (projectPath: string, title: string, body: string, defaultBranch?: string): Promise<PRResult> =>
+    ipcRenderer.invoke(IPC.GIT_CREATE_PR, projectPath, title, body, defaultBranch),
+
+  openExternal: (url: string): Promise<void> =>
+    ipcRenderer.invoke(IPC.SHELL_OPEN_EXTERNAL, url),
+
   // ─── Git Presets ───────────────────────────────────────────
 
   listGitPresets: (): Promise<GitPreset[]> =>

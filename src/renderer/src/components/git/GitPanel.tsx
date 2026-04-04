@@ -91,10 +91,11 @@ function ShipItModal({ identity, onConfirm, onCancel }: {
               This will run the full pipeline:
             </p>
             <div className="space-y-1.5 pl-1">
-              <Step num={1} text="Stage all changes" accent={false} />
-              <Step num={2} text="Generate a commit message using Claude Code" accent />
-              <Step num={3} text="Commit with your identity" accent={false} />
-              <Step num={4} text="Push to remote" accent={false} />
+              <Step num={1} text="Stage & commit with AI message" accent />
+              <Step num={2} text="Push to current branch" accent={false} />
+              <Step num={3} text="Merge latest main into branch" accent={false} />
+              <Step num={4} text="Resolve conflicts (if any)" accent={false} />
+              <Step num={5} text="Create PR with AI description" accent />
             </div>
             {identity && (
               <p className="text-[11px] text-turbo-text-muted mt-3">
@@ -159,6 +160,8 @@ export function GitPanel() {
   const loading = useGitActionsStore(s => s.loading)
   const lastMessage = useGitActionsStore(s => s.lastMessage)
   const lastError = useGitActionsStore(s => s.lastError)
+  const lastPRUrl = useGitActionsStore(s => s.lastPRUrl)
+  const shipProgress = useGitActionsStore(s => s.shipProgress)
   const [filesExpanded, setFilesExpanded] = useState(false)
   const [changedFiles, setChangedFiles] = useState<{ status: string; file: string }[]>([])
   const [shipItModalOpen, setShipItModalOpen] = useState(false)
@@ -168,7 +171,14 @@ export function GitPanel() {
     ? `${currentResolved.identity.name} <${currentResolved.identity.email}>`
     : ''
 
+  const setError = useGitActionsStore(s => s.setError)
+  const isOnMain = git?.branch === 'main' || git?.branch === 'master'
+
   const handleShipIt = useCallback(() => {
+    if (isOnMain) {
+      setError('Cannot ship from main. Create a feature branch first.')
+      return
+    }
     try {
       if (localStorage.getItem('turbo:shipItDontShow') === 'true') {
         shipIt()
@@ -176,7 +186,7 @@ export function GitPanel() {
       }
     } catch { /* */ }
     setShipItModalOpen(true)
-  }, [shipIt])
+  }, [shipIt, isOnMain])
 
   const handleShipItConfirm = useCallback((dontShowAgain: boolean) => {
     if (dontShowAgain) {
@@ -283,22 +293,47 @@ export function GitPanel() {
           disabled={anyLoading}
           onClick={pull}
         />
-        <div className="pt-1">
-          <ActionButton
-            label="Ship It"
-            shortcut="&#8679;&#8984;S"
-            icon={
-              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M15.59 14.37a6 6 0 01-5.84 7.38v-4.8m5.84-2.58a14.98 14.98 0 006.16-12.12A14.98 14.98 0 009.631 8.41m5.96 5.96a14.926 14.926 0 01-5.841 2.58m-.119-8.54a6 6 0 00-7.381 5.84h4.8m2.581-5.84a14.927 14.927 0 00-2.58 5.84m2.699 2.7c-.103.021-.207.041-.311.06a15.09 15.09 0 01-2.448-2.448 14.9 14.9 0 01.06-.312m-2.24 2.39a4.493 4.493 0 00-1.757 4.306 4.493 4.493 0 004.306-1.758M16.5 9a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z" />
-              </svg>
-            }
-            color="bg-turbo-accent/10 hover:bg-turbo-accent/20 text-turbo-accent border border-turbo-accent/20 hover:border-turbo-accent/40"
-            loading={loading.ship}
-            disabled={anyLoading || !hasChanges}
-            onClick={handleShipIt}
-          />
-        </div>
+        <ActionButton
+          label="Ship It"
+          shortcut="&#8679;&#8984;S"
+          icon={
+            <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15.59 14.37a6 6 0 01-5.84 7.38v-4.8m5.84-2.58a14.98 14.98 0 006.16-12.12A14.98 14.98 0 009.631 8.41m5.96 5.96a14.926 14.926 0 01-5.841 2.58m-.119-8.54a6 6 0 00-7.381 5.84h4.8m2.581-5.84a14.927 14.927 0 00-2.58 5.84m2.699 2.7c-.103.021-.207.041-.311.06a15.09 15.09 0 01-2.448-2.448 14.9 14.9 0 01.06-.312m-2.24 2.39a4.493 4.493 0 00-1.757 4.306 4.493 4.493 0 004.306-1.758M16.5 9a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z" />
+            </svg>
+          }
+          color="mt-1 bg-turbo-accent/10 hover:bg-turbo-accent/20 text-turbo-accent border border-turbo-accent/20 hover:border-turbo-accent/40"
+          loading={loading.ship}
+          disabled={anyLoading || !hasChanges}
+          onClick={handleShipIt}
+        />
+        {shipProgress && (
+          <p className="text-[10px] text-turbo-accent mt-1.5 px-3 animate-pulse truncate">
+            {shipProgress}
+          </p>
+        )}
       </div>
+
+      {/* View PR button */}
+      {lastPRUrl && (
+        <div className="px-2 py-2 border-b border-turbo-border/20">
+          <button
+            onClick={() => window.api.openExternal(lastPRUrl)}
+            className="w-full flex items-center gap-2 px-3 py-2.5 rounded-lg text-xs font-medium
+                       bg-turbo-accent/10 hover:bg-turbo-accent/20 text-turbo-accent
+                       border border-turbo-accent/20 hover:border-turbo-accent/40
+                       transition-all active:scale-[0.98]"
+          >
+            <svg className="w-3.5 h-3.5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round"
+                d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-4.5-6h6m0 0v6m0-6L10.5 13.5" />
+            </svg>
+            <span className="flex-1 text-left">View PR</span>
+            <svg className="w-3 h-3 opacity-50 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 19.5l15-15m0 0H8.25m11.25 0v11.25" />
+            </svg>
+          </button>
+        </div>
+      )}
 
       {/* Status message */}
       <AnimatePresence mode="wait">

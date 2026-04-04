@@ -47,17 +47,16 @@ export function useNerveCenterData(projectPath: string | undefined): NerveCenter
     lastFetchRef.current = Date.now()
 
     try {
-      const [statusRaw, branchResult, logResult] = await Promise.all([
+      const [statusRaw, branch, logResult] = await Promise.all([
         window.api.gitStatus(projectPath),
-        window.api.gitExec({ projectPath, commands: ['git rev-parse --abbrev-ref HEAD'] }),
+        window.api.gitGetBranch(projectPath),
         window.api.gitExec({ projectPath, commands: ['git log --oneline -n 5 --format=%h|%s|%ar'] })
       ])
 
       // Bail if project changed during fetch
       if (pathRef.current !== projectPath) return
 
-      const branchStep = branchResult.steps[0]
-      if (!branchResult.success || !branchStep || !statusRaw.success) {
+      if (!branch || !statusRaw.success) {
         setGit(null)
         setCommits([])
         setError('Not a git repository')
@@ -66,11 +65,7 @@ export function useNerveCenterData(projectPath: string | undefined): NerveCenter
       }
 
       const { dirty, staged } = parsePorcelainStatus(statusRaw.stdout)
-      setGit({
-        branch: branchStep.stdout.trim(),
-        dirty,
-        staged
-      })
+      setGit({ branch, dirty, staged })
 
       const logStep = logResult.success ? logResult.steps[0] : undefined
       setCommits(logStep?.stdout ? parseCommits(logStep.stdout) : [])

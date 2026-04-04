@@ -4,7 +4,8 @@ import type {
   GitCommandResult,
   GitWorkflowResult,
   GitAIMessageResult,
-  GitIdentity
+  GitIdentity,
+  PRResult
 } from '../../shared/types'
 
 const GIT_TIMEOUT = 30_000
@@ -116,6 +117,103 @@ export class GitOpsManager {
 
     return { message, diffStat: stat.stdout.trim() }
   }
+
+  // ─── Ship It Pipeline Methods ─────────────────────────────
+
+  async getCurrentBranch(projectPath: string): Promise<string> {
+    const result = await this.gitExec(projectPath, ['rev-parse', '--abbrev-ref', 'HEAD'])
+    if (!result.success) throw new Error('Not on a branch')
+    return result.stdout.trim()
+  }
+
+  async detectDefaultBranch(projectPath: string): Promise<string> {
+    const result = await this.gitExec(projectPath, ['symbolic-ref', 'refs/remotes/origin/HEAD', '--short'])
+    if (result.success) return result.stdout.trim().replace(/^origin\//, '')
+    return 'main'
+  }
+
+  async pushWithUpstream(
+    projectPath: string,
+    branch: string,
+    identity?: GitIdentity | null
+  ): Promise<GitCommandResult> {
+    return this.exec(projectPath, 'git', ['push', '-u', 'origin', branch], identity)
+  }
+
+  async fetchOrigin(projectPath: string): Promise<GitCommandResult> {
+    return this.gitExec(projectPath, ['fetch', 'origin'])
+  }
+
+  async mergeMain(
+    projectPath: string,
+    defaultBranch: string,
+    identity?: GitIdentity | null
+  ): Promise<GitCommandResult> {
+    return this.exec(projectPath, 'git', ['merge', `origin/${defaultBranch}`, '--no-edit'], identity)
+  }
+
+  async getConflictedFiles(projectPath: string): Promise<string[]> {
+    const result = await this.gitExec(projectPath, ['diff', '--name-only', '--diff-filter=U'])
+    if (!result.stdout.trim()) return []
+    return result.stdout.trim().split('\n').filter(Boolean)
+  }
+
+  async abortMerge(projectPath: string): Promise<GitCommandResult> {
+    return this.gitExec(projectPath, ['merge', '--abort'])
+  }
+
+  async generateAIPRDescription(
+    projectPath: string,
+    defaultBranch: string
+  ): Promise<{ title: string; body: string }> {
+    const [logResult, diffStatResult] = await Promise.all([
+      this.gitExec(projectPath, ['log', `origin/${defaultBranch}..HEAD`, '--oneline']),
+      this.gitExec(projectPath, ['diff', `origin/${defaultBranch}...HEAD`, '--stat'])
+    ])
+
+    const prompt = `Generate a GitHub PR title and description for these changes. Output in this exact format:\nTITLE: <short title under 70 chars>\nBODY: <markdown description with a summary section and key changes>\n\nCommits:\n${logResult.stdout}\n\nDiff stat:\n${diffStatResult.stdout}`
+
+    const result = await this.exec(projectPath, 'claude', ['-p', prompt], null, AI_TIMEOUT)
+    const output = result.stdout.trim()
+
+    const titleMatch = output.match(/TITLE:\s*(.+)/)
+    const bodyMatch = output.match(/BODY:\s*([\s\S]+)/)
+
+    return {
+      title: titleMatch?.[1]?.trim() || 'Update',
+      body: bodyMatch?.[1]?.trim() || output
+    }
+  }
+
+  async createPR(
+    projectPath: string,
+    title: string,
+    body: string,
+    baseBranch: string
+  ): Promise<PRResult> {
+    try {
+      const result = await this.exec(
+        projectPath, 'gh',
+        ['pr', 'create', '--title', title, '--body', body, '--base', baseBranch],
+        null, GIT_TIMEOUT
+      )
+      if (!result.success) {
+        if (result.stderr.includes('already exists')) {
+          const viewResult = await this.exec(
+            projectPath, 'gh', ['pr', 'view', '--json', 'url', '-q', '.url'],
+            null, 10_000
+          )
+          return { success: true, url: viewResult.stdout.trim(), message: 'PR already exists' }
+        }
+        return { success: false, message: result.stderr || 'PR creation failed' }
+      }
+      return { success: true, url: result.stdout.trim(), message: 'PR created' }
+    } catch (err) {
+      return { success: false, message: err instanceof Error ? err.message : String(err) }
+    }
+  }
+
+  // ─── Workflow Runner ──────────────────────────────────────
 
   async runCommands(
     projectPath: string,

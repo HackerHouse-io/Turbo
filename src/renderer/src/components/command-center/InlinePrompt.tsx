@@ -6,11 +6,14 @@ import { useGitIdentityStore } from '../../stores/useGitIdentityStore'
 import { AttachmentChip } from './AttachmentChip'
 import { BUILT_IN_INTENTS, getIntent, buildSessionPayload, DEFAULT_INTENT_ID } from '../../../../shared/intents'
 import { EFFORT_LEVELS, PERMISSION_MODES } from '../../../../shared/constants'
+import { slugify } from '../../../../shared/utils'
 import type { ClaudeModelInfo, AttachmentInfo, PermissionMode, EffortLevel } from '../../../../shared/types'
 
 export function InlinePrompt() {
   const [prompt, setPrompt] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [branchToggle, setBranchToggle] = useState(false)
+  const [branchLoading, setBranchLoading] = useState(false)
   const [models, setModels] = useState<ClaudeModelInfo[]>([])
   const [model, setModel] = useState('sonnet')
   const [selectedIntentId, setSelectedIntentId] = useState(DEFAULT_INTENT_ID)
@@ -79,6 +82,28 @@ export function InlinePrompt() {
 
     setIsSubmitting(true)
     try {
+      if (branchToggle && prompt.trim()) {
+        setBranchLoading(true)
+        try {
+          const aiSlug = await window.api.generateSlug(prompt.trim())
+          const slug = aiSlug || slugify(prompt.trim().slice(0, 60))
+          const branchName = `feat/${slug}`
+          const result = await window.api.gitExec({
+            projectPath: selectedProject.path,
+            commands: [`git checkout -b ${branchName}`]
+          })
+          if (!result.success) {
+            const fallback = `feat/${slug}-${Date.now().toString(36)}`
+            await window.api.gitExec({
+              projectPath: selectedProject.path,
+              commands: [`git checkout -b ${fallback}`]
+            })
+          }
+        } finally {
+          setBranchLoading(false)
+        }
+      }
+
       const atRefs = attachments.map(a => `@${a.filePath}`).join('\n')
       const fullPrompt = atRefs ? `${atRefs}\n\n${prompt.trim()}` : prompt.trim()
 
@@ -102,7 +127,7 @@ export function InlinePrompt() {
     } finally {
       setIsSubmitting(false)
     }
-  }, [prompt, attachments, selectedProject, selectedIntentId, model, permissionMode, effort, pinSession, focusSession])
+  }, [prompt, attachments, selectedProject, selectedIntentId, model, permissionMode, effort, branchToggle, pinSession, focusSession])
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
@@ -231,6 +256,26 @@ export function InlinePrompt() {
                   d="M18.375 12.739l-7.693 7.693a4.5 4.5 0 01-6.364-6.364l10.94-10.94A3 3 0 1119.5 7.372L8.552 18.32m.009-.01l-.01.01m5.699-9.941l-7.81 7.81a1.5 1.5 0 002.112 2.13" />
               </svg>
             </button>
+            {/* Branch toggle */}
+            <button
+              onClick={() => setBranchToggle(prev => !prev)}
+              disabled={isSubmitting || branchLoading}
+              title="Auto-create a feature branch before launching"
+              className={`h-6 flex items-center gap-1 px-2 rounded-md text-[10px] font-medium
+                border transition-colors ${
+                branchToggle
+                  ? 'bg-turbo-accent/20 text-turbo-accent border-turbo-accent/30'
+                  : 'text-turbo-text-dim border-turbo-border/30 hover:text-turbo-text hover:bg-white/[0.06]'
+              }`}
+            >
+              <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                <line x1="6" y1="3" x2="6" y2="15" />
+                <circle cx="18" cy="6" r="3" />
+                <circle cx="6" cy="18" r="3" />
+                <path d="M18 9a9 9 0 01-9 9" />
+              </svg>
+              New Branch
+            </button>
             {/* Permission mode pills */}
             <div className="h-6 flex items-center rounded-md border border-turbo-border/30 overflow-hidden">
               {PERMISSION_MODES.map(pm => (
@@ -270,13 +315,13 @@ export function InlinePrompt() {
             <kbd className="kbd text-[10px] h-6 flex items-center px-1.5 text-turbo-text-muted">&#8984;&#8617;</kbd>
             <button
               onClick={handleSubmit}
-              disabled={(!prompt.trim() && attachments.length === 0) || isSubmitting}
+              disabled={(!prompt.trim() && attachments.length === 0) || isSubmitting || branchLoading}
               className="h-8 px-5 rounded-lg text-xs font-semibold
                          bg-turbo-accent text-white hover:bg-turbo-accent/90
                          disabled:opacity-20 disabled:cursor-not-allowed
                          transition-all active:scale-[0.97]"
             >
-              {isSubmitting ? 'Starting...' : 'Go'}
+              {branchLoading ? 'Creating branch...' : isSubmitting ? 'Starting...' : 'Go'}
             </button>
           </div>
         </div>
