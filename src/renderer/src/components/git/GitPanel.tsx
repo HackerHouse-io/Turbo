@@ -1,10 +1,11 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useProjectStore, selectProjectPath } from '../../stores/useProjectStore'
 import { useGitIdentityStore } from '../../stores/useGitIdentityStore'
 import { useNerveCenterData } from '../../hooks/useNerveCenterData'
 import { useGitActionsStore } from '../../stores/useGitActionsStore'
 import { BranchSwitcher } from '../command-center/BranchSwitcher'
+import { PaletteIcon } from '../command-palette/PaletteIcon'
 import { runInTerminalDrawer } from '../../lib/runInTerminalDrawer'
 
 // ─── Spinner ────────────────────────────────────────────────────
@@ -153,7 +154,16 @@ function Step({ num, text, accent }: { num: number; text: string; accent: boolea
 
 export function GitPanel() {
   const projectPath = useProjectStore(selectProjectPath)
-  const { git, commits, refresh } = useNerveCenterData(projectPath)
+  const { git, commits, changedFiles, refresh } = useNerveCenterData(projectPath)
+  const [spinning, setSpinning] = useState(false)
+  const spinTimer = useRef<ReturnType<typeof setTimeout>>()
+
+  const handleRefresh = useCallback(() => {
+    refresh()
+    setSpinning(true)
+    clearTimeout(spinTimer.current)
+    spinTimer.current = setTimeout(() => setSpinning(false), 600)
+  }, [refresh])
   const quickCommit = useGitActionsStore(s => s.quickCommit)
   const push = useGitActionsStore(s => s.push)
   const pull = useGitActionsStore(s => s.pull)
@@ -164,7 +174,6 @@ export function GitPanel() {
   const lastPRUrl = useGitActionsStore(s => s.lastPRUrl)
   const shipProgress = useGitActionsStore(s => s.shipProgress)
   const [filesExpanded, setFilesExpanded] = useState(false)
-  const [changedFiles, setChangedFiles] = useState<{ status: string; file: string }[]>([])
   const [shipItModalOpen, setShipItModalOpen] = useState(false)
   const currentResolved = useGitIdentityStore(s => s.currentResolved)
 
@@ -197,22 +206,9 @@ export function GitPanel() {
     shipIt()
   }, [shipIt])
 
-  // Fetch changed files when expanded
-  const toggleFiles = useCallback(async () => {
-    if (!filesExpanded && projectPath) {
-      try {
-        const result = await window.api.gitStatus(projectPath)
-        if (result.success) {
-          const files = result.stdout.trim().split('\n').filter(Boolean).map(line => ({
-            status: line.slice(0, 2).trim(),
-            file: line.slice(3).trim()
-          }))
-          setChangedFiles(files)
-        }
-      } catch { /* ignore */ }
-    }
+  const toggleFiles = useCallback(() => {
     setFilesExpanded(v => !v)
-  }, [filesExpanded, projectPath])
+  }, [])
 
   const handleShowCommit = useCallback((hash: string) => {
     if (!projectPath) return
@@ -240,11 +236,23 @@ export function GitPanel() {
       <div className="px-3 pt-3 pb-2 border-b border-turbo-border/20">
         {git ? (
           <>
-            <BranchSwitcher
-              projectPath={projectPath!}
-              branch={git.branch}
-              onRefresh={refresh}
-            />
+            <div className="flex items-center gap-1">
+              <div className="flex-1 min-w-0">
+                <BranchSwitcher
+                  projectPath={projectPath!}
+                  branch={git.branch}
+                  onRefresh={refresh}
+                />
+              </div>
+              <button
+                onClick={handleRefresh}
+                className="p-1 rounded-md text-turbo-text-muted hover:text-turbo-text
+                           hover:bg-turbo-surface-active transition-colors flex-shrink-0"
+                title="Refresh git status"
+              >
+                <PaletteIcon icon="refresh" className={`w-3.5 h-3.5 transition-transform ${spinning ? 'animate-spin' : ''}`} />
+              </button>
+            </div>
             <button
               onClick={handleShowStatus}
               className="flex items-center gap-3 mt-2 text-[11px] cursor-pointer
