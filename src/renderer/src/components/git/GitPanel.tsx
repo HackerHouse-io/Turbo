@@ -22,30 +22,41 @@ function Spinner() {
 
 // ─── Action Button ──────────────────────────────────────────────
 
-function ActionButton({ label, shortcut, icon, color, loading, disabled, onClick }: {
+function ActionButton({ label, shortcut, icon, color, loading, disabled, tooltip, onClick }: {
   label: string
   shortcut: string
   icon: React.ReactNode
   color: string
   loading: boolean
   disabled?: boolean
+  tooltip?: string
   onClick: () => void
 }) {
   return (
-    <button
-      onClick={onClick}
-      disabled={loading || disabled}
-      className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-xs font-medium
-                  transition-all active:scale-[0.98]
-                  disabled:opacity-30 disabled:cursor-not-allowed
-                  ${color}`}
-    >
-      <span className="w-4 h-4 flex items-center justify-center flex-shrink-0">
-        {loading ? <Spinner /> : icon}
-      </span>
-      <span className="flex-1 text-left">{label}</span>
-      <kbd className="text-[9px] opacity-70 font-mono">{shortcut}</kbd>
-    </button>
+    <div className="relative group/action w-full">
+      <button
+        onClick={onClick}
+        disabled={loading || disabled}
+        className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-xs font-medium
+                    transition-all active:scale-[0.98]
+                    disabled:opacity-30 disabled:cursor-not-allowed
+                    ${color}`}
+      >
+        <span className="w-4 h-4 flex items-center justify-center flex-shrink-0">
+          {loading ? <Spinner /> : icon}
+        </span>
+        <span className="flex-1 text-left">{label}</span>
+        <kbd className="text-[9px] opacity-70 font-mono">{shortcut}</kbd>
+      </button>
+      {tooltip && disabled && (
+        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2.5 py-1.5 rounded-md
+                        bg-turbo-surface border border-turbo-border/40 text-[10px] text-turbo-muted
+                        whitespace-nowrap opacity-0 group-hover/action:opacity-100 transition-opacity
+                        pointer-events-none z-50 shadow-lg">
+          {tooltip}
+        </div>
+      )}
+    </div>
   )
 }
 
@@ -333,7 +344,8 @@ export function GitPanel() {
           }
           color="mt-1 bg-turbo-accent/10 hover:bg-turbo-accent/20 text-turbo-accent border border-turbo-accent/20 hover:border-turbo-accent/40"
           loading={loading.ship}
-          disabled={anyLoading || !hasChanges}
+          disabled={anyLoading || !hasChanges || isOnMain}
+          tooltip={isOnMain ? 'Create a feature branch to ship changes' : undefined}
           onClick={handleShipIt}
         />
         {shipProgress && (
