@@ -33,8 +33,11 @@ interface UIState {
 
   // Terminal workspace
   terminalWorkspaceOpen: boolean
+  workspaceNavDirection: 'down' | 'up'
   openTerminalWorkspace: (workspaceId?: string) => void
   closeTerminalWorkspace: () => void
+  navigateWorkspaceDown: () => void
+  navigateWorkspaceUp: () => void
 
   // Session timeline
   timelineOpen: boolean
@@ -86,6 +89,39 @@ interface UIState {
   consumeDropPaths: () => string[]
 }
 
+function getSortedProjectWorkspaces() {
+  const termStore = useTerminalStore.getState()
+  const projStore = useProjectStore.getState()
+  const proj = projStore.projects.find(p => p.id === projStore.selectedProjectId) || projStore.projects[0]
+  if (!proj?.path) return null
+  const sorted = Object.values(termStore.workspaces)
+    .filter(ws => ws.projectPath === proj.path)
+    .sort((a, b) => a.createdAt - b.createdAt)
+  return sorted.length > 0 ? { sorted, termStore } : null
+}
+
+function navigateWorkspace(direction: 'down' | 'up', set: (s: Partial<UIState>) => void) {
+  const result = getSortedProjectWorkspaces()
+  if (!result) return
+  const { sorted, termStore } = result
+  const isDown = direction === 'down'
+  const ui = useUIStore.getState()
+
+  if (!ui.terminalWorkspaceOpen) {
+    termStore.setActiveWorkspace(sorted[isDown ? 0 : sorted.length - 1].id)
+    set({ terminalWorkspaceOpen: true, workspaceNavDirection: direction })
+  } else {
+    const idx = sorted.findIndex(ws => ws.id === termStore.activeWorkspaceId)
+    const nextIdx = isDown ? idx + 1 : idx - 1
+    if (nextIdx >= 0 && nextIdx < sorted.length) {
+      termStore.setActiveWorkspace(sorted[nextIdx].id)
+      set({ workspaceNavDirection: direction })
+    } else {
+      set({ terminalWorkspaceOpen: false, workspaceNavDirection: direction })
+    }
+  }
+}
+
 export const useUIStore = create<UIState>((set) => ({
   commandPaletteOpen: false,
   openCommandPalette: () => set({ commandPaletteOpen: true }),
@@ -111,20 +147,19 @@ export const useUIStore = create<UIState>((set) => ({
   closePlanOverlay: () => set({ planOverlayOpen: false }),
 
   terminalWorkspaceOpen: false,
+  workspaceNavDirection: 'down' as const,
   openTerminalWorkspace: (workspaceId?: string) => {
     const termStore = useTerminalStore.getState()
     if (workspaceId) {
       termStore.setActiveWorkspace(workspaceId)
     } else {
-      const projStore = useProjectStore.getState()
-      const proj = projStore.projects.find(p => p.id === projStore.selectedProjectId) || projStore.projects[0]
-      if (proj?.path) {
-        const projectWorkspaces = Object.values(termStore.workspaces)
-          .filter(ws => ws.projectPath === proj.path)
-          .sort((a, b) => a.createdAt - b.createdAt)
-        if (projectWorkspaces.length > 0) {
-          termStore.setActiveWorkspace(projectWorkspaces[0].id)
-        } else {
+      const result = getSortedProjectWorkspaces()
+      if (result) {
+        termStore.setActiveWorkspace(result.sorted[0].id)
+      } else {
+        const projStore = useProjectStore.getState()
+        const proj = projStore.projects.find(p => p.id === projStore.selectedProjectId) || projStore.projects[0]
+        if (proj?.path) {
           const newId = termStore.createWorkspace(proj.path)
           termStore.setActiveWorkspace(newId)
           window.api.createPlainTerminal({ projectPath: proj.path, type: 'shell' }).then(terminal => {
@@ -133,12 +168,14 @@ export const useUIStore = create<UIState>((set) => ({
         }
       }
     }
-    set({ terminalWorkspaceOpen: true })
+    set({ terminalWorkspaceOpen: true, workspaceNavDirection: 'down' })
   },
   closeTerminalWorkspace: () => {
-    useTerminalStore.getState().setActiveWorkspace(null)
     set({ terminalWorkspaceOpen: false })
   },
+
+  navigateWorkspaceDown: () => navigateWorkspace('down', set),
+  navigateWorkspaceUp: () => navigateWorkspace('up', set),
 
   timelineOpen: false,
   openTimeline: () => set({ timelineOpen: true }),

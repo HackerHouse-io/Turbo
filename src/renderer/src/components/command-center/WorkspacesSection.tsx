@@ -65,7 +65,7 @@ function WorkspaceCard({ workspace, terminals }: {
 }) {
   const renameWorkspace = useTerminalStore(s => s.renameWorkspace)
   const deleteWorkspace = useTerminalStore(s => s.deleteWorkspace)
-  const addTerminalToWorkspace = useTerminalStore(s => s.addTerminalToWorkspace)
+  const addTerminalWithOverflow = useTerminalStore(s => s.addTerminalWithOverflow)
   const removeTerminalFromWorkspace = useTerminalStore(s => s.removeTerminalFromWorkspace)
   const openTerminalWorkspace = useUIStore(s => s.openTerminalWorkspace)
 
@@ -80,7 +80,6 @@ function WorkspaceCard({ workspace, terminals }: {
   )
 
   const panes = workspace.terminalIds.map(id => terminals[id]).filter(Boolean)
-  const canAdd = panes.length < MAX_PANES
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -114,7 +113,7 @@ function WorkspaceCard({ workspace, terminals }: {
       type
     })
     if (terminal) {
-      addTerminalToWorkspace(workspace.id, terminal.id)
+      addTerminalWithOverflow(workspace.id, terminal.id, workspace.projectPath)
     }
   }
 
@@ -209,13 +208,8 @@ function WorkspaceCard({ workspace, terminals }: {
       {/* Add terminal button */}
       <div className="border-t border-turbo-border/50 px-3 py-1.5 relative" ref={dropdownRef}>
         <button
-          onClick={() => canAdd && setDropdownOpen(o => !o)}
-          disabled={!canAdd}
-          className={`flex items-center gap-1.5 text-[10px] transition-colors ${
-            canAdd
-              ? 'text-turbo-text-muted hover:text-turbo-text-dim cursor-pointer'
-              : 'text-turbo-text-muted cursor-not-allowed'
-          }`}
+          onClick={() => setDropdownOpen(o => !o)}
+          className="flex items-center gap-1.5 text-[10px] transition-colors text-turbo-text-muted hover:text-turbo-text-dim cursor-pointer"
         >
           <PaletteIcon icon="plus" className="w-3 h-3" />
           Add Terminal

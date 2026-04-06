@@ -13,6 +13,7 @@ import { RunButton } from '../command-center/RunButton'
 export function TopBar() {
   const openCommandPalette = useUIStore(s => s.openCommandPalette)
   const openSettings = useUIStore(s => s.openSettings)
+  const toggleShortcutsOverlay = useUIStore(s => s.toggleShortcutsOverlay)
   const projectSelectorOpen = useUIStore(s => s.projectSelectorOpen)
   const toggleProjectSelector = useUIStore(s => s.toggleProjectSelector)
   const toggleNotificationCenter = useUIStore(s => s.toggleNotificationCenter)
@@ -143,6 +144,17 @@ export function TopBar() {
             <line x1="1.05" y1="12" x2="7" y2="12" />
             <line x1="17.01" y1="12" x2="22.96" y2="12" />
           </svg>
+        </button>
+
+        {/* Keyboard shortcuts */}
+        <button
+          onClick={toggleShortcutsOverlay}
+          className="flex items-center gap-1 px-1.5 py-1 rounded-lg hover:bg-turbo-surface-active
+                     text-turbo-text-muted hover:text-turbo-text transition-colors"
+          title="Keyboard Shortcuts"
+        >
+          <PaletteIcon icon="keyboard" className="w-4 h-4" />
+          <kbd className="text-[10px] font-mono text-turbo-text-muted">&#8984;/</kbd>
         </button>
 
         {/* Settings */}

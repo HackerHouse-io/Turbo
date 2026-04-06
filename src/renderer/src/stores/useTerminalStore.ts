@@ -34,6 +34,7 @@ interface TerminalState {
   renameWorkspace: (id: string, name: string) => void
   deleteWorkspace: (id: string) => void
   addTerminalToWorkspace: (workspaceId: string, terminalId: string) => void
+  addTerminalWithOverflow: (workspaceId: string, terminalId: string, projectPath: string) => { workspaceId: string; overflowed: boolean }
   removeTerminalFromWorkspace: (workspaceId: string, terminalId: string) => void
   setActiveWorkspace: (id: string | null) => void
 
@@ -224,6 +225,17 @@ export const useTerminalStore = create<TerminalState>((set, get) => ({
       saveWorkspaces(newWorkspaces)
       return { workspaces: newWorkspaces }
     })
+  },
+
+  addTerminalWithOverflow: (workspaceId, terminalId, projectPath) => {
+    const ws = get().workspaces[workspaceId]
+    if (ws && ws.terminalIds.length < MAX_PANES) {
+      get().addTerminalToWorkspace(workspaceId, terminalId)
+      return { workspaceId, overflowed: false }
+    }
+    const newWsId = get().createWorkspace(projectPath)
+    get().addTerminalToWorkspace(newWsId, terminalId)
+    return { workspaceId: newWsId, overflowed: true }
   },
 
   removeTerminalFromWorkspace: (workspaceId, terminalId) => {

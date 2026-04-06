@@ -263,6 +263,8 @@ export const DEFAULT_KEYBINDINGS: KeybindingDefinition[] = [
   { id: 'togglePlanOverlay',       label: 'Plan',               description: 'Toggle plan overlay',              defaultShortcut: null },
   { id: 'toggleProjectSelector',   label: 'Switch Project',     description: 'Open project selector',            defaultShortcut: null },
   { id: 'showShortcuts',           label: 'Keyboard Shortcuts', description: 'Show keyboard shortcuts overlay',  defaultShortcut: 'meta+/' },
+  { id: 'workspaceDown',             label: 'Next Workspace',     description: 'Cycle forward through workspaces',  defaultShortcut: 'meta+arrowdown' },
+  { id: 'workspaceUp',               label: 'Prev Workspace',     description: 'Cycle backward through workspaces', defaultShortcut: 'meta+arrowup' },
 ]
 
 // ─── Git Quick Actions ─────────────────────────────────────────

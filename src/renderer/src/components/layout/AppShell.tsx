@@ -21,9 +21,18 @@ import { ProjectOverview } from '../overview/ProjectOverview'
 
 // ─── Overlays (each subscribes only to its own boolean) ─────────
 
+const WorkspaceOverlay = memo(function WorkspaceOverlay() {
+  const open = useUIStore(s => s.terminalWorkspaceOpen)
+  const dir = useUIStore(s => s.workspaceNavDirection)
+  return (
+    <AnimatePresence mode="wait" custom={dir}>
+      {open && <TerminalWorkspace key="terminal-workspace" />}
+    </AnimatePresence>
+  )
+})
+
 const Overlays = memo(function Overlays() {
   const planOverlayOpen = useUIStore(s => s.planOverlayOpen)
-  const terminalWorkspaceOpen = useUIStore(s => s.terminalWorkspaceOpen)
   const timelineOpen = useUIStore(s => s.timelineOpen)
   const settingsOpen = useUIStore(s => s.settingsOpen)
   const shortcutsOverlayOpen = useUIStore(s => s.shortcutsOverlayOpen)
@@ -35,7 +44,7 @@ const Overlays = memo(function Overlays() {
   return (
     <>
       {planOverlayOpen && <PlanOverlay />}
-      {terminalWorkspaceOpen && <TerminalWorkspace />}
+      <WorkspaceOverlay />
       {timelineOpen && <SessionTimeline />}
       <AnimatePresence>{settingsOpen && <SettingsOverlay />}</AnimatePresence>
       <AnimatePresence>{shortcutsOverlayOpen && <ShortcutsOverlay />}</AnimatePresence>
@@ -122,6 +131,16 @@ export function AppShell() {
       if (matchesEvent(kb.getShortcut('showShortcuts'), e)) {
         e.preventDefault()
         useUIStore.getState().toggleShortcutsOverlay()
+        return
+      }
+      if (matchesEvent(kb.getShortcut('workspaceDown'), e)) {
+        e.preventDefault()
+        useUIStore.getState().navigateWorkspaceDown()
+        return
+      }
+      if (matchesEvent(kb.getShortcut('workspaceUp'), e)) {
+        e.preventDefault()
+        useUIStore.getState().navigateWorkspaceUp()
         return
       }
       // Git panel toggle: Cmd+G
