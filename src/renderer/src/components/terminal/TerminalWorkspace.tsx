@@ -4,6 +4,8 @@ import { useUIStore } from '../../stores/useUIStore'
 import { useTerminalStore } from '../../stores/useTerminalStore'
 import { useProjectStore } from '../../stores/useProjectStore'
 import { WorkspacePane } from './WorkspacePane'
+import { PaneLayout, DEFAULT_RATIOS } from './PaneLayout'
+import type { SplitRatios } from './PaneLayout'
 import { PaletteIcon } from '../command-palette/PaletteIcon'
 import type { PlainTerminalType } from '../../../../shared/types'
 
@@ -21,13 +23,6 @@ const overlayVariants = {
   }),
 }
 
-const GRID_CLASSES: Record<number, string> = {
-  1: 'grid-cols-1 grid-rows-1',
-  2: 'grid-cols-2 grid-rows-1',
-  3: 'grid-cols-2 grid-rows-2',
-  4: 'grid-cols-2 grid-rows-2',
-}
-
 export function TerminalWorkspace() {
   const closeTerminalWorkspace = useUIStore(s => s.closeTerminalWorkspace)
   const openTerminalWorkspace = useUIStore(s => s.openTerminalWorkspace)
@@ -37,6 +32,8 @@ export function TerminalWorkspace() {
   const activeWorkspaceId = useTerminalStore(s => s.activeWorkspaceId)
   const renameWorkspace = useTerminalStore(s => s.renameWorkspace)
   const addTerminalWithOverflow = useTerminalStore(s => s.addTerminalWithOverflow)
+  const setWorkspaceSplitRatio = useTerminalStore(s => s.setWorkspaceSplitRatio)
+  const resetWorkspaceSplitRatios = useTerminalStore(s => s.resetWorkspaceSplitRatios)
 
   const selectedProjectId = useProjectStore(s => s.selectedProjectId)
   const projects = useProjectStore(s => s.projects)
@@ -101,7 +98,22 @@ export function TerminalWorkspace() {
     }
   }
 
-  const gridClass = GRID_CLASSES[panes.length] ?? 'grid-cols-1 grid-rows-1'
+  const prevPaneCount = useRef(panes.length)
+  // Re-seed ref when switching workspaces to avoid resetting the new workspace's ratios
+  useEffect(() => {
+    prevPaneCount.current = panes.length
+  }, [activeWorkspaceId]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (panes.length !== prevPaneCount.current && activeWorkspaceId) {
+      resetWorkspaceSplitRatios(activeWorkspaceId)
+    }
+    prevPaneCount.current = panes.length
+  }, [panes.length, activeWorkspaceId, resetWorkspaceSplitRatios])
+
+  const splitRatios = activeWorkspace?.splitRatios ?? DEFAULT_RATIOS
+  const handleRatioChange = (key: keyof SplitRatios, value: number) => {
+    if (activeWorkspaceId) setWorkspaceSplitRatio(activeWorkspaceId, key, value)
+  }
 
   return (
     <motion.div
@@ -224,20 +236,16 @@ export function TerminalWorkspace() {
               </div>
             </div>
           ) : (
-            <div className={`grid ${gridClass} gap-[1px] h-full bg-turbo-border rounded-lg overflow-hidden`}>
-              {panes.map((terminal, index) => (
-                <div
-                  key={terminal.id}
-                  className={`bg-turbo-bg ${
-                    panes.length === 3 && index === 2 ? 'col-span-2' : ''
-                  }`}
-                >
-                  <div className="h-full group">
-                    <WorkspacePane terminal={terminal} />
-                  </div>
+            <PaneLayout
+              panes={panes.map(terminal => (
+                <div key={terminal.id} className="h-full bg-turbo-bg">
+                  <WorkspacePane terminal={terminal} />
                 </div>
               ))}
-            </div>
+              ratios={splitRatios}
+              onRatioChange={handleRatioChange}
+              className="h-full rounded-lg overflow-hidden"
+            />
           )}
         </div>
     </motion.div>

@@ -1,13 +1,15 @@
-import { useCallback } from 'react'
+import { useCallback, useEffect, useRef } from 'react'
 import { XTermRenderer } from './XTermRenderer'
 import { useSessionStore } from '../../stores/useSessionStore'
 import { useProjectStore, selectProjectPath } from '../../stores/useProjectStore'
+import { useTerminalStore } from '../../stores/useTerminalStore'
 import { useShallow } from 'zustand/react/shallow'
 import { isTerminalStatus } from '../../../../shared/types'
 import type { AgentSession } from '../../../../shared/types'
 import { STATUS_DOT_COLORS, STATUS_LABELS } from '../../lib/sessionStatus'
 import { useDropZone } from '../../hooks/useDropZone'
 import { shellQuote } from '../../lib/format'
+import { PaneLayout } from './PaneLayout'
 
 function TerminalPane({ session, isFocused, onFocus, onClose }: {
   session: AgentSession
@@ -112,6 +114,18 @@ export function TerminalGrid() {
     })
   )
 
+  const gridSplitRatios = useTerminalStore(s => s.gridSplitRatios)
+  const setGridSplitRatio = useTerminalStore(s => s.setGridSplitRatio)
+  const resetGridSplitRatios = useTerminalStore(s => s.resetGridSplitRatios)
+
+  const prevCount = useRef(visibleSessions.length)
+  useEffect(() => {
+    if (visibleSessions.length !== prevCount.current) {
+      resetGridSplitRatios()
+    }
+    prevCount.current = visibleSessions.length
+  }, [visibleSessions.length, resetGridSplitRatios])
+
   if (visibleSessions.length === 0) {
     return (
       <div className="flex-1 flex items-center justify-center">
@@ -131,16 +145,9 @@ export function TerminalGrid() {
     )
   }
 
-  // Grid layout based on count
-  const gridClass = visibleSessions.length === 1
-    ? 'grid-cols-1 grid-rows-1'
-    : visibleSessions.length === 2
-    ? 'grid-cols-2 grid-rows-1'
-    : 'grid-cols-2 grid-rows-2'
-
   return (
-    <div className={`flex-1 grid ${gridClass} gap-1 p-1 min-h-0`}>
-      {visibleSessions.map(session => (
+    <PaneLayout
+      panes={visibleSessions.map(session => (
         <TerminalPane
           key={session.id}
           session={session}
@@ -149,6 +156,9 @@ export function TerminalGrid() {
           onClose={() => unpinSession(session.id)}
         />
       ))}
-    </div>
+      ratios={gridSplitRatios}
+      onRatioChange={setGridSplitRatio}
+      className="flex-1 p-1 min-h-0"
+    />
   )
 }

@@ -1,8 +1,11 @@
 import { create } from 'zustand'
 import type { PlainTerminal } from '../../../shared/types'
+import type { SplitRatios } from '../components/terminal/PaneLayout'
+import { DEFAULT_RATIOS } from '../components/terminal/PaneLayout'
 
 export const MAX_PANES = 4
 const STORAGE_KEY = 'turbo:workspaces'
+const GRID_RATIOS_KEY = 'turbo:gridSplitRatios'
 
 export interface Workspace {
   id: string
@@ -10,6 +13,7 @@ export interface Workspace {
   projectPath: string
   terminalIds: string[] // max 4
   createdAt: number
+  splitRatios?: SplitRatios
 }
 
 interface TerminalState {
@@ -23,6 +27,9 @@ interface TerminalState {
 
   // Run terminal tracking: projectPath → terminalId
   runTerminals: Record<string, string>
+
+  // Split ratios for TerminalGrid
+  gridSplitRatios: SplitRatios
 
   // Data actions
   setTerminals: (terminals: PlainTerminal[]) => void
@@ -41,6 +48,12 @@ interface TerminalState {
   // Run terminal
   setRunTerminal: (projectPath: string, terminalId: string) => void
   clearRunTerminal: (projectPath: string) => void
+
+  // Split ratios
+  setWorkspaceSplitRatio: (workspaceId: string, key: keyof SplitRatios, value: number) => void
+  setGridSplitRatio: (key: keyof SplitRatios, value: number) => void
+  resetWorkspaceSplitRatios: (workspaceId: string) => void
+  resetGridSplitRatios: () => void
 
   // Pane focus
   setFocusedPane: (terminalId: string | null) => void
@@ -66,6 +79,37 @@ function saveWorkspaces(workspaces: Record<string, Workspace>) {
   }
 }
 
+function loadGridSplitRatios(): SplitRatios {
+  try {
+    const raw = localStorage.getItem(GRID_RATIOS_KEY)
+    if (!raw) return { ...DEFAULT_RATIOS }
+    return { ...DEFAULT_RATIOS, ...JSON.parse(raw) }
+  } catch {
+    return { ...DEFAULT_RATIOS }
+  }
+}
+
+function saveGridSplitRatios(ratios: SplitRatios) {
+  try {
+    localStorage.setItem(GRID_RATIOS_KEY, JSON.stringify(ratios))
+  } catch {
+    // storage full or unavailable
+  }
+}
+
+// Debounce localStorage writes during drag (~60fps) to avoid main-thread jank
+let saveWorkspacesTimer: ReturnType<typeof setTimeout> | null = null
+function debouncedSaveWorkspaces(workspaces: Record<string, Workspace>) {
+  if (saveWorkspacesTimer) clearTimeout(saveWorkspacesTimer)
+  saveWorkspacesTimer = setTimeout(() => saveWorkspaces(workspaces), 300)
+}
+
+let saveGridRatiosTimer: ReturnType<typeof setTimeout> | null = null
+function debouncedSaveGridSplitRatios(ratios: SplitRatios) {
+  if (saveGridRatiosTimer) clearTimeout(saveGridRatiosTimer)
+  saveGridRatiosTimer = setTimeout(() => saveGridSplitRatios(ratios), 300)
+}
+
 // ─── Store ─────────────────────────────────────────────────
 
 export const useTerminalStore = create<TerminalState>((set, get) => ({
@@ -74,6 +118,7 @@ export const useTerminalStore = create<TerminalState>((set, get) => ({
   activeWorkspaceId: null,
   focusedPaneId: null,
   runTerminals: {},
+  gridSplitRatios: loadGridSplitRatios(),
 
   setTerminals: (terminals) => {
     const record: Record<string, PlainTerminal> = {}
@@ -264,6 +309,41 @@ export const useTerminalStore = create<TerminalState>((set, get) => ({
       const { [projectPath]: _, ...rest } = s.runTerminals
       return { runTerminals: rest }
     }),
+
+  setWorkspaceSplitRatio: (workspaceId, key, value) => {
+    set(s => {
+      const ws = s.workspaces[workspaceId]
+      if (!ws) return s
+      const ratios = { ...(ws.splitRatios ?? DEFAULT_RATIOS), [key]: value }
+      const newWorkspaces = { ...s.workspaces, [workspaceId]: { ...ws, splitRatios: ratios } }
+      debouncedSaveWorkspaces(newWorkspaces)
+      return { workspaces: newWorkspaces }
+    })
+  },
+
+  setGridSplitRatio: (key, value) => {
+    set(s => {
+      const ratios = { ...s.gridSplitRatios, [key]: value }
+      debouncedSaveGridSplitRatios(ratios)
+      return { gridSplitRatios: ratios }
+    })
+  },
+
+  resetWorkspaceSplitRatios: (workspaceId) => {
+    set(s => {
+      const ws = s.workspaces[workspaceId]
+      if (!ws) return s
+      const newWorkspaces = { ...s.workspaces, [workspaceId]: { ...ws, splitRatios: { ...DEFAULT_RATIOS } } }
+      saveWorkspaces(newWorkspaces)
+      return { workspaces: newWorkspaces }
+    })
+  },
+
+  resetGridSplitRatios: () => {
+    const ratios = { ...DEFAULT_RATIOS }
+    saveGridSplitRatios(ratios)
+    set({ gridSplitRatios: ratios })
+  },
 
   setFocusedPane: (terminalId) => set({ focusedPaneId: terminalId })
 }))
