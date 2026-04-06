@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion'
 import { useUIStore } from '../../stores/useUIStore'
 import { useSessionStore } from '../../stores/useSessionStore'
+import { isTerminalStatus } from '../../../../shared/types'
 import { XTermRenderer } from './XTermRenderer'
 import { PaletteIcon } from '../command-palette/PaletteIcon'
 
@@ -68,7 +69,12 @@ export function TerminalDrawer() {
 
         {/* Terminal content */}
         <div className="flex-1 overflow-hidden">
-          <XTermRenderer terminalId={terminalId} mode={mode} />
+          <XTermRenderer
+            terminalId={terminalId}
+            mode={mode}
+            showResume={isSession && !!session && isTerminalStatus(session.status)}
+            onResume={isSession ? () => window.api.resumeSession(terminalId) : undefined}
+          />
         </div>
       </motion.div>
     </div>

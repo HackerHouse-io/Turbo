@@ -116,6 +116,21 @@ function SessionRow({ session, isSelected, isFocused, onSelect, onFocus, onReque
             </svg>
           </button>
         )}
+        {!isActive && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation()
+              window.api.resumeSession(session.id)
+            }}
+            className="w-5 h-5 flex items-center justify-center rounded
+                       text-turbo-accent hover:bg-turbo-accent/10 transition-colors"
+            title="Resume session"
+          >
+            <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.348a1.125 1.125 0 010 1.971l-11.54 6.347a1.125 1.125 0 01-1.667-.985V5.653z" />
+            </svg>
+          </button>
+        )}
         <button
           onClick={(e) => {
             e.stopPropagation()

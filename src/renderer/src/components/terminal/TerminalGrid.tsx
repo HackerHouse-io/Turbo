@@ -72,7 +72,12 @@ function TerminalPane({ session, isFocused, onFocus, onClose }: {
       </div>
 
       <div className="flex-1 min-h-0">
-        <XTermRenderer terminalId={session.id} mode="session" />
+        <XTermRenderer
+          terminalId={session.id}
+          mode="session"
+          showResume={!isActive}
+          onResume={() => window.api.resumeSession(session.id)}
+        />
       </div>
 
       {isDragOver && (

@@ -625,6 +625,7 @@ export function registerIpcHandlers(opts: IpcHandlerOptions): void {
 
   forward(sessionManager, 'session-updated', IPC.SESSION_UPDATED)
   forward(sessionManager, 'terminal-data', IPC.TERMINAL_DATA)
+  forward(sessionManager, 'terminal-clear', IPC.TERMINAL_CLEAR)
   forward(sessionManager, 'attention-needed', IPC.ATTENTION_NEW)
   forward(sessionManager, 'session-removed', IPC.SESSION_REMOVED)
   forward(plainTerminalManager, 'terminal-data', IPC.PLAIN_TERMINAL_DATA)

@@ -95,7 +95,7 @@ export function AgentDetailView({ sessionId }: AgentDetailViewProps) {
       <div className="flex-1 flex overflow-hidden">
         {/* Live terminal (main area) */}
         <div className="flex-1 overflow-hidden">
-          <XTermRenderer terminalId={sessionId} />
+          <XTermRenderer terminalId={sessionId} showResume={canResume} onResume={handleResume} />
         </div>
 
         {/* Context sidebar */}

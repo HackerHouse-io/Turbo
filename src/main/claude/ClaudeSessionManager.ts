@@ -50,6 +50,7 @@ export class ClaudeSessionManager extends EventEmitter {
   private bufferStore: TerminalBufferStore
   private saveTimer: ReturnType<typeof setTimeout> | null = null
   private savePending = false
+  private lastDimensions = new Map<string, { cols: number; rows: number }>()
   private blockUpdateTimers = new Map<string, ReturnType<typeof setTimeout>>()
   private titleAbortControllers = new Map<string, AbortController>()
 
@@ -149,6 +150,7 @@ export class ClaudeSessionManager extends EventEmitter {
    * Resize a session's terminal.
    */
   resizeSession(sessionId: string, cols: number, rows: number): void {
+    this.lastDimensions.set(sessionId, { cols, rows })
     this.ptyManager.resize(sessionId, cols, rows)
   }
 
@@ -174,6 +176,7 @@ export class ClaudeSessionManager extends EventEmitter {
     this.sessions.delete(sessionId)
     this.monitors.delete(sessionId)
     this.gitSnapshots.delete(sessionId)
+    this.lastDimensions.delete(sessionId)
     this.bufferStore.remove(sessionId)
     const timer = this.blockUpdateTimers.get(sessionId)
     if (timer) { clearTimeout(timer); this.blockUpdateTimers.delete(sessionId) }
@@ -207,15 +210,21 @@ export class ClaudeSessionManager extends EventEmitter {
 
     this.wireMonitor(sessionId)
 
+    // Clear old terminal data before spawning new PTY
+    this.bufferStore.remove(sessionId)
+    this.emit('terminal-clear', sessionId)
+
     const env = await this.buildEnv(session.projectPath)
 
     // Capture git baseline
     this.captureGitSnapshot(sessionId, session.projectPath)
 
-    // Spawn PTY with --resume
+    // Spawn PTY with --resume, using last-known terminal dimensions
+    const dims = this.lastDimensions.get(sessionId)
     this.ptyManager.spawn(sessionId, 'claude', ['--resume', sessionId], {
       cwd: session.projectPath,
-      env
+      env,
+      ...(dims && { cols: dims.cols, rows: dims.rows })
     })
 
     this.emitUpdate(sessionId)
@@ -239,6 +248,7 @@ export class ClaudeSessionManager extends EventEmitter {
     this.ptyManager.killAll()
     this.monitors.clear()
     this.gitSnapshots.clear()
+    this.lastDimensions.clear()
     this.blockUpdateTimers.forEach(t => clearTimeout(t))
     this.blockUpdateTimers.clear()
     this.titleAbortControllers.forEach(ac => ac.abort())
@@ -260,6 +270,7 @@ export class ClaudeSessionManager extends EventEmitter {
       session.attentionMessage = undefined
       session.attentionType = undefined
       session.currentAction = undefined
+
       this.sessions.set(session.id, session)
     }
 

@@ -8,9 +8,11 @@ import '@xterm/xterm/css/xterm.css'
 interface XTermRendererProps {
   terminalId: string
   mode?: 'session' | 'plain'
+  showResume?: boolean
+  onResume?: () => void
 }
 
-export function XTermRenderer({ terminalId, mode = 'session' }: XTermRendererProps) {
+export function XTermRenderer({ terminalId, mode = 'session', showResume, onResume }: XTermRendererProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const termRef = useRef<Terminal | null>(null)
   const fitRef = useRef<FitAddon | null>(null)
@@ -115,6 +117,13 @@ export function XTermRenderer({ terminalId, mode = 'session' }: XTermRendererPro
       }
     })
 
+    // Clear terminal when session is resumed
+    const unsubClear = mode === 'session' ? window.api.onTerminalClear?.((sid) => {
+      if (sid === terminalId) {
+        terminal.reset()
+      }
+    }) : undefined
+
     // Handle resize
     const resizeObserver = new ResizeObserver(() => {
       safeFit()
@@ -130,6 +139,7 @@ export function XTermRenderer({ terminalId, mode = 'session' }: XTermRendererPro
     return () => {
       clearTimeout(focusTimer)
       unsubData()
+      unsubClear?.()
       resizeObserver.disconnect()
       terminal.dispose()
       termRef.current = null
@@ -138,10 +148,32 @@ export function XTermRenderer({ terminalId, mode = 'session' }: XTermRendererPro
   }, [terminalId, mode])
 
   return (
-    <div
-      ref={containerRef}
-      className="w-full h-full"
-      style={{ padding: '4px' }}
-    />
+    <div className="relative w-full h-full">
+      <div
+        ref={containerRef}
+        className="w-full h-full"
+        style={{ padding: '4px' }}
+      />
+      {showResume && onResume && (
+        <div className="absolute bottom-4 right-4 group/resume">
+          <button
+            onClick={onResume}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg
+                       bg-turbo-accent text-white text-xs font-medium
+                       hover:bg-turbo-accent/90 transition-colors shadow-lg"
+          >
+            Resume
+            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.348a1.125 1.125 0 010 1.971l-11.54 6.347a1.125 1.125 0 01-1.667-.985V5.653z" />
+            </svg>
+          </button>
+          <div className="absolute bottom-full right-0 mb-2 px-2.5 py-1.5 rounded-md bg-turbo-surface border border-turbo-border
+                          text-[11px] text-turbo-text-dim whitespace-nowrap shadow-lg
+                          opacity-0 group-hover/resume:opacity-100 pointer-events-none transition-opacity">
+            Resume this session where it left off
+          </div>
+        </div>
+      )}
+    </div>
   )
 }

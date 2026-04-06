@@ -44,6 +44,11 @@ export default function App() {
       appendTerminalData(sessionId, data)
     })
 
+    // Clear terminal buffer when session is resumed
+    const unsubTerminalClear = window.api.onTerminalClear?.((sessionId) => {
+      clearTerminalBuffer(sessionId)
+    })
+
     // Buffer plain terminal data the same way
     const unsubPlainTerminal = window.api.onPlainTerminalData((terminalId, data) => {
       appendTerminalData(terminalId, data)
@@ -118,6 +123,7 @@ export default function App() {
 
     return () => {
       unsubTerminal()
+      unsubTerminalClear?.()
       unsubPlainTerminal()
       unsubPlainTerminalExit()
       unsubPlainTerminalCreated()

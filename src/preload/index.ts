@@ -343,6 +343,13 @@ const api = {
     return () => ipcRenderer.removeListener(IPC.TERMINAL_DATA, handler)
   },
 
+  onTerminalClear: (callback: (sessionId: string) => void) => {
+    const handler = (_: Electron.IpcRendererEvent, sessionId: string) =>
+      callback(sessionId)
+    ipcRenderer.on(IPC.TERMINAL_CLEAR, handler)
+    return () => ipcRenderer.removeListener(IPC.TERMINAL_CLEAR, handler)
+  },
+
   onAttentionNeeded: (callback: (item: AttentionItem) => void) => {
     const handler = (_: Electron.IpcRendererEvent, item: AttentionItem) => callback(item)
     ipcRenderer.on(IPC.ATTENTION_NEW, handler)
