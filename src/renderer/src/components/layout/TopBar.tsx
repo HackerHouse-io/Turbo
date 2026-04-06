@@ -9,6 +9,7 @@ import { ProjectSelector } from '../project/ProjectSelector'
 import { GitIdentitySelector } from '../git/GitIdentitySelector'
 import { XcodeButton } from '../command-center/XcodeButton'
 import { RunButton } from '../command-center/RunButton'
+import logoFramed from '../../assets/logo-framed.png'
 
 export function TopBar() {
   const openCommandPalette = useUIStore(s => s.openCommandPalette)
@@ -41,9 +42,7 @@ export function TopBar() {
     <div className="no-drag relative z-40 flex items-center gap-3 px-4 py-2 border-b border-turbo-border bg-turbo-bg/80 backdrop-blur-sm">
       {/* Logo */}
       <div className="flex items-center gap-2 mr-2">
-        <div className="w-6 h-6 rounded-md bg-turbo-accent flex items-center justify-center">
-          <span className="text-white text-xs font-bold">T</span>
-        </div>
+        <img src={logoFramed} alt="Turbo" className="w-8 h-8" />
         <span className="text-sm font-semibold text-turbo-text">Turbo</span>
       </div>
 
