@@ -39,7 +39,7 @@ export function TopBar() {
   }, [sessionsRecord])
 
   return (
-    <div className="no-drag relative z-40 flex items-center gap-3 px-4 py-2 border-b border-turbo-border bg-turbo-bg/80 backdrop-blur-sm">
+    <div data-tour="topbar" className="no-drag relative z-40 flex items-center gap-3 px-4 py-2 border-b border-turbo-border bg-turbo-bg/80 backdrop-blur-sm">
       {/* Logo */}
       <div className="flex items-center gap-2 mr-2">
         <img src={logoFramed} alt="Turbo" className="w-8 h-8" />
@@ -74,6 +74,7 @@ export function TopBar() {
 
       {/* Search / Command Palette trigger */}
       <button
+        data-tour="command-palette"
         onClick={openCommandPalette}
         className="flex-1 max-w-md flex items-center gap-2 px-3 py-1.5 rounded-lg
                    bg-turbo-surface border border-turbo-border text-turbo-text-muted
@@ -147,6 +148,7 @@ export function TopBar() {
 
         {/* Keyboard shortcuts */}
         <button
+          data-tour="shortcuts"
           onClick={toggleShortcutsOverlay}
           className="flex items-center gap-1 px-1.5 py-1 rounded-lg hover:bg-turbo-surface-active
                      text-turbo-text-muted hover:text-turbo-text transition-colors"

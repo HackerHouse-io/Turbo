@@ -458,5 +458,6 @@ export interface TurboSettings {
   keybindingOverrides?: KeybindingOverrides
   defaultIntent?: string
   githubRepoDefaults?: GitHubRepoDefaults
+  onboardingCompleted?: boolean
   [key: string]: unknown
 }

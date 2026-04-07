@@ -1,4 +1,4 @@
-import { useEffect, memo } from 'react'
+import { useEffect, memo, lazy, Suspense } from 'react'
 import { AnimatePresence } from 'framer-motion'
 import { TopBar } from './TopBar'
 import { SplitLayout } from './SplitLayout'
@@ -18,6 +18,13 @@ import { ToastContainer } from '../notifications/ToastContainer'
 import { NotificationCenter } from '../notifications/NotificationCenter'
 import { CreateProjectOverlay } from '../project/CreateProjectOverlay'
 import { ProjectOverview } from '../overview/ProjectOverview'
+import { useTourAutoStart } from '../../hooks/useTourAutoStart'
+import { useTourStore } from '../../stores/useTourStore'
+
+// Lazy-load the tour to keep ~350 lines of SVG illustrations out of cold start
+const OnboardingTour = lazy(() =>
+  import('../onboarding/OnboardingTour').then(m => ({ default: m.OnboardingTour }))
+)
 
 // ─── Overlays (each subscribes only to its own boolean) ─────────
 
@@ -40,6 +47,7 @@ const Overlays = memo(function Overlays() {
   const terminalDrawerOpen = useUIStore(s => s.terminalDrawerOpen)
   const notificationCenterOpen = useUIStore(s => s.notificationCenterOpen)
   const createProjectOverlayOpen = useUIStore(s => s.createProjectOverlayOpen)
+  const tourOpen = useTourStore(s => s.tourOpen)
 
   return (
     <>
@@ -52,6 +60,11 @@ const Overlays = memo(function Overlays() {
       {terminalDrawerOpen && <TerminalDrawer />}
       <AnimatePresence>{notificationCenterOpen && <NotificationCenter />}</AnimatePresence>
       <AnimatePresence>{createProjectOverlayOpen && <CreateProjectOverlay />}</AnimatePresence>
+      {tourOpen && (
+        <Suspense fallback={null}>
+          <OnboardingTour />
+        </Suspense>
+      )}
       <ToastContainer />
     </>
   )
@@ -60,6 +73,8 @@ const Overlays = memo(function Overlays() {
 // ─── App Shell ──────────────────────────────────────────────────
 
 export function AppShell() {
+  useTourAutoStart()
+
   // ─── Global drag-and-drop (fallback for drops outside React drop zones) ───
   const viewMode = useUIStore(s => s.viewMode)
 
@@ -190,6 +205,8 @@ export function AppShell() {
           ui.closeCommandPalette()
         } else if (ui.terminalDrawerOpen) {
           ui.closeTerminalDrawer()
+        } else if (useTourStore.getState().tourOpen) {
+          useTourStore.getState().endTour()
         } else if (ui.viewMode === 'overview') {
           ui.hideOverview()
         }

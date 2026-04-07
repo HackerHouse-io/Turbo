@@ -1,6 +1,11 @@
 import { SettingRow, SettingSectionHeader } from '../SettingRow'
 import { EFFORT_LEVELS, PERMISSION_MODES } from '../../../../../shared/constants'
 import type { ClaudeModelInfo, EffortLevel, PermissionMode } from '../../../../../shared/types'
+import { useTourStore } from '../../../stores/useTourStore'
+import { useUIStore } from '../../../stores/useUIStore'
+
+// Matches SettingsOverlay's exit transition (0.15s) so the tour starts after it has unmounted
+const SETTINGS_EXIT_MS = 200
 
 interface SectionGeneralProps {
   models: ClaudeModelInfo[]
@@ -16,6 +21,11 @@ export function SectionGeneral({
   models, defaultModel, defaultEffort, defaultPermissionMode,
   onModelChange, onEffortChange, onPermissionChange
 }: SectionGeneralProps) {
+  const handleRestartTour = () => {
+    useUIStore.getState().closeSettings()
+    setTimeout(() => useTourStore.getState().restartTour(), SETTINGS_EXIT_MS)
+  }
+
   return (
     <div className="space-y-6">
       <SettingSectionHeader title="General" description="Default settings for new Claude sessions" />
@@ -75,6 +85,20 @@ export function SectionGeneral({
               </button>
             ))}
           </div>
+        </SettingRow>
+      </div>
+
+      <SettingSectionHeader title="Onboarding" description="Guided tour of Turbo's features" />
+      <div className="rounded-lg border border-turbo-border bg-turbo-bg/50 divide-y divide-turbo-border">
+        <SettingRow label="Onboarding Tour" description="Replay the guided walkthrough of the interface">
+          <button
+            onClick={handleRestartTour}
+            className="h-8 px-4 rounded-lg text-xs font-medium border border-turbo-border
+                       text-turbo-text-dim hover:text-turbo-text hover:bg-turbo-surface-hover
+                       transition-colors"
+          >
+            Restart Tour
+          </button>
         </SettingRow>
       </div>
     </div>
