@@ -76,11 +76,13 @@ export class PlainTerminalManager extends EventEmitter {
       const terminal = this.terminals.get(id)
       if (terminal) {
         const env = this.pendingEnv.get(id)
+        // PtyManager merges process.env + enhanced PATH internally — only
+        // pass extra vars here, not the whole environment.
         this.pty.spawn(id, terminal.shell, [], {
           cwd: terminal.projectPath,
           cols,
           rows,
-          ...(env ? { env: { ...process.env, ...env } } : {})
+          ...(env ? { env } : {})
         })
         this.spawned.add(id)
         this.pendingEnv.delete(id)

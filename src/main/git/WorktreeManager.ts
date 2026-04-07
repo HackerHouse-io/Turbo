@@ -1,12 +1,9 @@
-import { execFile } from 'child_process'
-import { promisify } from 'util'
 import { app } from 'electron'
 import * as path from 'path'
 import * as fs from 'fs'
 import * as crypto from 'crypto'
 import type { WorktreeInfo, RebaseResult, PRResult } from '../../shared/types'
-
-const execFileAsync = promisify(execFile)
+import { execFileAsync } from '../utils/execFileAsync'
 
 /**
  * Manages the full lifecycle of git worktrees for parallel task execution.

@@ -1,6 +1,7 @@
 import * as pty from 'node-pty'
 import { EventEmitter } from 'events'
 import { PTY_BUFFER_INTERVAL_MS, DEFAULT_COLS, DEFAULT_ROWS } from '../../shared/constants'
+import { getEnhancedPath } from '../system/resolveShellPath'
 
 export interface PtyInstance {
   id: string
@@ -43,6 +44,10 @@ export class PtyManager extends EventEmitter {
       env: {
         ...process.env,
         ...options.env,
+        // Override PATH after the spread so caller-provided env can't accidentally
+        // strip out our enhanced PATH (Finder-launched Electron starts with a
+        // minimal PATH and would otherwise miss Homebrew/npm-global/etc.)
+        PATH: getEnhancedPath(),
         TERM: 'xterm-256color',
         COLORTERM: 'truecolor'
       } as Record<string, string>

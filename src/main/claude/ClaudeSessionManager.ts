@@ -1,9 +1,8 @@
 import { EventEmitter } from 'events'
 import { join } from 'path'
-import { execFile } from 'child_process'
-import { promisify } from 'util'
 import { v4 as uuid } from 'uuid'
 import { PtyManager } from '../pty/PtyManager'
+import { execFileAsync } from '../utils/execFileAsync'
 import { OutputMonitor } from './OutputMonitor'
 import { TerminalBufferStore } from './TerminalBufferStore'
 import { JsonFileStore } from '../JsonFileStore'
@@ -21,8 +20,7 @@ import type { GitOpsManager } from '../git/GitOpsManager'
 import type { SettingsManager } from '../SettingsManager'
 import type { ProjectManager } from '../ProjectManager'
 import type { GitIdentity } from '../../shared/types'
-
-const execFileAsync = promisify(execFile)
+import { getEnhancedEnv } from '../system/resolveShellPath'
 
 /**
  * ClaudeSessionManager: Core orchestrator for Claude Code CLI sessions.
@@ -367,7 +365,7 @@ export class ClaudeSessionManager extends EventEmitter {
       }
     }
 
-    monitor.onAttentionNeeded = (type, message) => {
+    monitor.onAttentionNeeded = ({ type, message, action }) => {
       const s = this.sessions.get(sessionId)
       if (!s || s.status === 'stopped') return
       if (type === 'stuck' && isTerminalStatus(s.status)) return
@@ -385,7 +383,8 @@ export class ClaudeSessionManager extends EventEmitter {
         message,
         timestamp: Date.now(),
         dismissed: false,
-        read: false
+        read: false,
+        ...(action ? { action } : {})
       }
       this.emit('attention-needed', item)
     }
@@ -596,7 +595,8 @@ export class ClaudeSessionManager extends EventEmitter {
       const result = await execFileAsync('claude', ['-p', titlePrompt], {
         timeout: 30_000,
         maxBuffer: 256 * 1024,
-        signal: ac.signal
+        signal: ac.signal,
+        env: getEnhancedEnv()
       })
       const cleaned = result.stdout.trim().replace(/^["'`]|["'`]$/g, '')
       const session = this.sessions.get(sessionId)

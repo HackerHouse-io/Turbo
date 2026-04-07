@@ -1,9 +1,7 @@
 import { readFileSync, statSync, readdirSync } from 'fs'
 import { join } from 'path'
-import { execFile } from 'child_process'
-import { promisify } from 'util'
-
-const execFilePromise = promisify(execFile)
+import { getEnhancedEnv } from '../system/resolveShellPath'
+import { execFileAsync as execFilePromise } from '../utils/execFileAsync'
 
 export interface DetectResult {
   command: string
@@ -164,7 +162,8 @@ export async function detectRunCommandWithClaude(projectPath: string): Promise<{
     const result = await execFilePromise('claude', ['-p', prompt], {
       cwd: projectPath,
       timeout: 60_000,
-      maxBuffer: 1024 * 1024
+      maxBuffer: 1024 * 1024,
+      env: getEnhancedEnv()
     })
 
     const command = result.stdout

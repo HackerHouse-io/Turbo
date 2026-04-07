@@ -3,12 +3,14 @@ import { useShallow } from 'zustand/react/shallow'
 import { useTourStore } from '../../stores/useTourStore'
 import { TOUR_STEPS } from './tourSteps'
 import { TourStep } from './TourStep'
+import { ReadyStep } from './ReadyStep'
 import { TourSpotlight } from './TourSpotlight'
 
 export function OnboardingTour() {
-  const { currentStep, nextStep, prevStep, endTour } = useTourStore(
+  const { currentStep, claudeStatus, nextStep, prevStep, endTour } = useTourStore(
     useShallow(s => ({
       currentStep: s.currentStep,
+      claudeStatus: s.claudeStatus,
       nextStep: s.nextStep,
       prevStep: s.prevStep,
       endTour: s.endTour,
@@ -19,6 +21,7 @@ export function OnboardingTour() {
   if (!step) return null
 
   const hasSpotlight = !!step.spotlightSelector
+  const isFinalStep = step.id === 'ready'
 
   return (
     <motion.div
@@ -42,15 +45,26 @@ export function OnboardingTour() {
       <div className="absolute inset-0 z-10 flex items-center justify-center pointer-events-none">
         <div className="pointer-events-auto">
           <AnimatePresence mode="wait">
-            <TourStep
-              key={step.id}
-              step={step}
-              currentIndex={currentStep}
-              totalSteps={TOUR_STEPS.length}
-              onNext={nextStep}
-              onPrev={prevStep}
-              onSkip={endTour}
-            />
+            {isFinalStep ? (
+              <ReadyStep
+                key="ready"
+                status={claudeStatus}
+                currentIndex={currentStep}
+                totalSteps={TOUR_STEPS.length}
+                onPrev={prevStep}
+                onFinish={endTour}
+              />
+            ) : (
+              <TourStep
+                key={step.id}
+                step={step}
+                currentIndex={currentStep}
+                totalSteps={TOUR_STEPS.length}
+                onNext={nextStep}
+                onPrev={prevStep}
+                onSkip={endTour}
+              />
+            )}
           </AnimatePresence>
         </div>
       </div>

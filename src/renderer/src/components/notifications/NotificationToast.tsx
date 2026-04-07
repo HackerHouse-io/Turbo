@@ -5,7 +5,7 @@ import type { AttentionType } from '../../../../shared/types'
 import { useNotificationStore } from '../../stores/useNotificationStore'
 import { useSessionStore } from '../../stores/useSessionStore'
 import { useUIStore } from '../../stores/useUIStore'
-import { ATTENTION_TYPE_COLORS } from '../../../../shared/constants'
+import { ATTENTION_TYPE_COLORS, CLAUDE_INSTALL_DOCS_URL } from '../../../../shared/constants'
 import { timeAgo } from '../../lib/format'
 
 const TYPE_ICONS: Record<AttentionType, string> = {
@@ -47,6 +47,12 @@ export function NotificationToast({ toast }: { toast: ToastItem }) {
     useSessionStore.getState().focusSession(item.sessionId)
   }
 
+  const handleInstallClick = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    dismissToast(toast.id)
+    window.api.openExternal(CLAUDE_INSTALL_DOCS_URL)
+  }
+
   return (
     <motion.div
       initial={{ opacity: 0, x: 80 }}
@@ -74,6 +80,15 @@ export function NotificationToast({ toast }: { toast: ToastItem }) {
           </div>
           {item.message && (
             <p className="text-xs text-turbo-text-muted mt-0.5 line-clamp-2">{item.message}</p>
+          )}
+          {item.action === 'open-install-guide' && (
+            <button
+              onClick={handleInstallClick}
+              className="mt-1.5 inline-flex h-6 px-2 items-center rounded text-[11px] font-medium
+                         bg-turbo-accent hover:bg-turbo-accent-hover text-white transition-colors"
+            >
+              Install Claude Code
+            </button>
           )}
         </div>
 

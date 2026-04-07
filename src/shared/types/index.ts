@@ -68,6 +68,8 @@ export interface AgentSession {
 
 export type AttentionType = 'decision' | 'stuck' | 'review' | 'error' | 'completed'
 
+export type AttentionAction = 'open-install-guide'
+
 export interface AttentionItem {
   id: string
   sessionId: string
@@ -77,6 +79,7 @@ export interface AttentionItem {
   timestamp: number
   dismissed: boolean
   read: boolean
+  action?: AttentionAction
 }
 
 // ─── Notification Preferences ──────────────────────────────────
@@ -173,6 +176,12 @@ export interface CreateSessionPayload {
 export interface ClaudeModelInfo {
   alias: string
   label: string
+}
+
+export interface ClaudeInstallStatus {
+  installed: boolean
+  version?: string  // e.g. "1.0.42" if parseable from `claude --version`
+  error?: string    // last error for diagnostics — never user-facing
 }
 
 // ─── Prompt History ────────────────────────────────────────────

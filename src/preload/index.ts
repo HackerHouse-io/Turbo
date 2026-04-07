@@ -19,6 +19,7 @@ import type {
   GitCommitPayload,
   GitExecPayload,
   ClaudeModelInfo,
+  ClaudeInstallStatus,
   GitPreset,
   PlanReadResult,
   PlanSavePayload,
@@ -125,6 +126,12 @@ const api = {
 
   generateSessionTitle: (prompt: string): Promise<string | null> =>
     ipcRenderer.invoke(IPC.CLAUDE_GENERATE_SESSION_TITLE, prompt),
+
+  checkClaudeInstalled: (): Promise<ClaudeInstallStatus> =>
+    ipcRenderer.invoke(IPC.CLAUDE_CHECK_INSTALL),
+
+  recheckClaudeInstalled: (): Promise<ClaudeInstallStatus> =>
+    ipcRenderer.invoke(IPC.CLAUDE_RECHECK_INSTALL),
 
   // ─── Settings ─────────────────────────────────────────────
 

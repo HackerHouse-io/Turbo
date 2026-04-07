@@ -1,5 +1,11 @@
 import { v4 as uuid } from 'uuid'
-import type { ActivityBlock, ActivityBlockType, AgentStatus } from '../../shared/types'
+import type { ActivityBlock, ActivityBlockType, AgentStatus, AttentionAction } from '../../shared/types'
+
+export interface AttentionNotice {
+  type: 'decision' | 'stuck' | 'error' | 'completed'
+  message: string
+  action?: AttentionAction
+}
 
 /**
  * Comprehensive ANSI/terminal escape stripping.
@@ -91,7 +97,7 @@ export class OutputMonitor {
   onStatusChange?: (status: AgentStatus, message?: string) => void
   onBlockCreated?: (block: ActivityBlock) => void
   onBlockUpdated?: (block: ActivityBlock) => void
-  onAttentionNeeded?: (type: 'decision' | 'stuck' | 'error' | 'completed', message: string) => void
+  onAttentionNeeded?: (notice: AttentionNotice) => void
 
   constructor() {}
 
@@ -136,10 +142,20 @@ export class OutputMonitor {
 
     if (code === 0) {
       this.setStatus('completed')
-      this.onAttentionNeeded?.('completed', 'Task completed successfully')
+      this.onAttentionNeeded?.({ type: 'completed', message: 'Task completed successfully' })
+    } else if (code === 127) {
+      // 127 = command not found. The PTY tried to exec `claude` and the
+      // shell couldn't find it. Surface a friendly install prompt instead
+      // of the cryptic exit code.
+      this.setStatus('error')
+      this.onAttentionNeeded?.({
+        type: 'error',
+        message: 'Claude Code is not installed or not in PATH. Click to install.',
+        action: 'open-install-guide'
+      })
     } else {
       this.setStatus('error')
-      this.onAttentionNeeded?.('error', `Task exited with code ${code}`)
+      this.onAttentionNeeded?.({ type: 'error', message: `Task exited with code ${code}` })
     }
   }
 
@@ -181,7 +197,7 @@ export class OutputMonitor {
     // Check for question patterns (needs attention)
     for (const pattern of QUESTION_PATTERNS) {
       if (pattern.test(trimmed)) {
-        this.onAttentionNeeded?.('decision', trimmed)
+        this.onAttentionNeeded?.({ type: 'decision', message: trimmed })
         this.setStatus('waiting_for_input')
         return
       }
@@ -305,7 +321,7 @@ export class OutputMonitor {
         const message = this.lastResponseLine
           ? `"${this.lastResponseLine.slice(0, 120)}"`
           : 'Claude is waiting for your input'
-        this.onAttentionNeeded?.('decision', message)
+        this.onAttentionNeeded?.({ type: 'decision', message })
         return
       }
     }
@@ -329,15 +345,15 @@ export class OutputMonitor {
               const message = this.lastResponseLine
                 ? `"${this.lastResponseLine.slice(0, 120)}"`
                 : 'Claude is waiting for your input'
-              this.onAttentionNeeded?.('decision', message)
+              this.onAttentionNeeded?.({ type: 'decision', message })
               return
             }
           }
         }
-        this.onAttentionNeeded?.(
-          'stuck',
-          'Task has been idle for over 60 seconds'
-        )
+        this.onAttentionNeeded?.({
+          type: 'stuck',
+          message: 'Task has been idle for over 60 seconds'
+        })
       }
     }, 60_000)
   }

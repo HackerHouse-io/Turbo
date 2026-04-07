@@ -1,5 +1,6 @@
 import { execFile } from 'child_process'
 import type { ClaudeModelInfo } from '../../shared/types'
+import { getEnhancedEnv } from '../system/resolveShellPath'
 
 const KNOWN_ALIASES: ClaudeModelInfo[] = [
   { alias: 'opus', label: 'Opus' },
@@ -18,7 +19,7 @@ export function detectModels(): Promise<ClaudeModelInfo[]> {
   if (cachedModels) return Promise.resolve(cachedModels)
 
   return new Promise(resolve => {
-    execFile('claude', ['--help'], { timeout: 10_000 }, (err, stdout) => {
+    execFile('claude', ['--help'], { timeout: 10_000, env: getEnhancedEnv() }, (err, stdout) => {
       if (err || !stdout) {
         cachedModels = KNOWN_ALIASES
         resolve(cachedModels)

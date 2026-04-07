@@ -7,18 +7,7 @@ import { useGitActionsStore } from '../../stores/useGitActionsStore'
 import { BranchSwitcher } from '../command-center/BranchSwitcher'
 import { PaletteIcon } from '../command-palette/PaletteIcon'
 import { runInTerminalDrawer } from '../../lib/runInTerminalDrawer'
-
-// ─── Spinner ────────────────────────────────────────────────────
-
-function Spinner() {
-  return (
-    <svg className="w-3.5 h-3.5 animate-spin" viewBox="0 0 24 24" fill="none">
-      <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeLinecap="round"
-              className="opacity-20" />
-      <path d="M12 2a10 10 0 019.95 9" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
-    </svg>
-  )
-}
+import { Spinner } from '../common/Spinner'
 
 // ─── Action Button ──────────────────────────────────────────────
 
@@ -43,7 +32,7 @@ function ActionButton({ label, shortcut, icon, color, loading, disabled, tooltip
                     ${color}`}
       >
         <span className="w-4 h-4 flex items-center justify-center flex-shrink-0">
-          {loading ? <Spinner /> : icon}
+          {loading ? <Spinner className="w-3.5 h-3.5" /> : icon}
         </span>
         <span className="flex-1 text-left">{label}</span>
         <kbd className="text-[9px] opacity-70 font-mono">{shortcut}</kbd>

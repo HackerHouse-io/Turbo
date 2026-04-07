@@ -55,6 +55,8 @@ export const IPC = {
   CLAUDE_DETECT_MODELS: 'claude:detect-models',
   CLAUDE_GENERATE_SLUG: 'claude:generate-slug',
   CLAUDE_GENERATE_SESSION_TITLE: 'claude:generate-session-title',
+  CLAUDE_CHECK_INSTALL: 'claude:check-install',
+  CLAUDE_RECHECK_INSTALL: 'claude:recheck-install',
 
   // Prompt History
   PROMPT_HISTORY_LIST: 'prompt:history:list',
@@ -138,6 +140,9 @@ export const PROMPT_HISTORY_MAX = 50
 export const SESSION_HISTORY_MAX = 200
 export const MAX_ACTIVITY_BLOCKS = 200
 export const MAX_PERSISTED_BLOCKS = 50
+
+export const CLAUDE_INSTALL_DOCS_URL = 'https://docs.claude.com/en/docs/claude-code/setup'
+export const CLAUDE_INSTALL_COMMAND = 'npm install -g @anthropic-ai/claude-code'
 
 // ─── Session option labels ───────────────────────────────────
 import type { EffortLevel, PermissionMode } from './types'
