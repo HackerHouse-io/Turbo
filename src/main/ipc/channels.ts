@@ -38,6 +38,7 @@ import { GitHubManager } from '../github/GitHubManager'
 import { ProjectCreationManager } from '../ProjectCreationManager'
 import { detectModels } from '../claude/ClaudeModelDetector'
 import { checkClaudeInstalled, invalidateClaudeInstallCache } from '../claude/checkClaudeInstalled'
+import { checkClaudeUpdates, invalidateClaudeUpdateCache } from '../claude/checkClaudeUpdates'
 import { getEnhancedEnv } from '../system/resolveShellPath'
 import { detectRunCommand, detectRunCommandWithClaude } from '../run/detectRunCommand'
 import { detectXcodeProject } from '../run/detectXcodeProject'
@@ -322,7 +323,12 @@ export function registerIpcHandlers(opts: IpcHandlerOptions): void {
 
   ipcMain.handle(IPC.CLAUDE_RECHECK_INSTALL, async () => {
     invalidateClaudeInstallCache()
+    invalidateClaudeUpdateCache()
     return checkClaudeInstalled()
+  })
+
+  ipcMain.handle(IPC.CLAUDE_CHECK_UPDATES, async () => {
+    return checkClaudeUpdates()
   })
 
   ipcMain.handle(IPC.CLAUDE_GENERATE_SLUG, async (_e, text: string) => {

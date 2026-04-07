@@ -20,6 +20,7 @@ import type {
   GitExecPayload,
   ClaudeModelInfo,
   ClaudeInstallStatus,
+  ClaudeUpdateStatus,
   GitPreset,
   PlanReadResult,
   PlanSavePayload,
@@ -132,6 +133,9 @@ const api = {
 
   recheckClaudeInstalled: (): Promise<ClaudeInstallStatus> =>
     ipcRenderer.invoke(IPC.CLAUDE_RECHECK_INSTALL),
+
+  checkClaudeUpdates: (): Promise<ClaudeUpdateStatus> =>
+    ipcRenderer.invoke(IPC.CLAUDE_CHECK_UPDATES),
 
   // ─── Settings ─────────────────────────────────────────────
 

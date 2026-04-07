@@ -184,6 +184,13 @@ export interface ClaudeInstallStatus {
   error?: string    // last error for diagnostics — never user-facing
 }
 
+export interface ClaudeUpdateStatus {
+  updateAvailable: boolean
+  currentVersion?: string  // local `claude --version`
+  latestVersion?: string   // npm registry "latest" tag
+  error?: string           // last error for diagnostics — never user-facing
+}
+
 // ─── Prompt History ────────────────────────────────────────────
 
 export interface PromptHistoryItem {

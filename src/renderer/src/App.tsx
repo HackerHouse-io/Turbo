@@ -8,6 +8,7 @@ import { useUIStore } from './stores/useUIStore'
 import { useKeybindingsStore } from './stores/useKeybindingsStore'
 import { useNotificationStore } from './stores/useNotificationStore'
 import { useGitHubStore } from './stores/useGitHubStore'
+import { useUpdateStore } from './stores/useUpdateStore'
 import { appendTerminalData, clearTerminalBuffer } from './lib/terminalBuffer'
 import { clearDrawerTerminal } from './lib/runInTerminalDrawer'
 
@@ -38,6 +39,11 @@ export default function App() {
     useKeybindingsStore.getState().initialize()
     useNotificationStore.getState().loadSettings()
     useGitHubStore.getState().initialize()
+
+    // Fire-and-forget Claude CLI update check. Silently no-ops on
+    // failure; opens the UpdateAvailableModal if a newer version is
+    // on npm and the user hasn't already dismissed it.
+    void useUpdateStore.getState().checkForUpdates()
 
     // Buffer all terminal data globally so XTermRenderer can replay on mount
     const unsubTerminal = window.api.onTerminalData((sessionId, data) => {

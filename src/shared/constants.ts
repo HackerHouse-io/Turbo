@@ -57,6 +57,7 @@ export const IPC = {
   CLAUDE_GENERATE_SESSION_TITLE: 'claude:generate-session-title',
   CLAUDE_CHECK_INSTALL: 'claude:check-install',
   CLAUDE_RECHECK_INSTALL: 'claude:recheck-install',
+  CLAUDE_CHECK_UPDATES: 'claude:check-updates',
 
   // Prompt History
   PROMPT_HISTORY_LIST: 'prompt:history:list',
@@ -143,6 +144,11 @@ export const MAX_PERSISTED_BLOCKS = 50
 
 export const CLAUDE_INSTALL_DOCS_URL = 'https://docs.claude.com/en/docs/claude-code/setup'
 export const CLAUDE_INSTALL_COMMAND = 'npm install -g @anthropic-ai/claude-code'
+export const CLAUDE_UPDATE_COMMAND = 'claude update'
+export const CLAUDE_NPM_PACKAGE_URL = 'https://registry.npmjs.org/@anthropic-ai/claude-code/latest'
+
+// localStorage keys (renderer)
+export const DISMISSED_CLAUDE_VERSION_KEY = 'turbo:dismissedClaudeVersion'
 
 // ─── Session option labels ───────────────────────────────────
 import type { EffortLevel, PermissionMode } from './types'

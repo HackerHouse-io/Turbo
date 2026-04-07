@@ -3,6 +3,7 @@ import { useProjectStore } from '../../stores/useProjectStore'
 import { useSessionStore } from '../../stores/useSessionStore'
 import { useUIStore } from '../../stores/useUIStore'
 import { useGitIdentityStore } from '../../stores/useGitIdentityStore'
+import { useUpdateStore } from '../../stores/useUpdateStore'
 import { AttachmentChip } from './AttachmentChip'
 import { BUILT_IN_INTENTS, getIntent, buildSessionPayload, DEFAULT_INTENT_ID } from '../../../../shared/intents'
 import { EFFORT_LEVELS, PERMISSION_MODES } from '../../../../shared/constants'
@@ -80,6 +81,12 @@ export function InlinePrompt() {
 
   const handleSubmit = useCallback(async () => {
     if ((!prompt.trim() && attachments.length === 0) || !selectedProject) return
+
+    // Block the send while we check for a Claude CLI update. If a modal
+    // appears, this awaits the user's choice. Dismiss → proceed; Update
+    // → cancel the send (the typed prompt stays in the textarea).
+    const proceed = await useUpdateStore.getState().requireUpdateCheckBeforeSend()
+    if (!proceed) return
 
     setIsSubmitting(true)
     try {

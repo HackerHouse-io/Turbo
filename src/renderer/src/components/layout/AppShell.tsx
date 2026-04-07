@@ -18,8 +18,10 @@ import { ToastContainer } from '../notifications/ToastContainer'
 import { NotificationCenter } from '../notifications/NotificationCenter'
 import { CreateProjectOverlay } from '../project/CreateProjectOverlay'
 import { ProjectOverview } from '../overview/ProjectOverview'
+import { UpdateAvailableModal } from '../update/UpdateAvailableModal'
 import { useTourAutoStart } from '../../hooks/useTourAutoStart'
 import { useTourStore } from '../../stores/useTourStore'
+import { useUpdateStore } from '../../stores/useUpdateStore'
 
 // Lazy-load the tour to keep ~350 lines of SVG illustrations out of cold start
 const OnboardingTour = lazy(() =>
@@ -47,6 +49,7 @@ const Overlays = memo(function Overlays() {
   const terminalDrawerOpen = useUIStore(s => s.terminalDrawerOpen)
   const notificationCenterOpen = useUIStore(s => s.notificationCenterOpen)
   const createProjectOverlayOpen = useUIStore(s => s.createProjectOverlayOpen)
+  const updateModalOpen = useUpdateStore(s => s.modalOpen)
   const tourOpen = useTourStore(s => s.tourOpen)
 
   return (
@@ -60,6 +63,7 @@ const Overlays = memo(function Overlays() {
       {terminalDrawerOpen && <TerminalDrawer />}
       <AnimatePresence>{notificationCenterOpen && <NotificationCenter />}</AnimatePresence>
       <AnimatePresence>{createProjectOverlayOpen && <CreateProjectOverlay />}</AnimatePresence>
+      <AnimatePresence>{updateModalOpen && <UpdateAvailableModal />}</AnimatePresence>
       {tourOpen && (
         <Suspense fallback={null}>
           <OnboardingTour />
@@ -185,7 +189,9 @@ export function AppShell() {
       // Escape -> Close overlays (highest z-index first)
       if (e.key === 'Escape') {
         const ui = useUIStore.getState()
-        if (ui.createProjectOverlayOpen) {
+        if (useUpdateStore.getState().modalOpen) {
+          useUpdateStore.getState().dismiss()
+        } else if (ui.createProjectOverlayOpen) {
           ui.closeCreateProjectOverlay()
         } else if (ui.shortcutsOverlayOpen) {
           ui.closeShortcutsOverlay()
