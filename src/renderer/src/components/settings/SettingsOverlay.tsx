@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useUIStore } from '../../stores/useUIStore'
+import { useGitHubStore } from '../../stores/useGitHubStore'
 import { SettingsSidebar, type SettingsSection } from './SettingsSidebar'
 import { SectionGeneral } from './sections/SectionGeneral'
 import { SectionNotifications } from './sections/SectionNotifications'
@@ -15,7 +16,14 @@ import type { ClaudeModelInfo, EffortLevel, PermissionMode, GitQuickActionOverri
 
 export function SettingsOverlay() {
   const closeSettings = useUIStore(s => s.closeSettings)
-  const [activeSection, setActiveSection] = useState<SettingsSection>('general')
+  const [activeSection, setActiveSection] = useState<SettingsSection>(
+    () => useUIStore.getState().pendingSettingsSection ?? 'general'
+  )
+
+  useEffect(() => {
+    useUIStore.getState().clearPendingSettingsSection()
+    useGitHubStore.getState().refreshStatus()
+  }, [])
 
   // ─── State (unchanged from original) ─────────────────────
   const [models, setModels] = useState<ClaudeModelInfo[]>([])

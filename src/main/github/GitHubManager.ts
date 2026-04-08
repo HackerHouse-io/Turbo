@@ -3,6 +3,7 @@ import { join } from 'path'
 import { readFile, writeFile, unlink } from 'fs/promises'
 import { execFile } from 'child_process'
 import { GITHUB_API_BASE } from '../../shared/constants'
+import { getEnhancedEnv } from '../system/resolveShellPath'
 import type {
   GitHubUser,
   GitHubOrg,
@@ -40,7 +41,7 @@ export class GitHubManager {
 
   private getGhCliToken(): Promise<string | null> {
     return new Promise(resolve => {
-      execFile('gh', ['auth', 'token'], { timeout: 5000 }, (err, stdout) => {
+      execFile('gh', ['auth', 'token'], { timeout: 5000, env: getEnhancedEnv() }, (err, stdout) => {
         if (err || !stdout.trim()) {
           resolve(null)
           return

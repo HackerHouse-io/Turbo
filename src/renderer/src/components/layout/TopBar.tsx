@@ -160,7 +160,7 @@ export function TopBar() {
 
         {/* Settings */}
         <button
-          onClick={openSettings}
+          onClick={() => openSettings()}
           className="p-1.5 rounded-lg hover:bg-turbo-surface-active text-turbo-text-muted
                      hover:text-turbo-text transition-colors"
           title="Settings"

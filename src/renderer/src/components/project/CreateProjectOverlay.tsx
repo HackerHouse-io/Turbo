@@ -4,6 +4,7 @@ import { useUIStore } from '../../stores/useUIStore'
 import { useProjectStore } from '../../stores/useProjectStore'
 import { useGitHubStore } from '../../stores/useGitHubStore'
 import { ToggleSwitch } from '../shared/ToggleSwitch'
+import { PaletteIcon } from '../command-palette/PaletteIcon'
 import {
   COMMON_LICENSES,
   COMMON_GITIGNORE_TEMPLATES,
@@ -40,6 +41,7 @@ export function CreateProjectOverlay() {
   const [creating, setCreating] = useState(false)
 
   useEffect(() => {
+    useGitHubStore.getState().refreshStatus()
     window.api.getSetting('defaultProjectsDir').then(dir => {
       if (dir) setProjectsDir(dir as string)
     })
@@ -132,6 +134,11 @@ export function CreateProjectOverlay() {
     close()
   }
 
+  const handleConnectGitHub = useCallback(() => {
+    close()
+    useUIStore.getState().openSettings('integrations')
+  }, [close])
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -205,6 +212,7 @@ export function CreateProjectOverlay() {
                   ghConnected={ghConnected}
                   orgs={ghOrgs}
                   onUpdate={updateConfig}
+                  onConnectGitHub={handleConnectGitHub}
                 />
               </motion.div>
             )}
@@ -343,19 +351,20 @@ interface ProjectConfig {
 }
 
 function ConfigureStep({
-  config, ghConnected, orgs, onUpdate
+  config, ghConnected, orgs, onUpdate, onConnectGitHub
 }: {
   config: ProjectConfig
   ghConnected: boolean
   orgs: { login: string; avatarUrl: string }[]
   onUpdate: (partial: Partial<ProjectConfig>) => void
+  onConnectGitHub: () => void
 }) {
   const selectClass = `h-8 px-3 pr-7 rounded-lg border border-turbo-border bg-turbo-bg text-xs
                        text-turbo-text appearance-none cursor-pointer
                        hover:border-turbo-border-bright focus:outline-none focus:border-turbo-accent/50
                        transition-colors`
 
-  const showGitHub = config.createGitHubRepo && ghConnected
+  const showGitHub = config.createGitHubRepo
 
   return (
     <div className="space-y-4">
@@ -373,12 +382,7 @@ function ConfigureStep({
       </div>
 
       <div className="flex items-center justify-between py-2">
-        <div>
-          <span className="text-sm text-turbo-text-dim">Create GitHub repository</span>
-          {!ghConnected && (
-            <p className="text-[11px] text-turbo-text-muted mt-0.5">Connect GitHub in Settings &gt; Integrations first</p>
-          )}
-        </div>
+        <span className="text-sm text-turbo-text-dim">Create GitHub repository</span>
         <ToggleSwitch
           checked={config.createGitHubRepo}
           onChange={v => onUpdate({ createGitHubRepo: v })}
@@ -386,6 +390,22 @@ function ConfigureStep({
       </div>
 
       <div className="rounded-lg border border-turbo-border bg-turbo-bg/50 divide-y divide-turbo-border">
+        {showGitHub && !ghConnected && (
+          <div className="py-2.5 px-3 flex items-center justify-between bg-turbo-accent/5">
+            <div className="flex items-center gap-2 min-w-0">
+              <PaletteIcon icon="info-circle" className="w-3.5 h-3.5 text-turbo-accent flex-shrink-0" />
+              <span className="text-[11px] text-turbo-text-dim truncate">
+                GitHub not connected — repo will be local only
+              </span>
+            </div>
+            <button
+              onClick={onConnectGitHub}
+              className="px-2.5 h-6 rounded-md text-[11px] font-medium bg-turbo-accent/20 text-turbo-accent hover:bg-turbo-accent/30 transition-colors flex-shrink-0"
+            >
+              Connect
+            </button>
+          </div>
+        )}
         {showGitHub && (
           <>
             <div className="py-2.5 px-3 flex items-center justify-between">
@@ -407,22 +427,20 @@ function ConfigureStep({
               </div>
             </div>
 
-            {orgs.length > 0 && (
-              <div className="py-2.5 px-3 flex items-center justify-between">
-                <span className="text-xs text-turbo-text-dim">Owner</span>
-                <div className="relative">
-                  <select value={config.org} onChange={e => onUpdate({ org: e.target.value })} className={selectClass}>
-                    <option value="">Personal</option>
-                    {orgs.map(o => (
-                      <option key={o.login} value={o.login}>{o.login}</option>
-                    ))}
-                  </select>
-                  <svg className="w-2.5 h-2.5 absolute right-2 top-1/2 -translate-y-1/2 text-turbo-text-muted pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
-                  </svg>
-                </div>
+            <div className="py-2.5 px-3 flex items-center justify-between">
+              <span className="text-xs text-turbo-text-dim">Owner</span>
+              <div className="relative">
+                <select value={config.org} onChange={e => onUpdate({ org: e.target.value })} className={selectClass}>
+                  <option value="">Personal</option>
+                  {orgs.map(o => (
+                    <option key={o.login} value={o.login}>{o.login}</option>
+                  ))}
+                </select>
+                <svg className="w-2.5 h-2.5 absolute right-2 top-1/2 -translate-y-1/2 text-turbo-text-muted pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+                </svg>
               </div>
-            )}
+            </div>
 
             <div className="py-2.5 px-3 flex items-center justify-between">
               <span className="text-xs text-turbo-text-dim">License</span>

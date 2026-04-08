@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { useTerminalStore } from './useTerminalStore'
 import { useProjectStore } from './useProjectStore'
+import type { SettingsSection } from '../components/settings/SettingsSidebar'
 
 type TerminalDrawerTarget =
   | { type: 'session'; sessionId: string }
@@ -46,8 +47,10 @@ interface UIState {
 
   // Settings overlay
   settingsOpen: boolean
-  openSettings: () => void
+  pendingSettingsSection: SettingsSection | null
+  openSettings: (section?: SettingsSection) => void
   closeSettings: () => void
+  clearPendingSettingsSection: () => void
 
   // Shortcuts overlay
   shortcutsOverlayOpen: boolean
@@ -182,8 +185,13 @@ export const useUIStore = create<UIState>((set) => ({
   closeTimeline: () => set({ timelineOpen: false }),
 
   settingsOpen: false,
-  openSettings: () => set({ settingsOpen: true }),
+  pendingSettingsSection: null,
+  openSettings: (section) => set({
+    settingsOpen: true,
+    pendingSettingsSection: section ?? null
+  }),
   closeSettings: () => set({ settingsOpen: false }),
+  clearPendingSettingsSection: () => set({ pendingSettingsSection: null }),
 
   shortcutsOverlayOpen: false,
   openShortcutsOverlay: () => set({ shortcutsOverlayOpen: true }),
