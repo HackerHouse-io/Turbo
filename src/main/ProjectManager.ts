@@ -1,7 +1,7 @@
 import { v4 as uuid } from 'uuid'
 import { readdirSync, existsSync } from 'fs'
 import { join } from 'path'
-import type { Project, AddProjectPayload, ScannedProject, GitIdentity } from '../shared/types'
+import type { Project, AddProjectPayload, ScannedProject, GitIdentity, RunCommandSource } from '../shared/types'
 import { PROJECT_COLORS } from '../shared/constants'
 import { JsonFileStore } from './JsonFileStore'
 
@@ -74,7 +74,7 @@ export class ProjectManager {
     }
   }
 
-  setRunCommand(projectId: string, command: string | undefined, source?: string, sourceMtime?: number): void {
+  setRunCommand(projectId: string, command: string | undefined, source?: RunCommandSource, sourceMtime?: number): void {
     const project = this.projects.get(projectId)
     if (project) {
       project.runCommand = command

@@ -2,10 +2,11 @@ import { readFileSync, statSync, readdirSync } from 'fs'
 import { join } from 'path'
 import { getEnhancedEnv } from '../system/resolveShellPath'
 import { execFileAsync as execFilePromise } from '../utils/execFileAsync'
+import type { RunCommandFileSource } from '../../shared/types'
 
 export interface DetectResult {
   command: string
-  source: string
+  source: RunCommandFileSource
   sourceMtime?: number
 }
 
@@ -40,7 +41,7 @@ async function detectXcode(
   projectPath: string,
   ext: '.xcworkspace' | '.xcodeproj',
   flag: '-workspace' | '-project',
-  sourceLabel: string
+  sourceLabel: RunCommandFileSource
 ): Promise<DetectResult | null> {
   const match = entries.find(e => e.endsWith(ext))
   if (!match) return null
@@ -112,7 +113,7 @@ export async function detectRunCommand(projectPath: string): Promise<DetectResul
   if (xcp) return xcp
 
   // 5–8. Simple file → command mapping
-  const simpleChecks: [string, string, string][] = [
+  const simpleChecks: [string, string, RunCommandFileSource][] = [
     ['Makefile', 'make', 'Makefile'],
     ['Cargo.toml', 'cargo run', 'Cargo.toml'],
     ['go.mod', 'go run .', 'go.mod'],

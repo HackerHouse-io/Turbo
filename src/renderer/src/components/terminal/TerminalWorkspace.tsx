@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useMemo } from 'react'
-import { motion } from 'framer-motion'
+import { motion, type Variants } from 'framer-motion'
 import { useUIStore } from '../../stores/useUIStore'
 import { useTerminalStore } from '../../stores/useTerminalStore'
 import { useProjectStore } from '../../stores/useProjectStore'
@@ -9,7 +9,7 @@ import type { SplitRatios } from './PaneLayout'
 import { PaletteIcon } from '../command-palette/PaletteIcon'
 import type { PlainTerminalType } from '../../../../shared/types'
 
-const overlayVariants = {
+const overlayVariants: Variants = {
   initial: (dir: 'down' | 'up') => ({
     y: dir === 'down' ? '-100%' : '100%',
   }),

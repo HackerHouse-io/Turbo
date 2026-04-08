@@ -247,7 +247,7 @@ const api = {
   onPlanFileChanged: (callback: (result: PlanReadResult) => void) => {
     const handler = (_: Electron.IpcRendererEvent, result: PlanReadResult) => callback(result)
     ipcRenderer.on(IPC.PLAN_FILE_CHANGED, handler)
-    return () => ipcRenderer.removeListener(IPC.PLAN_FILE_CHANGED, handler)
+    return () => { ipcRenderer.removeListener(IPC.PLAN_FILE_CHANGED, handler) }
   },
 
   // ─── Plain Terminal ────────────────────────────────────────

@@ -41,7 +41,6 @@ export const ProjectOverviewCard = React.memo(function ProjectOverviewCard({
   const errorCount = overviewData?.errorCount ?? 0
   const git = overviewData?.git ?? null
   const plan = overviewData?.plan ?? null
-  const activePlaybook = overviewData?.activePlaybook ?? null
 
   const borderClass = attentionCount > 0
     ? 'border-turbo-error/50'
@@ -209,17 +208,6 @@ export const ProjectOverviewCard = React.memo(function ProjectOverviewCard({
           )}
         </div>
       </div>
-
-      {/* Active playbook */}
-      {activePlaybook && (
-        <div className="flex items-center gap-1.5 mb-3 relative">
-          <PaletteIcon icon="playbook" className="w-3 h-3 text-turbo-accent flex-shrink-0" />
-          <span className="text-xs text-turbo-text-dim truncate">{activePlaybook.name}</span>
-          <span className="text-[10px] text-turbo-text-muted flex-shrink-0">
-            {activePlaybook.currentStep}/{activePlaybook.totalSteps}
-          </span>
-        </div>
-      )}
 
       {/* Latest session */}
       {latestSession ? (

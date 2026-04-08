@@ -12,6 +12,7 @@ interface NerveCenterData {
   loading: boolean
   error: string | null
   refresh: () => void
+  forceRefresh: () => void
 }
 
 function parseCommits(raw: string): GitCommitEntry[] {

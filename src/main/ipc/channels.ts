@@ -21,7 +21,8 @@ import type {
   CreatePlainTerminalPayload,
   PlainTerminal,
   CreateWorktreePayload,
-  CreateProjectPayload
+  CreateProjectPayload,
+  RunCommandSource
 } from '../../shared/types'
 import { IPC } from '../../shared/constants'
 import { ClaudeSessionManager } from '../claude/ClaudeSessionManager'
@@ -269,10 +270,10 @@ export function registerIpcHandlers(opts: IpcHandlerOptions): void {
   })
 
   ipcMain.handle(IPC.PROJECT_SET_RUN_COMMAND, async (_e, projectId: string, command: string | undefined, source?: string, sourceMtime?: number) => {
-    projectManager.setRunCommand(projectId, command, source, sourceMtime)
+    projectManager.setRunCommand(projectId, command, source as RunCommandSource | undefined, sourceMtime)
   })
 
-  async function detectFull(projectPath: string): Promise<{ command: string; source: string; sourceMtime?: number } | null> {
+  async function detectFull(projectPath: string): Promise<{ command: string; source: RunCommandSource; sourceMtime?: number } | null> {
     const fileResult = await detectRunCommand(projectPath)
     if (fileResult) return fileResult
     const aiResult = await detectRunCommandWithClaude(projectPath)

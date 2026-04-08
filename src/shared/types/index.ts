@@ -366,6 +366,7 @@ export type KeybindingActionId =
   | 'toggleCommandPalette' | 'toggleTerminalWorkspace' | 'toggleSettings'
   | 'toggleOverview' | 'toggleTimeline' | 'togglePlanOverlay'
   | 'toggleProjectSelector' | 'showShortcuts'
+  | 'workspaceDown' | 'workspaceUp'
 
 export interface KeybindingDefinition {
   id: KeybindingActionId
