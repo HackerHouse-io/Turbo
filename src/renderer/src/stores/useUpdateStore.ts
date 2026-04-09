@@ -110,7 +110,16 @@ export const useUpdateStore = create<UpdateState>((set, get) => ({
   },
 
   acceptUpdate: () => {
-    set({ modalOpen: false })
+    // Treat "Update Now" as acknowledgment of this version so we don't
+    // re-prompt while `claude update` is still running in the background
+    // (the npm cache TTL is 1 hour, so the next send would otherwise
+    // reopen the modal before the update finishes).
+    const latest = get().latestVersion
+    if (latest) saveDismissedVersion(latest)
+    set({
+      modalOpen: false,
+      ...(latest ? { dismissedVersion: latest } : {})
+    })
     if (pendingResolver) {
       const r = pendingResolver
       pendingResolver = null
