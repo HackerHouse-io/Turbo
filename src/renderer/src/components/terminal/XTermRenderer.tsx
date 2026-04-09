@@ -132,6 +132,20 @@ export function XTermRenderer({ terminalId, mode = 'session', showResume, onResu
     })
     resizeObserver.observe(containerRef.current)
 
+    // Restore scrollback position when window regains focus — xterm's renderer
+    // can drift the viewport when waking from a blurred state.
+    const handleWindowFocus = () => {
+      const buf = terminal.buffer.active
+      if (buf.viewportY >= buf.baseY) return
+      const target = buf.viewportY
+      requestAnimationFrame(() => {
+        const current = terminal.buffer.active.viewportY
+        if (current !== target) terminal.scrollLines(target - current)
+      })
+    }
+
+    window.addEventListener('focus', handleWindowFocus)
+
     // Focus terminal — delay slightly so drawer animation settles
     terminal.focus()
     const focusTimer = setTimeout(() => terminal.focus(), 150)
@@ -141,6 +155,7 @@ export function XTermRenderer({ terminalId, mode = 'session', showResume, onResu
       unsubData()
       unsubClear?.()
       resizeObserver.disconnect()
+      window.removeEventListener('focus', handleWindowFocus)
       terminal.dispose()
       termRef.current = null
       fitRef.current = null
