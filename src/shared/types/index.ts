@@ -165,6 +165,7 @@ export interface CreateSessionPayload {
   projectPath: string
   prompt?: string
   name?: string
+  titleSeed?: string              // Raw user text (no @file refs, no intent wrap) used solely for AI title generation
   permissionMode?: PermissionMode
   effort?: EffortLevel
   model?: string

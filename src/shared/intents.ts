@@ -123,10 +123,22 @@ export function buildSessionPayload(
   model?: string,
   attachments?: CreateSessionPayload['attachments']
 ): CreateSessionPayload {
+  const rawUser = userPrompt.trim()
+  const atRefs = attachments?.length
+    ? attachments.map(a => `@${a.filePath}`).join('\n')
+    : ''
+  const fullPrompt = [atRefs, rawUser].filter(Boolean).join('\n\n')
+
+  // Title seed: prefer the user's real words; fall back to attachment filenames
+  // so image-only submissions still get a sensible Claude-generated title.
+  const titleSeed = rawUser || (attachments?.length
+    ? `Task involving attached file(s): ${attachments.map(a => a.fileName).join(', ')}`
+    : '')
+
   return {
     projectPath,
-    prompt: intent.wrapPrompt(userPrompt),
-    name: userPrompt.trim().slice(0, 60) || 'New Task',
+    prompt: intent.wrapPrompt(fullPrompt),
+    titleSeed,
     permissionMode: intent.permissionMode,
     effort: intent.effort,
     model,

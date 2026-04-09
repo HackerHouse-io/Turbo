@@ -70,7 +70,9 @@ export class ClaudeSessionManager extends EventEmitter {
    */
   async createSession(payload: CreateSessionPayload): Promise<AgentSession> {
     const id = uuid()
-    const name = payload.name || this.generateName(payload.prompt)
+    // Placeholder — replaced asynchronously by generateSmartTitle below unless
+    // the caller explicitly provided a name.
+    const name = payload.name || 'New Task'
 
     const session: AgentSession = {
       id,
@@ -104,9 +106,12 @@ export class ClaudeSessionManager extends EventEmitter {
       env
     })
 
-    // Fire async AI title generation (non-blocking)
-    if (!payload.name && payload.prompt) {
-      this.generateSmartTitle(id, payload.prompt)
+    // Fire async AI title generation (non-blocking). Use titleSeed (clean user
+    // text without @file refs or intent wrapping) so Claude titles the user's
+    // actual task, not the prompt scaffolding.
+    const seed = payload.titleSeed || payload.prompt
+    if (!payload.name && seed) {
+      this.generateSmartTitle(id, seed)
     }
 
     this.emitUpdate(id)
@@ -579,14 +584,6 @@ export class ClaudeSessionManager extends EventEmitter {
     }
   }
 
-  private generateName(prompt?: string): string {
-    if (!prompt) return 'New Task'
-    // Take first ~40 chars of prompt as name
-    const clean = prompt.replace(/\s+/g, ' ').trim()
-    if (clean.length <= 40) return clean
-    return clean.slice(0, 37) + '...'
-  }
-
   private async generateSmartTitle(sessionId: string, prompt: string): Promise<void> {
     const ac = new AbortController()
     this.titleAbortControllers.set(sessionId, ac)
@@ -598,14 +595,18 @@ export class ClaudeSessionManager extends EventEmitter {
         signal: ac.signal,
         env: getEnhancedEnv()
       })
-      const cleaned = result.stdout.trim().replace(/^["'`]|["'`]$/g, '')
+      const cleaned = result.stdout
+        .trim()
+        .replace(/^["'`]|["'`]$/g, '')
+        .replace(/\s+/g, ' ')
+        .slice(0, 80)
       const session = this.sessions.get(sessionId)
       if (session && cleaned) {
         session.name = cleaned
         this.emitUpdate(sessionId)
       }
     } catch {
-      // Silently keep truncated prompt as fallback
+      // Silently keep placeholder ('New Task') as fallback
     } finally {
       this.titleAbortControllers.delete(sessionId)
     }

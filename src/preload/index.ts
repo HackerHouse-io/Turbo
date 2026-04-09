@@ -125,9 +125,6 @@ const api = {
   generateSlug: (text: string): Promise<string | null> =>
     ipcRenderer.invoke(IPC.CLAUDE_GENERATE_SLUG, text),
 
-  generateSessionTitle: (prompt: string): Promise<string | null> =>
-    ipcRenderer.invoke(IPC.CLAUDE_GENERATE_SESSION_TITLE, prompt),
-
   checkClaudeInstalled: (): Promise<ClaudeInstallStatus> =>
     ipcRenderer.invoke(IPC.CLAUDE_CHECK_INSTALL),
 

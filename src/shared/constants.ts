@@ -54,7 +54,6 @@ export const IPC = {
   // Claude CLI
   CLAUDE_DETECT_MODELS: 'claude:detect-models',
   CLAUDE_GENERATE_SLUG: 'claude:generate-slug',
-  CLAUDE_GENERATE_SESSION_TITLE: 'claude:generate-session-title',
   CLAUDE_CHECK_INSTALL: 'claude:check-install',
   CLAUDE_RECHECK_INSTALL: 'claude:recheck-install',
   CLAUDE_CHECK_UPDATES: 'claude:check-updates',

@@ -112,13 +112,10 @@ export function InlinePrompt() {
         }
       }
 
-      const atRefs = attachments.map(a => `@${a.filePath}`).join('\n')
-      const fullPrompt = atRefs ? `${atRefs}\n\n${prompt.trim()}` : prompt.trim()
-
       const currentIntent = getIntent(selectedIntentId)
       const payload = buildSessionPayload(
         currentIntent,
-        fullPrompt,
+        prompt.trim(),
         selectedProject.path,
         model,
         attachments.length > 0 ? attachments : undefined
