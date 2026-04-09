@@ -329,6 +329,13 @@ function RepoDefaultsCard({ orgs }: RepoDefaultsCardProps) {
           </div>
         </SettingRow>
 
+        <SettingRow label="Initialize git" description="Run git init and create an initial commit for new projects">
+          <ToggleSwitch
+            checked={defaults.autoInitGit ?? true}
+            onChange={v => update({ autoInitGit: v })}
+          />
+        </SettingRow>
+
         <SettingRow label="Init README" description="Create README.md with project name">
           <ToggleSwitch
             checked={defaults.autoInitReadme}

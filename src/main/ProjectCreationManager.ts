@@ -32,6 +32,13 @@ export class ProjectCreationManager {
   ) {}
 
   async createProject(payload: CreateProjectPayload): Promise<CreateProjectResult> {
+    // Defensive: GitHub remote requires a local git repo. If git is disabled,
+    // force createGitHubRepo off so we never reach the GitHub block in an
+    // impossible state, even if a future caller bypasses the UI guards.
+    if (!payload.initGit) {
+      payload = { ...payload, createGitHubRepo: false }
+    }
+
     const steps: StepResult[] = []
     const projectsDir = this.settingsManager.get('defaultProjectsDir') as string
     const projectPath = join(projectsDir, payload.name)
@@ -58,17 +65,19 @@ export class ProjectCreationManager {
     }
 
     // Step 2: Git init
-    const initResult = await this.gitOpsManager.exec(projectPath, 'git', ['init', '-b', 'main'], identity)
-    steps.push({
-      label: 'Initialize git',
-      success: initResult.success,
-      error: initResult.success ? undefined : initResult.stderr
-    })
-    if (!initResult.success) {
-      // Still register the project even without git
-      const project = this.projectManager.addProject({ name: payload.name, path: projectPath })
-      registeredProjectId = project.id
-      return { success: false, projectPath, projectId: registeredProjectId, error: 'Git init failed', steps }
+    if (payload.initGit) {
+      const initResult = await this.gitOpsManager.exec(projectPath, 'git', ['init', '-b', 'main'], identity)
+      steps.push({
+        label: 'Initialize git',
+        success: initResult.success,
+        error: initResult.success ? undefined : initResult.stderr
+      })
+      if (!initResult.success) {
+        // Still register the project even without git
+        const project = this.projectManager.addProject({ name: payload.name, path: projectPath })
+        registeredProjectId = project.id
+        return { success: false, projectPath, projectId: registeredProjectId, error: 'Git init failed', steps }
+      }
     }
 
     // Steps 3-4: Fetch .gitignore and LICENSE templates concurrently
@@ -121,18 +130,20 @@ export class ProjectCreationManager {
     }
 
     // Step 6: Initial commit
-    const stageResult = await this.gitOpsManager.exec(projectPath, 'git', ['add', '-A'], identity)
-    if (stageResult.success) {
-      const commitResult = await this.gitOpsManager.exec(
-        projectPath, 'git', ['commit', '-m', 'Initial commit'], identity
-      )
-      steps.push({
-        label: 'Initial commit',
-        success: commitResult.success,
-        error: commitResult.success ? undefined : commitResult.stderr
-      })
-    } else {
-      steps.push({ label: 'Initial commit', success: false, error: 'Failed to stage files' })
+    if (payload.initGit) {
+      const stageResult = await this.gitOpsManager.exec(projectPath, 'git', ['add', '-A'], identity)
+      if (stageResult.success) {
+        const commitResult = await this.gitOpsManager.exec(
+          projectPath, 'git', ['commit', '-m', 'Initial commit'], identity
+        )
+        steps.push({
+          label: 'Initial commit',
+          success: commitResult.success,
+          error: commitResult.success ? undefined : commitResult.stderr
+        })
+      } else {
+        steps.push({ label: 'Initial commit', success: false, error: 'Failed to stage files' })
+      }
     }
 
     // Step 7: Create GitHub repo (conditional)

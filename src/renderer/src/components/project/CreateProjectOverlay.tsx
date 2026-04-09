@@ -26,6 +26,7 @@ export function CreateProjectOverlay() {
 
   const [config, setConfig] = useState<ProjectConfig>({
     description: '',
+    initGit: true,
     createGitHubRepo: ghConnected,
     visibility: 'private',
     org: '',
@@ -53,6 +54,7 @@ export function CreateProjectOverlay() {
         org: defaults.defaultOrg,
         license: defaults.defaultLicense,
         gitignoreTemplate: defaults.defaultGitignore,
+        initGit: defaults.autoInitGit ?? true,
         initReadme: defaults.autoInitReadme,
         description: defaults.descriptionTemplate || prev.description
       }))
@@ -102,7 +104,8 @@ export function CreateProjectOverlay() {
       const res = await window.api.createNewProject({
         name: projectName.trim(),
         description: config.description,
-        createGitHubRepo: config.createGitHubRepo && ghConnected,
+        initGit: config.initGit,
+        createGitHubRepo: config.createGitHubRepo && ghConnected && config.initGit,
         visibility: config.visibility,
         org: config.org,
         license: config.license,
@@ -342,6 +345,7 @@ function NameStep({
 
 interface ProjectConfig {
   description: string
+  initGit: boolean
   createGitHubRepo: boolean
   visibility: RepoVisibility
   org: string
@@ -382,9 +386,20 @@ function ConfigureStep({
       </div>
 
       <div className="flex items-center justify-between py-2">
-        <span className="text-sm text-turbo-text-dim">Create GitHub repository</span>
+        <span className="text-sm text-turbo-text-dim">Initialize git repository</span>
+        <ToggleSwitch
+          checked={config.initGit}
+          onChange={v => onUpdate(v ? { initGit: true } : { initGit: false, createGitHubRepo: false })}
+        />
+      </div>
+
+      <div className="flex items-center justify-between py-2">
+        <span className={`text-sm ${config.initGit ? 'text-turbo-text-dim' : 'text-turbo-text-muted'}`}>
+          Create GitHub repository
+        </span>
         <ToggleSwitch
           checked={config.createGitHubRepo}
+          disabled={!config.initGit}
           onChange={v => onUpdate({ createGitHubRepo: v })}
         />
       </div>

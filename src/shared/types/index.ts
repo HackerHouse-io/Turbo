@@ -416,6 +416,7 @@ export interface GitHubTokenValidation {
 export interface GitHubRepoDefaults {
   visibility: RepoVisibility
   defaultOrg: string
+  autoInitGit: boolean
   autoInitReadme: boolean
   defaultLicense: string
   defaultGitignore: string
@@ -442,6 +443,7 @@ export interface CreateGitHubRepoResult {
 export interface CreateProjectPayload {
   name: string
   description: string
+  initGit: boolean
   createGitHubRepo: boolean
   visibility: RepoVisibility
   org: string

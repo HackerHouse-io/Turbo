@@ -235,6 +235,7 @@ export const COMMON_GITIGNORE_TEMPLATES = [
 export const DEFAULT_GITHUB_REPO_DEFAULTS: GitHubRepoDefaults = {
   visibility: 'private',
   defaultOrg: '',
+  autoInitGit: true,
   autoInitReadme: true,
   defaultLicense: 'MIT',
   defaultGitignore: 'Node',

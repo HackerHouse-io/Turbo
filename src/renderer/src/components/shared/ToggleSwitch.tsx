@@ -2,13 +2,14 @@ interface ToggleSwitchProps {
   checked: boolean
   onChange: (checked: boolean) => void
   label?: string
+  disabled?: boolean
 }
 
-export function ToggleSwitch({ checked, onChange, label }: ToggleSwitchProps) {
+export function ToggleSwitch({ checked, onChange, label, disabled }: ToggleSwitchProps) {
   return (
     <div
-      className="flex items-center gap-2 cursor-pointer"
-      onClick={() => onChange(!checked)}
+      className={`flex items-center gap-2 ${disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}
+      onClick={() => { if (!disabled) onChange(!checked) }}
     >
       <div
         className={`w-9 h-5 rounded-full transition-colors relative flex-shrink-0 ${
