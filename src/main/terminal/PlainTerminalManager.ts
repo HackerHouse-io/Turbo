@@ -19,6 +19,8 @@ export class PlainTerminalManager extends EventEmitter {
   private spawned = new Set<string>()
   /** Pending env vars for terminals that haven't been spawned yet (e.g. claude git env) */
   private pendingEnv = new Map<string, Record<string, string>>()
+  /** Queued stdin for terminals whose PTY hasn't spawned yet */
+  private pendingInput = new Map<string, string>()
 
   constructor() {
     super()
@@ -35,6 +37,7 @@ export class PlainTerminalManager extends EventEmitter {
       }
       this.spawned.delete(id)
       this.pendingEnv.delete(id)
+      this.pendingInput.delete(id)
       this.emit('terminal-exit', id, code)
     })
   }
@@ -66,7 +69,12 @@ export class PlainTerminalManager extends EventEmitter {
   }
 
   write(id: string, data: string): void {
-    if (!this.spawned.has(id)) return
+    if (!this.spawned.has(id)) {
+      // Queue input until PTY spawns on first resize
+      const queued = this.pendingInput.get(id) || ''
+      this.pendingInput.set(id, queued + data)
+      return
+    }
     this.pty.write(id, data)
   }
 
@@ -86,6 +94,13 @@ export class PlainTerminalManager extends EventEmitter {
         })
         this.spawned.add(id)
         this.pendingEnv.delete(id)
+
+        // Flush any input that arrived before the PTY was ready
+        const queued = this.pendingInput.get(id)
+        if (queued) {
+          this.pty.write(id, queued)
+          this.pendingInput.delete(id)
+        }
       }
       return
     }
@@ -100,6 +115,7 @@ export class PlainTerminalManager extends EventEmitter {
     }
     this.spawned.delete(id)
     this.pendingEnv.delete(id)
+    this.pendingInput.delete(id)
     this.pty.kill(id)
   }
 
@@ -120,5 +136,6 @@ export class PlainTerminalManager extends EventEmitter {
     this.terminals.clear()
     this.spawned.clear()
     this.pendingEnv.clear()
+    this.pendingInput.clear()
   }
 }

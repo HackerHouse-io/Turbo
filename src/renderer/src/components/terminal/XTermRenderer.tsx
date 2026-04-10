@@ -68,7 +68,12 @@ export function XTermRenderer({ terminalId, mode = 'session', showResume, onResu
     let webglAddon: WebglAddon | null = null
     try {
       const addon = new WebglAddon()
-      addon.onContextLoss(() => addon.dispose())
+      addon.onContextLoss(() => {
+        addon.dispose()
+        webglAddon = null
+        // Force a full re-render so the DOM fallback repaints all cells
+        terminal.refresh(0, terminal.rows - 1)
+      })
       terminal.loadAddon(addon)
       webglAddon = addon
     } catch (err) {
@@ -107,8 +112,23 @@ export function XTermRenderer({ terminalId, mode = 'session', showResume, onResu
       sendResize(terminalId, cols, rows)
     }
 
+    // Send input to PTY via IPC
+    terminal.onData((data) => {
+      sendInput(terminalId, data)
+    })
+
+    // Subscribe to live PTY output INSIDE the rAF, after buffer replay, so we
+    // never write the same data twice.  Between mount and the rAF, incoming
+    // data is captured by the global buffer in App.tsx and included in the
+    // replay.  After replay the live listener takes over — no gap because JS
+    // is single-threaded within the rAF callback.
+    let unsubData: (() => void) | null = null
+    let disposed = false
+
     // Defer initial fit to next frame so layout is settled
     requestAnimationFrame(() => {
+      if (disposed) return
+
       safeFit()
 
       // Replay buffered data from before this terminal mounted
@@ -125,19 +145,14 @@ export function XTermRenderer({ terminalId, mode = 'session', showResume, onResu
         }).catch(() => { /* buffer replay failed, non-fatal */ })
       }
 
+      // Now subscribe — buffer replay is complete, no duplicates possible
+      unsubData = subscribeData((sid, data) => {
+        if (sid === terminalId) {
+          terminal.write(data)
+        }
+      })
+
       sendResizeIfChanged()
-    })
-
-    // Send input to PTY via IPC
-    terminal.onData((data) => {
-      sendInput(terminalId, data)
-    })
-
-    // Receive output from PTY
-    const unsubData = subscribeData((sid, data) => {
-      if (sid === terminalId) {
-        terminal.write(data)
-      }
     })
 
     // Clear terminal when session is resumed
@@ -180,8 +195,9 @@ export function XTermRenderer({ terminalId, mode = 'session', showResume, onResu
     const focusTimer = setTimeout(() => terminal.focus(), 150)
 
     return () => {
+      disposed = true
       clearTimeout(focusTimer)
-      unsubData()
+      unsubData?.()
       unsubClear?.()
       resizeObserver.disconnect()
       window.removeEventListener('focus', handleWindowFocus)
@@ -202,6 +218,7 @@ export function XTermRenderer({ terminalId, mode = 'session', showResume, onResu
         ref={containerRef}
         className="w-full h-full"
         style={{ padding: '4px' }}
+        onClick={() => termRef.current?.focus()}
       />
       {showResume && onResume && (
         <div className="absolute bottom-4 right-4 group/resume">
