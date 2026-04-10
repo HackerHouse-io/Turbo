@@ -29,7 +29,7 @@ function TerminalPane({ session, isFocused, onFocus, onClose }: {
     <div
       onClick={onFocus}
       {...dropProps}
-      className={`relative flex flex-col rounded-lg overflow-hidden border transition-colors
+      className={`relative flex flex-col h-full rounded-lg overflow-hidden border transition-colors
         ${isFocused ? 'border-turbo-accent/50' : 'border-turbo-border/30 hover:border-turbo-border/60'}
       `}
     >
