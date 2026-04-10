@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react'
 import { Terminal } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import { WebLinksAddon } from '@xterm/addon-web-links'
+import { WebglAddon } from '@xterm/addon-webgl'
 import { getTerminalBuffer, appendTerminalData } from '../../lib/terminalBuffer'
 import '@xterm/xterm/css/xterm.css'
 
@@ -62,6 +63,18 @@ export function XTermRenderer({ terminalId, mode = 'session', showResume, onResu
 
     terminal.open(containerRef.current)
 
+    // WebGL renderer fixes cell-clearing artifacts under rapid TUI redraws
+    // (Ink's plan-mode prompt stacks text on the default DOM renderer).
+    let webglAddon: WebglAddon | null = null
+    try {
+      const addon = new WebglAddon()
+      addon.onContextLoss(() => addon.dispose())
+      terminal.loadAddon(addon)
+      webglAddon = addon
+    } catch (err) {
+      console.warn('[XTermRenderer] WebGL renderer unavailable, falling back to DOM', err)
+    }
+
     termRef.current = terminal
     fitRef.current = fitAddon
 
@@ -82,6 +95,18 @@ export function XTermRenderer({ terminalId, mode = 'session', showResume, onResu
     const sendResize = mode === 'plain' ? window.api.resizePlainTerminal : window.api.resizeTerminal
     const subscribeData = mode === 'plain' ? window.api.onPlainTerminalData : window.api.onTerminalData
 
+    // Track last-sent PTY dims so we can skip no-op resize IPC during drags
+    // where the container resizes but the cell grid lands on the same dims.
+    let lastCols = 0
+    let lastRows = 0
+    const sendResizeIfChanged = () => {
+      const { cols, rows } = terminal
+      if (cols === lastCols && rows === lastRows) return
+      lastCols = cols
+      lastRows = rows
+      sendResize(terminalId, cols, rows)
+    }
+
     // Defer initial fit to next frame so layout is settled
     requestAnimationFrame(() => {
       safeFit()
@@ -100,9 +125,7 @@ export function XTermRenderer({ terminalId, mode = 'session', showResume, onResu
         }).catch(() => { /* buffer replay failed, non-fatal */ })
       }
 
-      // Send initial resize
-      const { cols, rows } = terminal
-      sendResize(terminalId, cols, rows)
+      sendResizeIfChanged()
     })
 
     // Send input to PTY via IPC
@@ -124,11 +147,17 @@ export function XTermRenderer({ terminalId, mode = 'session', showResume, onResu
       }
     }) : undefined
 
-    // Handle resize
+    // Coalesce resize bursts to one fit+IPC per frame so window drags don't
+    // flood the PTY with SIGWINCHes mid-Ink-redraw.
+    let resizePending = false
     const resizeObserver = new ResizeObserver(() => {
-      safeFit()
-      const { cols, rows } = terminal
-      sendResize(terminalId, cols, rows)
+      if (resizePending) return
+      resizePending = true
+      requestAnimationFrame(() => {
+        resizePending = false
+        safeFit()
+        sendResizeIfChanged()
+      })
     })
     resizeObserver.observe(containerRef.current)
 
@@ -156,6 +185,11 @@ export function XTermRenderer({ terminalId, mode = 'session', showResume, onResu
       unsubClear?.()
       resizeObserver.disconnect()
       window.removeEventListener('focus', handleWindowFocus)
+      // Dispose WebGL addon before the terminal — letting terminal.dispose()
+      // cascade through the addon manager hits a known xterm teardown race.
+      if (webglAddon) {
+        try { webglAddon.dispose() } catch { /* xterm-internal teardown race */ }
+      }
       terminal.dispose()
       termRef.current = null
       fitRef.current = null

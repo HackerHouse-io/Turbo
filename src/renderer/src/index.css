@@ -43,10 +43,8 @@
     -webkit-app-region: no-drag;
   }
 
-  /* xterm.js overrides */
-  .xterm {
-    padding: 8px;
-  }
+  /* xterm.js overrides — padding is applied via the containerRef wrapper
+     in XTermRenderer.tsx so FitAddon's dimension math stays correct. */
   .xterm-viewport::-webkit-scrollbar {
     width: 6px;
   }
