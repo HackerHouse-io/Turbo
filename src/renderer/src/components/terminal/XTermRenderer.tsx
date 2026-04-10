@@ -83,12 +83,15 @@ export function XTermRenderer({ terminalId, mode = 'session', showResume, onResu
     termRef.current = terminal
     fitRef.current = fitAddon
 
-    // Safe fit helper — FitAddon crashes if container has zero dimensions
+    // Safe fit helper — FitAddon crashes if container has zero dimensions.
+    // After fit, force a full WebGL redraw so stale pixels don't linger in
+    // areas that were vacated by a resize.
     const safeFit = () => {
       try {
         const el = containerRef.current
         if (el && el.clientWidth > 0 && el.clientHeight > 0) {
           fitAddon.fit()
+          terminal.refresh(0, terminal.rows - 1)
         }
       } catch {
         // FitAddon can throw if element is detached
@@ -213,11 +216,10 @@ export function XTermRenderer({ terminalId, mode = 'session', showResume, onResu
   }, [terminalId, mode])
 
   return (
-    <div className="relative w-full h-full">
+    <div className="relative w-full h-full" style={{ padding: '4px' }}>
       <div
         ref={containerRef}
         className="w-full h-full"
-        style={{ padding: '4px' }}
         onClick={() => termRef.current?.focus()}
       />
       {showResume && onResume && (

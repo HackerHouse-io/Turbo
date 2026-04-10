@@ -44,6 +44,7 @@ export const useSessionStore = create<SessionState>((set) => ({
       // Short-circuit: skip update if nothing meaningful changed
       const prev = state.sessions[session.id]
       if (prev &&
+        prev.name === session.name &&
         prev.status === session.status &&
         prev.tokenCount === session.tokenCount &&
         prev.estimatedCost === session.estimatedCost &&
