@@ -223,7 +223,7 @@ export function XTermRenderer({ terminalId, mode = 'session', showResume, onResu
         onClick={() => termRef.current?.focus()}
       />
       {showResume && onResume && (
-        <div className="absolute bottom-4 right-4 group/resume">
+        <div className="absolute bottom-4 right-4 z-20 group/resume">
           <button
             onClick={onResume}
             className="flex items-center gap-2 px-4 py-2 rounded-lg
