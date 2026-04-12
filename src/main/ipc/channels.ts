@@ -37,6 +37,7 @@ import { PlainTerminalManager } from '../terminal/PlainTerminalManager'
 import { WorktreeManager } from '../git/WorktreeManager'
 import { GitHubManager } from '../github/GitHubManager'
 import { ProjectCreationManager } from '../ProjectCreationManager'
+import type { SystemMetricsMonitor } from '../system/SystemMetricsMonitor'
 import { detectModels } from '../claude/ClaudeModelDetector'
 import { checkClaudeInstalled, invalidateClaudeInstallCache } from '../claude/checkClaudeInstalled'
 import { checkClaudeUpdates, invalidateClaudeUpdateCache } from '../claude/checkClaudeUpdates'
@@ -74,6 +75,7 @@ interface IpcHandlerOptions {
   worktreeManager: WorktreeManager
   githubManager: GitHubManager
   projectCreationManager: ProjectCreationManager
+  metricsMonitor: SystemMetricsMonitor
   getMainWindow: () => BrowserWindow | null
 }
 
@@ -94,6 +96,7 @@ export function registerIpcHandlers(opts: IpcHandlerOptions): void {
     worktreeManager,
     githubManager,
     projectCreationManager,
+    metricsMonitor,
     getMainWindow
   } = opts
 
@@ -486,6 +489,12 @@ export function registerIpcHandlers(opts: IpcHandlerOptions): void {
 
   ipcMain.handle(IPC.SHELL_OPEN_EXTERNAL, async (_e, url: string) => {
     shell.openExternal(url)
+  })
+
+  // ─── System Metrics ───────────────────────────────────────
+
+  ipcMain.handle(IPC.SYSTEM_GET_METRICS, async () => {
+    return metricsMonitor.getSnapshot()
   })
 
   // ─── Git Presets ───────────────────────────────────────────

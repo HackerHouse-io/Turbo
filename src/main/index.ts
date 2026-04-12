@@ -13,6 +13,7 @@ import { WorktreeManager } from './git/WorktreeManager'
 import { GitHubManager } from './github/GitHubManager'
 import { ProjectCreationManager } from './ProjectCreationManager'
 import { NotificationManager } from './NotificationManager'
+import { SystemMetricsMonitor } from './system/SystemMetricsMonitor'
 import { registerIpcHandlers } from './ipc/channels'
 
 let mainWindow: BrowserWindow | null = null
@@ -25,6 +26,7 @@ let gitPresetManager: GitPresetManager
 let planFileManager: PlanFileManager
 let plainTerminalManager: PlainTerminalManager
 let notificationManager: NotificationManager
+let metricsMonitor: SystemMetricsMonitor
 
 const isDev = !app.isPackaged
 
@@ -114,6 +116,15 @@ app.whenReady().then(() => {
     settingsManager, projectManager, gitOpsManager, gitIdentityManager, githubManager
   )
 
+  metricsMonitor = new SystemMetricsMonitor({
+    intervalMs: 2000,
+    getMainWindow: () => mainWindow,
+    getTrackedPids: () => [
+      ...sessionManager.listTrackedPids(),
+      ...plainTerminalManager.listTrackedPids()
+    ]
+  })
+
   // Register IPC handlers
   registerIpcHandlers({
     sessionManager,
@@ -128,6 +139,7 @@ app.whenReady().then(() => {
     worktreeManager,
     githubManager,
     projectCreationManager,
+    metricsMonitor,
     getMainWindow: () => mainWindow
   })
 
@@ -135,6 +147,10 @@ app.whenReady().then(() => {
 
   // Create main window
   createWindow()
+
+  // Start system metrics monitoring (after window exists so visibility
+  // listeners attach to the real BrowserWindow)
+  metricsMonitor.start()
 
   // Wire up OS notifications for attention events
   if (mainWindow) {
@@ -158,6 +174,7 @@ app.on('window-all-closed', () => {
 })
 
 app.on('before-quit', () => {
+  metricsMonitor?.stop()
   plainTerminalManager?.dispose()
   planFileManager?.dispose()
   sessionManager?.dispose()

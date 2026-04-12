@@ -9,6 +9,7 @@ import { useKeybindingsStore } from './stores/useKeybindingsStore'
 import { useNotificationStore } from './stores/useNotificationStore'
 import { useGitHubStore } from './stores/useGitHubStore'
 import { useUpdateStore } from './stores/useUpdateStore'
+import { useSystemMetricsStore } from './stores/useSystemMetricsStore'
 import { appendTerminalData, clearTerminalBuffer } from './lib/terminalBuffer'
 import { clearDrawerTerminal } from './lib/runInTerminalDrawer'
 
@@ -39,6 +40,7 @@ export default function App() {
     useKeybindingsStore.getState().initialize()
     useNotificationStore.getState().loadSettings()
     useGitHubStore.getState().initialize()
+    useSystemMetricsStore.getState().initialize()
 
     // Fire-and-forget Claude CLI update check. Silently no-ops on
     // failure; opens the UpdateAvailableModal if a newer version is

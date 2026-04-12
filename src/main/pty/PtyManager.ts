@@ -115,6 +115,20 @@ export class PtyManager extends EventEmitter {
   }
 
   /**
+   * List live PTY process IDs.
+   */
+  listPids(): Array<{ id: string; pid: number }> {
+    const out: Array<{ id: string; pid: number }> = []
+    for (const [id, inst] of this.instances) {
+      const pid = inst.process.pid
+      if (typeof pid === 'number' && pid > 0) {
+        out.push({ id, pid })
+      }
+    }
+    return out
+  }
+
+  /**
    * Kill all PTY processes.
    */
   killAll(): void {

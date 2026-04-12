@@ -2,6 +2,7 @@ import { SessionSidebar } from '../sidebar/SessionSidebar'
 import { TerminalGrid } from '../terminal/TerminalGrid'
 import { InlinePrompt } from '../command-center/InlinePrompt'
 import { GitPanel } from '../git/GitPanel'
+import { SystemMetricsIndicator } from '../status/SystemMetricsIndicator'
 import { useProjectStore } from '../../stores/useProjectStore'
 import { useUIStore } from '../../stores/useUIStore'
 import { WelcomeState } from '../command-center/CommandCenter'
@@ -26,12 +27,14 @@ export function SplitLayout() {
     <div className="flex-1 flex overflow-hidden">
       <SessionSidebar />
 
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex-1 flex flex-col min-w-0 relative">
         <TerminalGrid />
 
         <div className="flex-shrink-0 border-t border-turbo-border/30 bg-turbo-bg/95 backdrop-blur-md px-6 py-4">
           <InlinePrompt />
         </div>
+
+        <SystemMetricsIndicator />
       </div>
 
       {gitPanelOpen && <GitPanel />}

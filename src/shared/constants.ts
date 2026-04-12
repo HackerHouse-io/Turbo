@@ -133,7 +133,11 @@ export const IPC = {
   GIT_CREATE_PR: 'git:create-pr',
 
   // Shell
-  SHELL_OPEN_EXTERNAL: 'shell:open-external'
+  SHELL_OPEN_EXTERNAL: 'shell:open-external',
+
+  // System Metrics
+  SYSTEM_GET_METRICS: 'system:get-metrics',
+  SYSTEM_METRICS_UPDATE: 'system:metrics-update'
 } as const
 
 export const PROMPT_HISTORY_MAX = 50

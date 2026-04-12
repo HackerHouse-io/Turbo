@@ -36,7 +36,8 @@ import type {
   GitHubOrg,
   CreateProjectPayload,
   CreateProjectResult,
-  XcodeProjectInfo
+  XcodeProjectInfo,
+  SystemMetrics
 } from '../shared/types'
 
 /**
@@ -374,6 +375,17 @@ const api = {
     const handler = (_: Electron.IpcRendererEvent, sessionId: string) => callback(sessionId)
     ipcRenderer.on(IPC.NOTIFICATION_CLICK, handler)
     return () => ipcRenderer.removeListener(IPC.NOTIFICATION_CLICK, handler)
+  },
+
+  // ─── System Metrics ───────────────────────────────────────
+
+  getSystemMetrics: (): Promise<SystemMetrics | null> =>
+    ipcRenderer.invoke(IPC.SYSTEM_GET_METRICS),
+
+  onSystemMetricsUpdate: (callback: (metrics: SystemMetrics) => void) => {
+    const handler = (_: Electron.IpcRendererEvent, metrics: SystemMetrics) => callback(metrics)
+    ipcRenderer.on(IPC.SYSTEM_METRICS_UPDATE, handler)
+    return () => ipcRenderer.removeListener(IPC.SYSTEM_METRICS_UPDATE, handler)
   },
 
   // ─── File Utilities ───────────────────────────────────────

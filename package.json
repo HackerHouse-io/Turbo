@@ -21,12 +21,14 @@
     "@xterm/xterm": "^5.5.0",
     "framer-motion": "^12.0.0",
     "node-pty": "^1.1.0",
+    "pidusage": "^4.0.1",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "uuid": "^10.0.0",
     "zustand": "^5.0.0"
   },
   "devDependencies": {
+    "@types/pidusage": "^2.0.5",
     "@types/react": "^18.3.0",
     "@types/react-dom": "^18.3.0",
     "@types/uuid": "^10.0.0",
@@ -45,15 +47,24 @@
     "productName": "Turbo",
     "mac": {
       "category": "public.app-category.developer-tools",
-      "target": ["dmg", "zip"],
+      "target": [
+        "dmg",
+        "zip"
+      ],
       "icon": "resources/icons/icon.icns"
     },
     "win": {
-      "target": ["nsis", "zip"],
+      "target": [
+        "nsis",
+        "zip"
+      ],
       "icon": "resources/icons/icon.ico"
     },
     "linux": {
-      "target": ["AppImage", "deb"],
+      "target": [
+        "AppImage",
+        "deb"
+      ],
       "icon": "resources/icons"
     },
     "directories": {

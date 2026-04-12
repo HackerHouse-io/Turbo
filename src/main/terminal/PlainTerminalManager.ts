@@ -1,6 +1,7 @@
 import { EventEmitter } from 'events'
 import { v4 as uuid } from 'uuid'
 import { PtyManager } from '../pty/PtyManager'
+import type { TrackedPid } from '../system/SystemMetricsMonitor'
 import type { PlainTerminal, PlainTerminalType } from '../../shared/types'
 
 /**
@@ -121,6 +122,20 @@ export class PlainTerminalManager extends EventEmitter {
 
   list(): PlainTerminal[] {
     return Array.from(this.terminals.values())
+  }
+
+  listTrackedPids(): TrackedPid[] {
+    const out: TrackedPid[] = []
+    for (const { id, pid } of this.pty.listPids()) {
+      const t = this.terminals.get(id)
+      if (!t) continue
+      out.push({
+        pid,
+        kind: t.type === 'claude' ? 'claude' : 'terminal',
+        label: t.type === 'claude' ? 'claude' : 'shell'
+      })
+    }
+    return out
   }
 
   countByProject(projectPath: string): number {

@@ -462,6 +462,35 @@ export interface CreateProjectResult {
   steps: { label: string; success: boolean; error?: string }[]
 }
 
+// ─── System Metrics ───────────────────────────────────────────
+
+export type MetricCategory =
+  | 'main'
+  | 'renderer'
+  | 'gpu'
+  | 'utility'
+  | 'terminal'
+  | 'claude'
+  | 'other'
+
+export interface ProcessMetric {
+  pid: number
+  category: MetricCategory
+  name: string
+  cpu: number        // percent; can exceed 100 on multi-core
+  memoryMB: number   // resident set size
+}
+
+export type CategoryBreakdown = Record<MetricCategory, number>
+
+export interface SystemMetrics {
+  timestamp: number
+  sampleDurationMs: number
+  cpu: { total: number; byCategory: CategoryBreakdown }
+  memory: { totalMB: number; byCategory: CategoryBreakdown }
+  processes: ProcessMetric[]
+}
+
 // ─── Settings ─────────────────────────────────────────────────
 
 export interface TurboSettings {

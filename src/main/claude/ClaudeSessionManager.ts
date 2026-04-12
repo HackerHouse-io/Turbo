@@ -2,6 +2,7 @@ import { EventEmitter } from 'events'
 import { join } from 'path'
 import { v4 as uuid } from 'uuid'
 import { PtyManager } from '../pty/PtyManager'
+import type { TrackedPid } from '../system/SystemMetricsMonitor'
 import { execFileAsync } from '../utils/execFileAsync'
 import { OutputMonitor } from './OutputMonitor'
 import { TerminalBufferStore } from './TerminalBufferStore'
@@ -232,6 +233,17 @@ export class ClaudeSessionManager extends EventEmitter {
 
     this.emitUpdate(sessionId)
     return session
+  }
+
+  /**
+   * List tracked PIDs for system metrics monitoring.
+   */
+  listTrackedPids(): TrackedPid[] {
+    return this.ptyManager.listPids().map(({ id, pid }) => ({
+      pid,
+      kind: 'claude' as const,
+      label: this.sessions.get(id)?.name?.slice(0, 24) || 'claude'
+    }))
   }
 
   /**
