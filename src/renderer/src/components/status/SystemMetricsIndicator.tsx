@@ -36,7 +36,7 @@ export function SystemMetricsIndicator() {
 
   return (
     <div
-      className="no-drag absolute bottom-3 right-3 z-40 select-none"
+      className="no-drag relative select-none"
       onMouseEnter={() => setExpanded(true)}
       onMouseLeave={() => setExpanded(false)}
     >

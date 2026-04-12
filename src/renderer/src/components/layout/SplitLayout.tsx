@@ -2,7 +2,7 @@ import { SessionSidebar } from '../sidebar/SessionSidebar'
 import { TerminalGrid } from '../terminal/TerminalGrid'
 import { InlinePrompt } from '../command-center/InlinePrompt'
 import { GitPanel } from '../git/GitPanel'
-import { SystemMetricsIndicator } from '../status/SystemMetricsIndicator'
+
 import { useProjectStore } from '../../stores/useProjectStore'
 import { useUIStore } from '../../stores/useUIStore'
 import { WelcomeState } from '../command-center/CommandCenter'
@@ -34,7 +34,6 @@ export function SplitLayout() {
           <InlinePrompt />
         </div>
 
-        <SystemMetricsIndicator />
       </div>
 
       {gitPanelOpen && <GitPanel />}

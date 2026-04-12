@@ -8,6 +8,7 @@ import { BranchSwitcher } from '../command-center/BranchSwitcher'
 import { PaletteIcon } from '../command-palette/PaletteIcon'
 import { runInTerminalDrawer } from '../../lib/runInTerminalDrawer'
 import { Spinner } from '../common/Spinner'
+import { SystemMetricsIndicator } from '../status/SystemMetricsIndicator'
 
 // ─── Action Button ──────────────────────────────────────────────
 
@@ -463,6 +464,11 @@ export function GitPanel() {
             </div>
           </div>
         )}
+      </div>
+
+      {/* System resources */}
+      <div className="flex-shrink-0 border-t border-turbo-border/20 px-3 py-2">
+        <SystemMetricsIndicator />
       </div>
 
       <AnimatePresence>
