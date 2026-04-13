@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useProjectStore, selectProjectPath } from '../../stores/useProjectStore'
+import { useEffectivePath } from '../../hooks/useEffectivePath'
 import { useGitIdentityStore } from '../../stores/useGitIdentityStore'
 import { useNerveCenterData } from '../../hooks/useNerveCenterData'
 import { useGitActionsStore } from '../../stores/useGitActionsStore'
@@ -154,7 +155,8 @@ function Step({ num, text, accent }: { num: number; text: string; accent: boolea
 // ─── Git Panel ──────────────────────────────────────────────────
 
 export function GitPanel() {
-  const projectPath = useProjectStore(selectProjectPath)
+  const rawProjectPath = useProjectStore(selectProjectPath)
+  const projectPath = useEffectivePath()
   const { git, commits, changedFiles, refresh, forceRefresh } = useNerveCenterData(projectPath)
   const [spinning, setSpinning] = useState(false)
   const spinTimer = useRef<ReturnType<typeof setTimeout>>()
@@ -240,7 +242,7 @@ export function GitPanel() {
             <div className="flex items-center gap-1">
               <div className="flex-1 min-w-0">
                 <BranchSwitcher
-                  projectPath={projectPath!}
+                  projectPath={rawProjectPath!}
                   branch={git.branch}
                   onRefresh={forceRefresh}
                 />

@@ -3,6 +3,7 @@ import { useTerminalStore, type Workspace, MAX_PANES } from '../../stores/useTer
 import { useUIStore } from '../../stores/useUIStore'
 import { useProjectStore, selectProjectPath } from '../../stores/useProjectStore'
 import { useConfirmAction } from '../../hooks/useConfirmAction'
+import { useEffectivePath } from '../../hooks/useEffectivePath'
 import { PaletteIcon } from '../command-palette/PaletteIcon'
 import type { PlainTerminalType } from '../../../../shared/types'
 
@@ -12,6 +13,7 @@ export function WorkspacesSection() {
   const createWorkspace = useTerminalStore(s => s.createWorkspace)
   const addTerminalToWorkspace = useTerminalStore(s => s.addTerminalToWorkspace)
   const selectedProjectPath = useProjectStore(selectProjectPath)
+  const effectivePath = useEffectivePath()
 
   const projectWorkspaces = useMemo(() =>
     Object.values(workspaces)
@@ -24,13 +26,13 @@ export function WorkspacesSection() {
     if (!selectedProjectPath) return
     const wsId = createWorkspace(selectedProjectPath)
     const terminal = await window.api.createPlainTerminal({
-      projectPath: selectedProjectPath,
+      projectPath: effectivePath ?? selectedProjectPath,
       type: 'shell'
     })
     if (terminal) {
       addTerminalToWorkspace(wsId, terminal.id)
     }
-  }, [selectedProjectPath, createWorkspace, addTerminalToWorkspace])
+  }, [selectedProjectPath, effectivePath, createWorkspace, addTerminalToWorkspace])
 
   return (
     <div className="px-4 py-3">

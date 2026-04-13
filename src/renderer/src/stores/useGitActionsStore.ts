@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { useProjectStore } from './useProjectStore'
+import { useWorktreeStore } from './useWorktreeStore'
 import { runInTerminalDrawer, resolveGitCommand } from '../lib/runInTerminalDrawer'
 import { GIT_AI_MESSAGE_PLACEHOLDER } from '../../../shared/constants'
 import type { AgentSession } from '../../../shared/types'
@@ -29,7 +30,9 @@ export const selectBusy = (s: GitActionsState) =>
 function getProjectPath(): string | undefined {
   const s = useProjectStore.getState()
   const proj = s.projects.find(p => p.id === s.selectedProjectId)
-  return proj?.path
+  if (!proj?.path) return undefined
+  const wt = useWorktreeStore.getState()
+  return wt.activeWorktreePath[proj.path] ?? proj.path
 }
 
 const withBranchEcho = (cmd: string) =>

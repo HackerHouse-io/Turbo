@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { useShallow } from 'zustand/react/shallow'
 import type { AgentSession, AttentionItem } from '../../../shared/types'
+import { useWorktreeStore } from './useWorktreeStore'
 
 interface SessionState {
   sessions: Record<string, AgentSession>
@@ -158,12 +159,21 @@ export const useSessionStore = create<SessionState>((set) => ({
 // ─── Granular Selectors ─────────────────────────────────────────
 // These prevent re-renders when unrelated sessions change.
 
+/** Build the set of paths belonging to a project (root + worktree dirs). Read imperatively to avoid cross-store subscription loops. */
+function getProjectPaths(projectPath: string): Set<string> {
+  const worktrees = useWorktreeStore.getState().worktrees[projectPath] ?? []
+  const paths = new Set<string>([projectPath])
+  for (const wt of worktrees) paths.add(wt.path)
+  return paths
+}
+
 /** Returns sessions filtered by project path — shallow-compared array. */
 export function useProjectSessions(projectPath: string | undefined): AgentSession[] {
   return useSessionStore(
     useShallow(s => {
       if (!projectPath) return []
-      return Object.values(s.sessions).filter(sess => sess.projectPath === projectPath)
+      const paths = getProjectPaths(projectPath)
+      return Object.values(s.sessions).filter(sess => paths.has(sess.projectPath))
     })
   )
 }
@@ -173,7 +183,10 @@ export function useSessionCounts(projectPath: string | undefined) {
   return useSessionStore(
     useShallow(s => {
       const all = projectPath
-        ? Object.values(s.sessions).filter(sess => sess.projectPath === projectPath)
+        ? (() => {
+            const paths = getProjectPaths(projectPath)
+            return Object.values(s.sessions).filter(sess => paths.has(sess.projectPath))
+          })()
         : Object.values(s.sessions)
       let active = 0, waiting = 0, error = 0, done = 0, tokens = 0, cost = 0
       for (const sess of all) {

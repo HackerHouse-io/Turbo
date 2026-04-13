@@ -4,6 +4,7 @@ import { useSessionStore } from '../../stores/useSessionStore'
 import { useUIStore } from '../../stores/useUIStore'
 import { useGitIdentityStore } from '../../stores/useGitIdentityStore'
 import { useUpdateStore } from '../../stores/useUpdateStore'
+import { useWorktreeStore } from '../../stores/useWorktreeStore'
 import { AttachmentChip } from './AttachmentChip'
 import { BUILT_IN_INTENTS, getIntent, buildSessionPayload, DEFAULT_INTENT_ID } from '../../../../shared/intents'
 import { EFFORT_LEVELS, PERMISSION_MODES } from '../../../../shared/constants'
@@ -89,34 +90,27 @@ export function InlinePrompt() {
     if (!proceed) return
 
     setIsSubmitting(true)
+    let worktreePath: string | null = null
     try {
       if (branchToggle && prompt.trim()) {
         setBranchLoading(true)
         try {
           const aiSlug = await window.api.generateSlug(prompt.trim())
           const slug = aiSlug || slugify(prompt.trim().slice(0, 60))
-          const branchName = `feat/${slug}`
-          const result = await window.api.gitExec({
-            projectPath: selectedProject.path,
-            commands: [`git checkout -b ${branchName}`]
-          })
-          if (!result.success) {
-            const fallback = `feat/${slug}-${Date.now().toString(36)}`
-            await window.api.gitExec({
-              projectPath: selectedProject.path,
-              commands: [`git checkout -b ${fallback}`]
-            })
-          }
+          const worktreeInfo = await useWorktreeStore.getState()
+            .createAndActivateWorktree(selectedProject.path, slug)
+          worktreePath = worktreeInfo.path
         } finally {
           setBranchLoading(false)
         }
       }
 
+      const sessionProjectPath = worktreePath ?? selectedProject.path
       const currentIntent = getIntent(selectedIntentId)
       const payload = buildSessionPayload(
         currentIntent,
         prompt.trim(),
-        selectedProject.path,
+        sessionProjectPath,
         model,
         attachments.length > 0 ? attachments : undefined
       )
