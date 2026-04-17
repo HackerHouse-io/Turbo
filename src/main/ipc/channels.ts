@@ -628,8 +628,13 @@ export function registerIpcHandlers(opts: IpcHandlerOptions): void {
   function forward(emitter: EventEmitter, event: string, channel: string): void {
     emitter.on(event, (...args: unknown[]) => {
       const win = getMainWindow()
-      if (win && !win.isDestroyed()) {
-        win.webContents.send(channel, ...args)
+      if (!win || win.isDestroyed()) return
+      const wc = win.webContents
+      if (wc.isDestroyed() || wc.isCrashed() || wc.isLoading()) return
+      try {
+        wc.send(channel, ...args)
+      } catch {
+        // Render frame was disposed between checks (e.g. during reload/HMR) — drop the event.
       }
     })
   }
