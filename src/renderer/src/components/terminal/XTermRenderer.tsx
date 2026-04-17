@@ -6,6 +6,15 @@ import { WebglAddon } from '@xterm/addon-webgl'
 import { getTerminalBuffer, appendTerminalData } from '../../lib/terminalBuffer'
 import '@xterm/xterm/css/xterm.css'
 
+// Font-size ladder used to keep xterm cols >= TARGET_COLS in narrow panes.
+// Stepwise (not linear) so the ladder settles cleanly during drag-resize and
+// integer px keeps glyphs crisp. CELL_WIDTH_PX is the per-size cell width for
+// the JetBrains Mono / SF Mono stack — roughly fontSize * 0.6, calibrated per
+// step so the ladder prediction agrees with what FitAddon actually produces.
+const FONT_LADDER = [13, 12, 11, 10] as const
+const TARGET_COLS = 100
+const CELL_WIDTH_PX: Record<number, number> = { 13: 7.8, 12: 7.2, 11: 6.6, 10: 6.0 }
+
 interface XTermRendererProps {
   terminalId: string
   mode?: 'session' | 'plain'
@@ -17,6 +26,7 @@ export function XTermRenderer({ terminalId, mode = 'session', showResume, onResu
   const containerRef = useRef<HTMLDivElement>(null)
   const termRef = useRef<Terminal | null>(null)
   const fitRef = useRef<FitAddon | null>(null)
+  const lastFontSizeRef = useRef<number>(FONT_LADDER[0])
 
   useEffect(() => {
     if (!containerRef.current) return
@@ -84,15 +94,31 @@ export function XTermRenderer({ terminalId, mode = 'session', showResume, onResu
     fitRef.current = fitAddon
 
     // Safe fit helper — FitAddon crashes if container has zero dimensions.
-    // After fit, force a full WebGL redraw so stale pixels don't linger in
-    // areas that were vacated by a resize.
+    // Also auto-scales font size so narrow panes keep cols >= TARGET_COLS,
+    // preventing Claude's plan-mode TUI from truncating bullets with "…".
+    // Font must be applied before fit() so cell metrics are fresh when cols
+    // are computed. After fit, force a full WebGL redraw so stale pixels
+    // don't linger in areas that were vacated by a resize.
     const safeFit = () => {
       try {
         const el = containerRef.current
-        if (el && el.clientWidth > 0 && el.clientHeight > 0) {
-          fitAddon.fit()
-          terminal.refresh(0, terminal.rows - 1)
+        if (!el || el.clientWidth <= 0 || el.clientHeight <= 0) return
+
+        const width = el.clientWidth
+        let nextSize: number = FONT_LADDER[FONT_LADDER.length - 1]
+        for (const size of FONT_LADDER) {
+          if (Math.floor(width / CELL_WIDTH_PX[size]) >= TARGET_COLS) {
+            nextSize = size
+            break
+          }
         }
+        if (nextSize !== lastFontSizeRef.current) {
+          terminal.options.fontSize = nextSize
+          lastFontSizeRef.current = nextSize
+        }
+
+        fitAddon.fit()
+        terminal.refresh(0, terminal.rows - 1)
       } catch {
         // FitAddon can throw if element is detached
       }
@@ -216,7 +242,7 @@ export function XTermRenderer({ terminalId, mode = 'session', showResume, onResu
   }, [terminalId, mode])
 
   return (
-    <div className="relative w-full h-full" style={{ padding: '4px' }}>
+    <div className="relative w-full h-full" style={{ padding: '2px' }}>
       <div
         ref={containerRef}
         className="w-full h-full"
