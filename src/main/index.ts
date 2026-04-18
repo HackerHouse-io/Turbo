@@ -30,6 +30,10 @@ let metricsMonitor: SystemMetricsMonitor
 
 const isDev = !app.isPackaged
 
+// Ensure the app name is "Turbo" in the macOS menu bar during dev (in packaged
+// builds this is set by electron-builder's productName)
+app.setName('Turbo')
+
 // Prevent EPIPE crashes when stdout/stderr pipe is closed (e.g. during dev reload)
 process.stdout?.on('error', () => {})
 process.stderr?.on('error', () => {})
