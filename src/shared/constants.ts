@@ -53,6 +53,7 @@ export const IPC = {
 
   // Claude CLI
   CLAUDE_DETECT_MODELS: 'claude:detect-models',
+  CLAUDE_DETECT_OPTIONS: 'claude:detect-options',
   CLAUDE_GENERATE_SLUG: 'claude:generate-slug',
   CLAUDE_CHECK_INSTALL: 'claude:check-install',
   CLAUDE_RECHECK_INSTALL: 'claude:recheck-install',
@@ -160,6 +161,7 @@ export const EFFORT_LEVELS: { value: EffortLevel; label: string }[] = [
   { value: 'low', label: 'Low' },
   { value: 'medium', label: 'Med' },
   { value: 'high', label: 'High' },
+  { value: 'xhigh', label: 'XHi' },
   { value: 'max', label: 'Max' }
 ]
 

@@ -19,6 +19,7 @@ import type {
   GitCommitPayload,
   GitExecPayload,
   ClaudeModelInfo,
+  ClaudeCliOptions,
   ClaudeInstallStatus,
   ClaudeUpdateStatus,
   GitPreset,
@@ -122,6 +123,9 @@ const api = {
 
   detectModels: (): Promise<ClaudeModelInfo[]> =>
     ipcRenderer.invoke(IPC.CLAUDE_DETECT_MODELS),
+
+  detectClaudeOptions: (): Promise<ClaudeCliOptions> =>
+    ipcRenderer.invoke(IPC.CLAUDE_DETECT_OPTIONS),
 
   generateSlug: (text: string): Promise<string | null> =>
     ipcRenderer.invoke(IPC.CLAUDE_GENERATE_SLUG, text),

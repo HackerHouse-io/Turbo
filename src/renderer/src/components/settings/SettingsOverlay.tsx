@@ -28,7 +28,7 @@ export function SettingsOverlay() {
   // ─── State (unchanged from original) ─────────────────────
   const [models, setModels] = useState<ClaudeModelInfo[]>([])
   const [defaultModel, setDefaultModel] = useState<string>('')
-  const [defaultEffort, setDefaultEffort] = useState<EffortLevel>('medium')
+  const [defaultEffort, setDefaultEffort] = useState<EffortLevel>('xhigh')
   const [defaultPermissionMode, setDefaultPermissionMode] = useState<PermissionMode>('default')
   const [notificationsEnabled, setNotificationsEnabled] = useState(true)
   const [notificationSound, setNotificationSound] = useState(true)

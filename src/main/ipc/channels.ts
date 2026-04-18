@@ -38,7 +38,7 @@ import { WorktreeManager } from '../git/WorktreeManager'
 import { GitHubManager } from '../github/GitHubManager'
 import { ProjectCreationManager } from '../ProjectCreationManager'
 import type { SystemMetricsMonitor } from '../system/SystemMetricsMonitor'
-import { detectModels } from '../claude/ClaudeModelDetector'
+import { detectModels, detectClaudeOptions } from '../claude/ClaudeModelDetector'
 import { checkClaudeInstalled, invalidateClaudeInstallCache } from '../claude/checkClaudeInstalled'
 import { checkClaudeUpdates, invalidateClaudeUpdateCache } from '../claude/checkClaudeUpdates'
 import { getEnhancedEnv } from '../system/resolveShellPath'
@@ -319,6 +319,10 @@ export function registerIpcHandlers(opts: IpcHandlerOptions): void {
 
   ipcMain.handle(IPC.CLAUDE_DETECT_MODELS, async () => {
     return detectModels()
+  })
+
+  ipcMain.handle(IPC.CLAUDE_DETECT_OPTIONS, async () => {
+    return detectClaudeOptions()
   })
 
   ipcMain.handle(IPC.CLAUDE_CHECK_INSTALL, async () => {

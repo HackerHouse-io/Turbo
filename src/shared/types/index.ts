@@ -146,7 +146,7 @@ export interface Project {
 // ─── CLI Flag Types ─────────────────────────────────────────────
 
 export type PermissionMode = 'default' | 'plan' | 'auto'
-export type EffortLevel = 'low' | 'medium' | 'high' | 'max'
+export type EffortLevel = 'low' | 'medium' | 'high' | 'xhigh' | 'max'
 
 // ─── Attachments ────────────────────────────────────────────────
 
@@ -175,8 +175,21 @@ export interface CreateSessionPayload {
 }
 
 export interface ClaudeModelInfo {
-  alias: string
+  alias: string           // short alias used as CLI value (e.g. 'sonnet')
+  label: string           // display label (may include version, e.g. 'Sonnet 4.5')
+  version?: string        // parsed from full-name aliases (e.g. '4.5')
+  fullName?: string       // full CLI name (e.g. 'sonnet-4-5')
+}
+
+export interface EffortOption {
+  value: EffortLevel
   label: string
+}
+
+export interface ClaudeCliOptions {
+  models: ClaudeModelInfo[]
+  efforts: EffortOption[]
+  cliVersion: string | null
 }
 
 export interface ClaudeInstallStatus {

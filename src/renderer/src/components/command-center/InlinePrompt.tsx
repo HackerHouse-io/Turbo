@@ -10,7 +10,9 @@ import { BUILT_IN_INTENTS, getIntent, buildSessionPayload, DEFAULT_INTENT_ID } f
 import { EFFORT_LEVELS, PERMISSION_MODES } from '../../../../shared/constants'
 import { slugify } from '../../../../shared/utils'
 import { useDropZone } from '../../hooks/useDropZone'
-import type { ClaudeModelInfo, AttachmentInfo, PermissionMode, EffortLevel } from '../../../../shared/types'
+import type { ClaudeModelInfo, EffortOption, AttachmentInfo, PermissionMode, EffortLevel } from '../../../../shared/types'
+
+const FALLBACK_EFFORTS: EffortOption[] = EFFORT_LEVELS.map(e => ({ value: e.value, label: e.label }))
 
 export function InlinePrompt() {
   const [prompt, setPrompt] = useState('')
@@ -19,10 +21,11 @@ export function InlinePrompt() {
   const [branchLoading, setBranchLoading] = useState(false)
   const [models, setModels] = useState<ClaudeModelInfo[]>([])
   const [model, setModel] = useState('sonnet')
+  const [efforts, setEfforts] = useState<EffortOption[]>(FALLBACK_EFFORTS)
   const [selectedIntentId, setSelectedIntentId] = useState(DEFAULT_INTENT_ID)
   const [attachments, setAttachments] = useState<AttachmentInfo[]>([])
   const [permissionMode, setPermissionMode] = useState<PermissionMode>('default')
-  const [effort, setEffort] = useState<EffortLevel>('medium')
+  const [effort, setEffort] = useState<EffortLevel>('xhigh')
   const [isFocused, setIsFocused] = useState(false)
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const selectedProjectId = useProjectStore(s => s.selectedProjectId)
@@ -39,11 +42,12 @@ export function InlinePrompt() {
     Promise.all([
       window.api.getSetting('defaultModel'),
       window.api.getSetting('defaultIntent'),
-      window.api.detectModels()
-    ]).then(([savedModel, savedIntent, m]) => {
-      setModels(m)
+      window.api.detectClaudeOptions()
+    ]).then(([savedModel, savedIntent, opts]) => {
+      setModels(opts.models)
+      setEfforts(opts.efforts.length > 0 ? opts.efforts : FALLBACK_EFFORTS)
       if (savedModel) setModel(savedModel as string)
-      else if (m.length > 0) setModel(m[0].alias)
+      else if (opts.models.length > 0) setModel(opts.models[0].alias)
       if (savedIntent && typeof savedIntent === 'string') setSelectedIntentId(savedIntent)
     })
   }, [])
@@ -51,8 +55,11 @@ export function InlinePrompt() {
   useEffect(() => {
     const i = getIntent(selectedIntentId)
     setPermissionMode(i.permissionMode)
-    setEffort(i.effort)
-  }, [selectedIntentId])
+    // Fall back to the first available effort if the intent's default
+    // isn't in the list the CLI reports.
+    const available = efforts.length > 0 ? efforts : FALLBACK_EFFORTS
+    setEffort(available.some(e => e.value === i.effort) ? i.effort : available[0].value)
+  }, [selectedIntentId, efforts])
 
   useEffect(() => {
     if (pendingDropPaths.length === 0) return
@@ -304,7 +311,7 @@ export function InlinePrompt() {
 
             {/* Effort pills */}
             <div className="h-6 flex items-center rounded-md border border-turbo-border/30 overflow-hidden">
-              {EFFORT_LEVELS.map(e => (
+              {efforts.map(e => (
                 <button
                   key={e.value}
                   onClick={() => setEffort(e.value)}

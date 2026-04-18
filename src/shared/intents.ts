@@ -19,7 +19,7 @@ export const BUILT_IN_INTENTS: Intent[] = [
     icon: 'zap',
     description: 'Send prompt as-is — no wrapping',
     permissionMode: 'default',
-    effort: 'medium',
+    effort: 'xhigh',
     print: false,
     color: '#6366f1',
     wrapPrompt: (p) => p
